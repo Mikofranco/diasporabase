@@ -101,3 +101,12 @@ body {
   background-color: #1E293B;
   padding: 5rem;
 }
+.sidebar-menu-button-active {
+  background: linear-gradient(90deg, #0EA5E9 0%, #0284C7 100%);
+  color: white;
+}
+
+.action-btn {
+  background: linear-gradient(90deg, #0EA5E9 0%, #0284C7 100%);
+  color: white;
+}

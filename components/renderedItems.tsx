@@ -1,4 +1,3 @@
-// CheckboxReactHookFormMultiple.tsx
 "use client";
 
 import * as React from "react";
@@ -6,7 +5,6 @@ import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,7 +27,7 @@ interface Item {
 interface CheckboxReactHookFormMultipleProps {
   onChange?: (selectedItems: string[]) => void;
   items: Item[];
-  initialValues?: string[]; // Add initialValues prop
+  initialValues?: string[];
 }
 
 const FormSchema = z.object({
@@ -41,12 +39,12 @@ const FormSchema = z.object({
 export function CheckboxReactHookFormMultiple({
   onChange,
   items,
-  initialValues = [], // Default to empty array
+  initialValues = [],
 }: CheckboxReactHookFormMultipleProps) {
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      items: initialValues, // Use initialValues for form default
+      items: initialValues,
     },
   });
 
@@ -56,7 +54,7 @@ export function CheckboxReactHookFormMultiple({
   React.useEffect(() => {
     const subscription = form.watch((value) => {
       if (onChange && value.items) {
-        console.log("Selected items:", value.items);
+        console.log("Selected items:", value.items);//@ts-ignore
         onChange(value.items);
       }
     });
@@ -153,26 +151,29 @@ export function CheckboxReactHookFormMultiple({
     return findItem(items) || id;
   };
 
-  const handleSelect = (
-    item: Item,
-    field: any,
-    event: React.MouseEvent | React.ChangeEvent<HTMLInputElement>
-  ) => {
-    event.stopPropagation();
+  // Handle item click to toggle expansion
+  const handleItemClick = (item: Item) => {
+    if (item.children || item.subChildren) {
+      setExpanded((prev) => ({
+        ...prev,
+        [item.id]: !prev[item.id],
+      }));
+    }
+  };
+
+  // Handle checkbox selection
+  const handleSelect = (item: Item, field: any) => {
     console.log(`Handling select for: ${item.label} (${item.id})`);
     const descendantIds = getDescendantIds(item);
     const isSelected = field.value.includes(item.id);
 
-    // Handle selection/deselection
     let newValue: string[];
     if (isSelected) {
-      // Deselect the item and its descendants
       newValue = field.value.filter(
         (id: string) => id !== item.id && !descendantIds.includes(id)
       );
       console.log(`Deselecting ${item.id} and descendants:`, descendantIds);
     } else {
-      // Select the item and its descendants
       newValue = [...new Set([...field.value, item.id, ...descendantIds])];
       console.log(`Selecting ${item.id} and descendants:`, descendantIds);
     }
@@ -183,7 +184,6 @@ export function CheckboxReactHookFormMultiple({
     setExpanded((prev) => {
       const newExpanded = { ...prev };
       if (isSelected) {
-        // Collapse the item and its descendants with subChildren
         newExpanded[item.id] = false;
         if (item.subChildren) {
           item.subChildren.forEach((subChild) => {
@@ -195,7 +195,6 @@ export function CheckboxReactHookFormMultiple({
           });
         }
       } else {
-        // Expand the item and its descendants with subChildren
         newExpanded[item.id] = true;
         if (item.subChildren) {
           item.subChildren.forEach((subChild) => {
@@ -259,7 +258,8 @@ export function CheckboxReactHookFormMultiple({
             name="items"
             render={({ field }) => (
               <FormItem
-                className={`flex flex-row items-center gap-1.5 py-1 px-2 rounded-md transition-all duration-200 ${
+                onClick={() => handleItemClick(item)}
+                className={`flex flex-row items-center gap-1.5 py-1 px-2 rounded-md transition-all duration-200 cursor-pointer ${
                   field.value?.includes(item.id)
                     ? "bg-white"
                     : level === 0
@@ -272,8 +272,7 @@ export function CheckboxReactHookFormMultiple({
               >
                 {(item.children || item.subChildren) && (
                   <span
-                    onClick={(e) => handleSelect(item, field, e)}
-                    className="cursor-pointer text-gray-600 hover:text-gray-800 transition-transform duration-300"
+                    className="text-gray-600 hover:text-gray-800 transition-transform duration-300"
                     aria-expanded={expanded[item.id]}
                   >
                     {expanded[item.id] ? (
@@ -287,11 +286,8 @@ export function CheckboxReactHookFormMultiple({
                   <Checkbox
                     id={item.id}
                     checked={field.value?.includes(item.id)}
-                    onCheckedChange={() =>
-                      handleSelect(item, field, {
-                        stopPropagation: () => {},
-                      } as any)
-                    }
+                    onCheckedChange={() => handleSelect(item, field)}
+                    onClick={(e) => e.stopPropagation()} // Prevent item click from triggering
                     className="border-gray-400 focus:ring-2 focus:ring-offset-1 h-4 w-4 transition-all duration-200 hover:border-gray-600"
                     aria-checked={field.value?.includes(item.id)}
                   />
@@ -303,6 +299,7 @@ export function CheckboxReactHookFormMultiple({
                       ? "font-medium"
                       : "text-gray-700"
                   } hover:text-gray-900`}
+                  onClick={(e) => e.stopPropagation()} // Prevent label click from triggering item click
                 >
                   {item.label}
                 </FormLabel>
@@ -348,7 +345,6 @@ export function CheckboxReactHookFormMultiple({
                   sub-items.
                 </FormDescription>
               </div>
-              {/* Selected Items as Badges */}
               <div className="flex flex-wrap gap-1 mb-2">
                 {field.value.length > 0 ? (
                   field.value
@@ -394,7 +390,6 @@ export function CheckboxReactHookFormMultiple({
                   </span>
                 )}
               </div>
-              {/* Checkbox List */}
               <div className="border border-gray-200 rounded-lg p-2.5 max-h-72 overflow-y-auto">
                 {renderItems(items)}
               </div>

@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import * as React from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Users,
@@ -16,7 +16,7 @@ import {
   ChevronUp,
   LayoutDashboard,
   Mountain,
-} from "lucide-react"
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -29,16 +29,22 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from "@/components/ui/sidebar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { createClient } from "@/lib/supabase/client" //@ts-ignore
-import debounce from "lodash.debounce"
+} from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { createClient } from "@/lib/supabase/client"; //@ts-ignore
+import debounce from "lodash.debounce";
+import Image from "next/image";
 
-type UserRole = "admin" | "volunteer" | "agency" | null
+type UserRole = "admin" | "volunteer" | "agency" | null;
 
 interface Profile {
-  role: UserRole
-  full_name: string | null
+  role: UserRole;
+  full_name: string | null;
 }
 
 const ROUTES = {
@@ -67,7 +73,7 @@ const ROUTES = {
     home: "/",
     login: "/login",
   },
-}
+};
 
 const MENU_ITEMS = {
   admin: [
@@ -78,14 +84,26 @@ const MENU_ITEMS = {
     { path: ROUTES.admin.settings, label: "Settings", icon: Settings },
   ],
   volunteer: [
-    { path: ROUTES.volunteer.dashboard, label: "Dashboard", icon: LayoutDashboard },
+    {
+      path: ROUTES.volunteer.dashboard,
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
     { path: ROUTES.volunteer.projects, label: "My Projects", icon: Briefcase },
     { path: ROUTES.volunteer.profile, label: "Profile", icon: User },
-    { path: ROUTES.volunteer.findOpportunity, label: "Find Opportunity", icon: Search },
+    {
+      path: ROUTES.volunteer.findOpportunity,
+      label: "Find Opportunity",
+      icon: Search,
+    },
     { path: ROUTES.volunteer.settings, label: "Settings", icon: Settings },
   ],
   agency: [
-    { path: ROUTES.agency.dashboard, label: "Dashboard", icon: LayoutDashboard },
+    {
+      path: ROUTES.agency.dashboard,
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
     { path: ROUTES.agency.projects, label: "Projects", icon: Briefcase },
     { path: ROUTES.agency.profile, label: "Profile", icon: User },
     { path: ROUTES.agency.analytics, label: "Analytics", icon: BarChart },
@@ -95,95 +113,106 @@ const MENU_ITEMS = {
     { path: ROUTES.guest.home, label: "Home", icon: Home },
     { path: ROUTES.guest.login, label: "Login", icon: LogOut },
   ],
-}
+};
 
 export function AppSidebar() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const supabase = createClient()
+  const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
 
-  const [userRole, setUserRole] = React.useState<UserRole>(null)
-  const [userName, setUserName] = React.useState<string | null>(null)
-  const [loading, setLoading] = React.useState(true)
+  const [userRole, setUserRole] = React.useState<UserRole>(null);
+  const [userName, setUserName] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     const fetchUser = async () => {
-      setLoading(true)
+      setLoading(true);
       const {
         data: { session },
         error: sessionError,
-      } = await supabase.auth.getSession()
+      } = await supabase.auth.getSession();
 
       // Only log actual errors, not null sessions (which are normal for unauthenticated users)
       if (sessionError) {
-        console.error("Session error:", sessionError)
+        console.error("Session error:", sessionError);
       }
 
       if (!session) {
         // No session is normal for unauthenticated users - don't treat as error
-        setUserRole(null)
-        setUserName(null)
-        setLoading(false)
-        return
+        setUserRole(null);
+        setUserName(null);
+        setLoading(false);
+        return;
       }
 
       const { data: profile, error: profileError } = (await supabase
         .from("profiles")
         .select("role, full_name")
         .eq("id", session.user.id)
-        .single()) as { data: Profile | null; error: any }
+        .single()) as { data: Profile | null; error: any };
 
       if (profileError || !profile) {
-        console.error("Profile error:", profileError)
-        setUserRole(null)
-        setUserName(null)
+        console.error("Profile error:", profileError);
+        setUserRole(null);
+        setUserName(null);
       } else {
-        setUserRole(profile.role || null)
-        setUserName(profile.full_name)
+        setUserRole(profile.role || null);
+        setUserName(profile.full_name);
       }
-      setLoading(false)
-    }
+      setLoading(false);
+    };
 
-    fetchUser()
+    fetchUser();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        fetchUser()
-      } else {
-        setUserRole(null)
-        setUserName(null)
-        setLoading(false)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session) {
+          fetchUser();
+        } else {
+          setUserRole(null);
+          setUserName(null);
+          setLoading(false);
+        }
       }
-    })
+    );
 
     return () => {
-      authListener.subscription.unsubscribe()
-    }
-  }, [supabase])
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   const handleLogout = debounce(async () => {
-    setLoading(true)
-    const { error } = await supabase.auth.signOut()
+    setLoading(true);
+    const { error } = await supabase.auth.signOut();
     if (!error) {
-      router.push(ROUTES.guest.home)
+      router.push(ROUTES.guest.home);
     } else {
-      console.error("Logout error:", error)
+      console.error("Logout error:", error);
     }
-    setLoading(false)
-  }, 300)
+    setLoading(false);
+  }, 300);
 
   const getMenuItems = (role: UserRole) => {
-    const items = MENU_ITEMS[role || "guest"]
+    const items = MENU_ITEMS[role || "guest"];
     return (
       <SidebarGroup>
         <SidebarGroupLabel>
-          {role ? `${role.charAt(0).toUpperCase() + role.slice(1)} Dashboard` : "Navigation"}
+          {role
+            ? `${role.charAt(0).toUpperCase() + role.slice(1)} Dashboard`
+            : "Navigation"}
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             {items.map((item) => (
               <SidebarMenuItem key={item.path}>
-                <SidebarMenuButton asChild isActive={pathname === item.path || pathname.startsWith(item.path)}>
+                <SidebarMenuButton
+                  asChild
+                  className={
+                    pathname === item.path || pathname.startsWith(item.path)
+                      ? "sidebar-menu-button-active"
+                      : ""
+                  }
+                >
                   <Link href={item.path}>
                     <item.icon />
                     <span>{item.label}</span>
@@ -194,8 +223,8 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
-    )
-  }
+    );
+  };
 
   return (
     <Sidebar>
@@ -203,13 +232,19 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              {/* <DropdownMenuTrigger asChild> */}
                 <SidebarMenuButton>
-                  <Mountain />
-                  <span>Volunteer Connect</span>
-                  <ChevronDown className="ml-auto" />
+                  <Image
+                    src="/svg/logo.svg"
+                    alt="Diaspora Logo"
+                    width={32}
+                    height={32}
+                    className="rounded-full mr-2"
+                  />
+                  <span className="hidden md:inline text-[20px] font-bold">DiasporaBase</span>
+                  {/* <ChevronDown className="ml-auto" /> */}
                 </SidebarMenuButton>
-              </DropdownMenuTrigger>
+              {/* </DropdownMenuTrigger> */}
               <DropdownMenuContent className="w-[--radix-popper-anchor-width]">
                 <DropdownMenuItem>
                   <span>About Us</span>
@@ -229,7 +264,9 @@ export function AppSidebar() {
             <SidebarGroupLabel>Loading...</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {Array.from({ length: MENU_ITEMS[userRole || "guest"].length }).map((_, index) => (
+                {Array.from({
+                  length: MENU_ITEMS[userRole || "guest"].length,
+                }).map((_, index) => (
                   <SidebarMenuItem key={index}>
                     <SidebarMenuButton>
                       <div className="h-4 w-4 rounded-full bg-muted" />
@@ -255,7 +292,10 @@ export function AppSidebar() {
                   <ChevronUp className="ml-auto" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width]">
+              <DropdownMenuContent
+                side="top"
+                className="w-[--radix-popper-anchor-width]"
+              >
                 {userRole && (
                   <>
                     <DropdownMenuItem>
@@ -287,5 +327,5 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

@@ -16,11 +16,14 @@ export async function middleware(req: NextRequest) {
     console.log("Session found:", session);
   }
 
-
   const path = req.nextUrl.pathname;
 
   // Allow public routes
-  if (path === "/" || path === "/projects" || path.startsWith("/auth/callback")) {
+  if (
+    path === "/" ||
+    path === "/projects" ||
+    path.startsWith("/auth/callback")
+  ) {
     return res;
   }
 
@@ -58,7 +61,10 @@ export async function middleware(req: NextRequest) {
       .single();
 
     if (profileError || !profileData?.role) {
-      console.error("Profile fetch error in middleware:", profileError?.message);
+      console.error(
+        "Profile fetch error in middleware:",
+        profileError?.message
+      );
       const redirectUrl = req.nextUrl.clone();
       redirectUrl.pathname = "/login";
       return NextResponse.redirect(redirectUrl); // Redirect to login if profile fetch fails
@@ -72,7 +78,11 @@ export async function middleware(req: NextRequest) {
   }
 
   // If logged in and accessing auth pages, redirect to their dashboard
-  if (path === "/login" || path === "/register-agency" || path === "/register-volunteer") {
+  if (
+    path === "/login" ||
+    path === "/register-agency" ||
+    path === "/register-volunteer"
+  ) {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = `/dashboard/${userRole}`;
     return NextResponse.redirect(redirectUrl);
@@ -87,7 +97,8 @@ export async function middleware(req: NextRequest) {
 
   // Check role-based access for protected routes
   for (const prefix in protectedPaths) {
-    if (path.startsWith(prefix)) {//@ts-ignore
+    if (path.startsWith(prefix)) {
+      //@ts-ignore
       if (!protectedPaths[prefix].includes(userRole)) {
         const redirectUrl = req.nextUrl.clone();
         redirectUrl.pathname = `/dashboard/${userRole}`;
@@ -100,5 +111,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

@@ -1,3 +1,5 @@
+import OrganizationsProjects from "@/parts/agency/projects/index";
+
 // app/agency/projects/page.tsx
 export default function AgencyProjectsPage() {
   return (
@@ -6,6 +8,7 @@ export default function AgencyProjectsPage() {
         <h3 className="text-2xl font-bold tracking-tight">Agency Projects Management</h3>
         <p className="text-sm text-muted-foreground">Create and manage your organization's projects.</p>
       </div>
+      <OrganizationsProjects/>
     </div>
   )
 }

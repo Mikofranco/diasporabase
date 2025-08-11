@@ -1,4 +1,3 @@
-// VolunteerProfilePage.tsx
 "use client";
 
 import type React from "react";
@@ -16,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CalendarIcon } from "lucide-react";
+import { Loader2, CalendarIcon, User } from "lucide-react"; // Added User icon for placeholder
 import { MultiSelectSkills } from "@/components/multi-select-skills";
 import { expertiseData } from "@/data/expertise";
 import { LocationSelects } from "@/components/location-selects";
@@ -48,6 +47,7 @@ interface ProfileData {
   volunteer_country: string | null;
   volunteer_state: string | null;
   volunteer_lga: string | null;
+  profile_picture: string | null; // Added profile_picture field
 }
 
 export default function VolunteerProfilePage() {
@@ -68,9 +68,27 @@ export default function VolunteerProfilePage() {
   const [availabilityEndDate, setAvailabilityEndDate] = useState<
     Date | undefined
   >(undefined);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userPhone, setUserPhone] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null); // State for image file
+  const [imagePreview, setImagePreview] = useState<string | null>(null); // State for image preview
 
   const supabase = createClient();
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        console.error("Error fetching user:", error);
+        return;
+      }
+      setUserEmail(user.email);
+      setUserPhone(user.phone || null);
+    };
+
+    fetchUserEmail();
+  }, [supabase]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -93,7 +111,7 @@ export default function VolunteerProfilePage() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "full_name, email, phone, date_of_birth, address, skills, availability, experience, residence_country, residence_state, origin_country, origin_state, origin_lga, volunteer_country, volunteer_state, volunteer_lga"
+          "full_name, email, phone, date_of_birth, address, skills, availability, experience, residence_country, residence_state, origin_country, origin_state, origin_lga, volunteer_country, volunteer_state, volunteer_lga, profile_picture"
         )
         .eq("id", user.id)
         .single();
@@ -105,8 +123,10 @@ export default function VolunteerProfilePage() {
         setProfile({
           ...data,
           skills: data.skills || [],
+          profile_picture: data.profile_picture || null, // Initialize profile_picture
         });
-        setSelectedSkill(data.skills || []); // Initialize selectedSkill with profile.skills
+        setSelectedSkill(data.skills || []);
+        setImagePreview(data.profile_picture || null); // Set initial image preview
 
         // Parse availability data
         if (data.availability === "full-time") {
@@ -129,7 +149,7 @@ export default function VolunteerProfilePage() {
             );
           } catch (e) {
             console.error("Error parsing availability dates:", e);
-            setAvailabilityType("full-time"); // Fallback
+            setAvailabilityType("full-time");
             setAvailabilityStartDate(undefined);
             setAvailabilityEndDate(undefined);
           }
@@ -145,6 +165,43 @@ export default function VolunteerProfilePage() {
     fetchProfile();
   }, [supabase]);
 
+  // Handle image file selection
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string); // Set preview URL
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload image to Supabase storage
+  const uploadImage = async (userId: string, file: File) => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${userId}-${Date.now()}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from("profile-pictures")
+      .upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (error) {
+      console.error("Error uploading image:", error);
+      return null;
+    }
+
+    // Get the public URL of the uploaded image
+    const { data: publicUrlData } = supabase.storage
+      .from("profile-pictures")
+      .getPublicUrl(fileName);
+
+    return publicUrlData.publicUrl;
+  };
+
   const handleInputChange = (
     field: keyof ProfileData,
     value: string | string[]
@@ -154,7 +211,7 @@ export default function VolunteerProfilePage() {
 
   const handleSkillsChange = (skills: string[]) => {
     setSelectedSkill(skills);
-    handleInputChange("skills", skills); // Update profile.skills as well
+    handleInputChange("skills", skills);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -206,6 +263,24 @@ export default function VolunteerProfilePage() {
       return;
     }
 
+    let profilePictureUrl = profile.profile_picture;
+    if (imageFile) {
+      const uploadedUrl = await uploadImage(user.id, imageFile);
+      if (uploadedUrl) {
+        profilePictureUrl = uploadedUrl;
+        setProfile((prev) =>
+          prev ? { ...prev, profile_picture: uploadedUrl } : null
+        );
+      } else {
+        setMessage({
+          text: "Failed to upload profile picture.",
+          isError: true,
+        });
+        setSubmitting(false);
+        return;
+      }
+    }
+
     // Prepare availability data for storage
     const availabilityToStore =
       availabilityType === "full-time"
@@ -226,7 +301,7 @@ export default function VolunteerProfilePage() {
         phone: profile.phone,
         date_of_birth: profile.date_of_birth,
         address: profile.address,
-        skills: selectedSkill, // Use selectedSkill for updating skills
+        skills: selectedSkill,
         availability: availabilityToStore,
         experience: profile.experience,
         origin_country: profile.origin_country,
@@ -235,6 +310,8 @@ export default function VolunteerProfilePage() {
         volunteer_country: profile.volunteer_country,
         volunteer_state: profile.volunteer_state,
         volunteer_lga: profile.volunteer_lga,
+        email: user.email,
+        profile_picture: profilePictureUrl, 
       })
       .eq("id", user.id);
 
@@ -291,6 +368,37 @@ export default function VolunteerProfilePage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-6" aria-live="polite">
+          {/* Profile Picture Section */}
+          <div className="grid gap-2">
+            <Label>Profile Picture</Label>
+            <div className="flex items-center gap-4">
+              <div className="relative h-24 w-24 rounded-full overflow-hidden bg-muted">
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <User className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Input
+                  id="profile-picture"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Upload a profile picture (JPEG, PNG, max 5MB)
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="full-name">Full Name</Label>
@@ -309,7 +417,7 @@ export default function VolunteerProfilePage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="john@example.com"
+                placeholder={userEmail || ""}
                 value={profile.email || ""}
                 disabled
               />
@@ -322,7 +430,7 @@ export default function VolunteerProfilePage() {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="+1 (555) 123-4567"
+                placeholder={userPhone || ""}
                 value={profile.phone || ""}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
               />
@@ -355,8 +463,8 @@ export default function VolunteerProfilePage() {
             <Label>Skills & Interests</Label>
             <CheckboxReactHookFormMultiple
               items={expertiseData}
-              onChange={handleSkillsChange} // Pass the handler function
-              initialValues={profile.skills || []} // Pass initial skills
+              onChange={handleSkillsChange}
+              initialValues={profile.skills || []}
             />
           </div>
 
@@ -467,7 +575,6 @@ export default function VolunteerProfilePage() {
             />
           </div>
 
-          {/* Residence Information (Read-only, auto-tracked) */}
           <div className="grid gap-2">
             <Label>Country of Residence</Label>
             <Input
@@ -527,7 +634,7 @@ export default function VolunteerProfilePage() {
             lgaOptional
           />
 
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button type="submit" className="w-full action-btn" disabled={submitting}>
             {submitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
