@@ -1,3 +1,4 @@
+// app/dashboard/agency/projects/[projectId]/page.tsx
 "use client";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
@@ -68,6 +69,7 @@ interface Volunteer {
   residence_country: string;
   volunteer_state: string;
   average_rating: number;
+  request_status?: string;
 }
 
 const ProjectDetails: React.FC = () => {
@@ -79,9 +81,8 @@ const ProjectDetails: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState<boolean>(false);
-  const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(
-    null
-  );
+  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState<boolean>(false);
+  const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
   const router = useRouter();
   const { projectId } = useParams();
 
@@ -102,39 +103,45 @@ const ProjectDetails: React.FC = () => {
           .eq("organization_id", userId)
           .single();
 
-        if (projectError)
-          throw new Error("Error fetching project: " + projectError.message);
-        if (!projectData)
-          throw new Error("Project not found or you don’t have access.");
+        if (projectError) throw new Error("Error fetching project: " + projectError.message);
+        if (!projectData) throw new Error("Project not found or you don’t have access.");
 
         setProject(projectData);
 
-        const requiredSkills =
-          projectData.required_skills?.length > 0
-            ? projectData.required_skills
-            : ["general"];
-        const { data: volunteerData, error: volunteerError } =
-          await supabase.rpc("select_volunteers_for_project", {
-            project_id: projectId,
-            required_skills: requiredSkills,
-          });
-        console.log("required skills:", requiredSkills);
-        setVolunteers(volunteerData || []);
+        const requiredSkills = projectData.required_skills?.length > 0 ? projectData.required_skills : ["general"];
+        const { data: volunteerData, error: volunteerError } = await supabase.rpc(
+          "select_volunteers_for_project",
+          {
+            p_project_id: projectId,
+            p_required_skills: requiredSkills,
+          }
+        );
+
+        if (volunteerError) throw new Error("Error fetching volunteers: " + volunteerError.message);
+        if (!volunteerData) throw new Error("No volunteers found.");
+
+        const { data: requestData, error: requestError } = await supabase
+          .from("volunteer_requests")
+          .select("volunteer_id, status")
+          .eq("project_id", projectId);
+
+        if (requestError) throw new Error("Error fetching request statuses: " + requestError.message);
+
+        const volunteersWithStatus = volunteerData.map((v: Volunteer) => ({
+          ...v,
+          request_status: requestData.find((r: any) => r.volunteer_id === v.volunteer_id)?.status || null,
+        }));
+        setVolunteers(volunteersWithStatus);
 
         const { data: assignedData, error: assignedError } = await supabase
           .from("project_volunteers")
-          .select(
-            "profiles(id, full_name, email, skills, availability, residence_country, volunteer_state)"
-          )
+          .select("volunteer_id, profiles!inner(id, full_name, email, skills, availability, residence_country, volunteer_state)")
           .eq("project_id", projectId);
 
-        if (assignedError)
-          throw new Error(
-            "Error fetching assigned volunteers: " + assignedError.message
-          );
+        if (assignedError) throw new Error("Error fetching assigned volunteers: " + assignedError.message);
         setAssignedVolunteers(
           assignedData?.map((item: any) => ({
-            volunteer_id: item.profiles.id,
+            volunteer_id: item.volunteer_id,
             full_name: item.profiles.full_name,
             email: item.profiles.email,
             skills: item.profiles.skills,
@@ -169,24 +176,20 @@ const ProjectDetails: React.FC = () => {
         .eq("id", userId)
         .single();
 
-      if (profileError)
-        throw new Error("Error fetching profile: " + profileError.message);
+      if (profileError) throw new Error("Error fetching profile: " + profileError.message);
 
-      const { error: ratingError } = await supabase
-        .from("project_ratings")
-        .insert([
-          {
-            project_id: project.id,
-            user_id: userId,
-            user_name: profile.full_name || "Anonymous",
-            rating: parseInt(rating),
-            comment,
-            email: (await supabase.auth.getUser()).data.user?.email || "",
-          },
-        ]);
+      const { error: ratingError } = await supabase.from("project_ratings").insert([
+        {
+          project_id: project.id,
+          user_id: userId,
+          user_name: profile.full_name || "Anonymous",
+          rating: parseInt(rating),
+          comment,
+          email: (await supabase.auth.getUser()).data.user?.email || "",
+        },
+      ]);
 
-      if (ratingError)
-        throw new Error("Error submitting rating: " + ratingError.message);
+      if (ratingError) throw new Error("Error submitting rating: " + ratingError.message);
       setRating("");
       setComment("");
       toast.success("Rating submitted successfully!");
@@ -196,17 +199,29 @@ const ProjectDetails: React.FC = () => {
     }
   };
 
-  const handleAssignVolunteer = async (volunteer: Volunteer) => {
+  const handleSendRequest = async (volunteer: Volunteer) => {
     if (!project) return;
 
     try {
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
-      if (!userId) throw new Error("Please log in to assign volunteers.");
+      if (!userId) throw new Error("Please log in to send requests.");
+
+      const { data: existingRequest } = await supabase
+        .from("volunteer_requests")
+        .select("id, status")
+        .eq("project_id", project.id)
+        .eq("volunteer_id", volunteer.volunteer_id)
+        .single();
+
+      if (existingRequest) {
+        toast.error(`Request already sent (Status: ${existingRequest.status})`);
+        return;
+      }
 
       const { data: existingAssignment } = await supabase
         .from("project_volunteers")
-        .select("id")
+        .select("volunteer_id")
         .eq("project_id", project.id)
         .eq("volunteer_id", volunteer.volunteer_id)
         .single();
@@ -221,36 +236,49 @@ const ProjectDetails: React.FC = () => {
         return;
       }
 
-      const { error: assignError } = await supabase
-        .from("project_volunteers")
-        .insert([
-          {
-            project_id: project.id,
-            volunteer_id: volunteer.volunteer_id,
-          },
-        ]);
+      const { error: requestError } = await supabase.from("volunteer_requests").insert([
+        {
+          project_id: project.id,
+          volunteer_id: volunteer.volunteer_id,
+          status: "pending",
+        },
+      ]);
 
-      if (assignError)
-        throw new Error("Error assigning volunteer: " + assignError.message);
+      if (requestError) throw new Error("Error sending request: " + requestError.message);
 
-      const newRegistered = project.volunteers_registered + 1;
+      setVolunteers(
+        volunteers.map((v) =>
+          v.volunteer_id === volunteer.volunteer_id ? { ...v, request_status: "pending" } : v
+        )
+      );
+      toast.success("Request sent to volunteer!");
+      setIsAssignDialogOpen(false);
+    } catch (err: any) {
+      setError(err.message);
+      toast.error(err.message);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!project) return;
+
+    try {
+      const { data: userId, error: userIdError } = await getUserId();
+      if (userIdError) throw new Error(userIdError);
+      if (!userId) throw new Error("Please log in to update project status.");
+
+      const newStatus = project.status === "active" ? "cancelled" : "active";
       const { error: updateError } = await supabase
         .from("projects")
-        .update({ volunteers_registered: newRegistered })
-        .eq("id", project.id);
+        .update({ status: newStatus })
+        .eq("id", project.id)
+        .eq("organization_id", userId);
 
-      if (updateError)
-        throw new Error("Error updating project: " + updateError.message);
+      if (updateError) throw new Error("Error updating project status: " + updateError.message);
 
-      setAssignedVolunteers([...assignedVolunteers, volunteer]);
-      setVolunteers(
-        volunteers.filter((v) => v.volunteer_id !== volunteer.volunteer_id)
-      );
-      setProject((prev) =>
-        prev ? { ...prev, volunteers_registered: newRegistered } : null
-      );
-      toast.success("Volunteer assigned successfully!");
-      setIsAssignDialogOpen(false);
+      setProject((prev) => (prev ? { ...prev, status: newStatus } : null));
+      toast.success(`Project ${newStatus === "active" ? "activated" : "deactivated"} successfully!`);
+      setIsDeactivateDialogOpen(false);
     } catch (err: any) {
       setError(err.message);
       toast.error(err.message);
@@ -299,52 +327,86 @@ const ProjectDetails: React.FC = () => {
     <TooltipProvider>
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{project.title}</h1>
-          <Button
-            variant="outline"
-            onClick={() => router.push("/dashboard/agency/projects")}
-            className="transition-colors duration-200"
-          >
-            Back to Projects
-          </Button>
+          <h1 className="text-3xl font-bold text-gray-900">{project.title}</h1>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.push("/dashboard/agency/projects")}
+              className="border-gray-300 hover:bg-gray-100 transition-colors duration-200"
+            >
+              Back to Projects
+            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/dashboard/agency/projects/${project.id}/edit`)}
+                  className="border-blue-500 text-blue-500 hover:bg-blue-50 transition-colors duration-200"
+                >
+                  Edit Project
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit project details</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={project.status === "active" ? "destructive" : "default"}
+                  onClick={() => setIsDeactivateDialogOpen(true)}
+                  className={
+                    project.status === "active"
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "bg-green-600 hover:bg-green-700"
+                  }
+                >
+                  {project.status === "active" ? "Deactivate" : "Activate"} Project
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {project.status === "active" ? "Deactivate this project" : "Activate this project"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
-        <Card className="shadow-lg">
+        <Card className="shadow-lg border-0 bg-white">
           <CardHeader>
-            <CardTitle className="text-xl">{project.title}</CardTitle>
-            <CardDescription>{project.organization_name}</CardDescription>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-2xl text-gray-900">{project.title}</CardTitle>
+              <Badge
+                variant={
+                  project.status === "active"
+                    ? "default"
+                    : project.status === "cancelled"
+                    ? "destructive"
+                    : "secondary"
+                }
+                className="text-sm"
+              >
+                {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+              </Badge>
+            </div>
+            <CardDescription className="text-gray-600">{project.organization_name}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-gray-600">{project.description}</p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <CardContent className="space-y-6">
+            <p className="text-gray-700 leading-relaxed">{project.description}</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-gray-500" />
-                <p>
+                <p className="text-gray-700">
                   <strong>Location:</strong> {project.location}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Badge
-                  variant={
-                    project.status === "active" ? "default" : "secondary"
-                  }
-                >
-                  {project.status}
-                </Badge>
-                <p>
-                  <strong>Status:</strong> {project.status}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <p>
+                <p className="text-gray-700">
                   <strong>Category:</strong> {project.category}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <p>
+                <p className="text-gray-700">
                   <strong>Skills Needed:</strong>{" "}
                   {project.required_skills?.map((skill) => (
-                    <Badge key={skill} variant="outline" className="ml-1">
+                    <Badge key={skill} variant="outline" className="ml-1 bg-gray-100">
                       {skill}
                     </Badge>
                   )) || "None"}
@@ -352,7 +414,7 @@ const ProjectDetails: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-gray-500" />
-                <p>
+                <p className="text-gray-700">
                   <strong>Dates:</strong>{" "}
                   {new Date(project.start_date).toLocaleDateString()} -{" "}
                   {new Date(project.end_date).toLocaleDateString()}
@@ -360,49 +422,53 @@ const ProjectDetails: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-gray-500" />
-                <p>
-                  <strong>Volunteers:</strong> {project.volunteers_registered}/
-                  {project.volunteers_needed}
+                <p className="text-gray-700">
+                  <strong>Volunteers:</strong> {project.volunteers_registered}/{project.volunteers_needed}
                 </p>
               </div>
             </div>
 
-            {/* <h3 className="text-lg font-semibold mt-6">Rate This Project</h3>
+            {/* <h3 className="text-lg font-semibold text-gray-900 mt-6">Rate This Project</h3>
             <div className="space-y-4 max-w-md">
               <div>
-                <Label htmlFor="rating">Rating (1-5)</Label>
+                <Label htmlFor="rating" className="text-gray-700">
+                  Rating (1-5)
+                </Label>
                 <Select value={rating} onValueChange={setRating}>
-                  <SelectTrigger id="rating">
+                  <SelectTrigger id="rating" className="border-gray-300">
                     <SelectValue placeholder="Select a rating" />
                   </SelectTrigger>
                   <SelectContent>
                     {[1, 2, 3, 4, 5].map((num) => (
                       <SelectItem key={num} value={num.toString()}>
-                        {num} <Star className="inline h-4 w-4 ml-1" />
+                        {num} <Star className="inline h-4 w-4 ml-1 text-yellow-400" />
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="comment">Comment (optional)</Label>
+                <Label htmlFor="comment" className="text-gray-700">
+                  Comment (optional)
+                </Label>
                 <Input
                   id="comment"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="Add a comment"
+                  className="border-gray-300"
                 />
               </div>
               <Button
                 onClick={handleRatingSubmit}
                 disabled={!rating}
-                className="w-full transition-colors duration-200"
+                className="w-full bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
               >
                 Submit Rating
               </Button>
             </div> */}
 
-            <h3 className="text-lg font-semibold mt-6">Assigned Volunteers</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mt-6">Assigned Volunteers</h3>
             {assignedVolunteers.length === 0 ? (
               <p className="text-gray-500">No volunteers assigned yet.</p>
             ) : (
@@ -410,15 +476,15 @@ const ProjectDetails: React.FC = () => {
                 {assignedVolunteers.map((volunteer) => (
                   <Card
                     key={volunteer.volunteer_id}
-                    className="hover:shadow-md transition-shadow duration-200"
+                    className="hover:shadow-md transition-shadow duration-200 border-0 bg-gray-50"
                   >
                     <CardContent className="pt-4">
-                      <p className="font-semibold">{volunteer.full_name}</p>
+                      <p className="font-semibold text-gray-900">{volunteer.full_name}</p>
                       <p className="text-sm text-gray-600">{volunteer.email}</p>
                       <p className="text-sm">
                         <strong>Skills:</strong>{" "}
                         {volunteer.skills.map((skill) => (
-                          <Badge key={skill} variant="outline" className="ml-1">
+                          <Badge key={skill} variant="outline" className="ml-1 bg-gray-100">
                             {skill}
                           </Badge>
                         ))}
@@ -427,8 +493,7 @@ const ProjectDetails: React.FC = () => {
                         <strong>Availability:</strong> {volunteer.availability}
                       </p>
                       <p className="text-sm">
-                        <strong>Location:</strong> {volunteer.volunteer_state},{" "}
-                        {volunteer.residence_country}
+                        <strong>Location:</strong> {volunteer.volunteer_state}, {volunteer.residence_country}
                       </p>
                       <p className="text-sm">
                         <strong>Rating:</strong>{" "}
@@ -443,116 +508,70 @@ const ProjectDetails: React.FC = () => {
               </div>
             )}
 
-            <ProjectRecommendation //@ts-ignore
-             projectId={projectId || ""}/>
+            <ProjectRecommendation projectId={projectId as string} />
 
-            {/* <h3 className="text-lg font-semibold mt-6">
-              Recommended Volunteers
-            </h3>
-            {volunteers.length === 0 ? (
-              <p className="text-gray-500">No volunteers found.</p>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {volunteers.map((volunteer) => (
-                  <Card
-                    key={volunteer.volunteer_id}
-                    className="hover:shadow-md transition-shadow duration-200"
+            <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirm Volunteer Request</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to send a request to {selectedVolunteer?.full_name} for {project.title}?
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAssignDialogOpen(false)}
+                    className="hover:bg-gray-100"
                   >
-                    <CardContent className="pt-4">
-                      <p className="font-semibold">{volunteer.full_name}</p>
-                      <p className="text-sm text-gray-600">{volunteer.email}</p>
-                      <p className="text-sm">
-                        <strong>Skills:</strong>{" "}
-                        {volunteer.skills.map((skill) => (
-                          <Badge key={skill} variant="outline" className="ml-1">
-                            {skill}
-                          </Badge>
-                        ))}
-                      </p>
-                      <p className="text-sm">
-                        <strong>Availability:</strong> {volunteer.availability}
-                      </p>
-                      <p className="text-sm">
-                        <strong>Location:</strong> {volunteer.volunteer_state},{" "}
-                        {volunteer.residence_country}
-                      </p>
-                      <p className="text-sm">
-                        <strong>Rating:</strong>{" "}
-                        <span className="flex items-center">
-                          {volunteer.average_rating.toFixed(1)}{" "}
-                          <Star className="h-4 w-4 ml-1 text-yellow-400" />
-                        </span>
-                      </p>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              className="mt-4 w-full bg-green-600 hover:bg-green-700 transition-colors duration-200"
-                              onClick={() => {
-                                setSelectedVolunteer(volunteer);
-                                setIsAssignDialogOpen(true);
-                              }}
-                              disabled={
-                                project.volunteers_registered >=
-                                project.volunteers_needed
-                              }
-                            >
-                              Assign Volunteer
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {project.volunteers_registered >=
-                            project.volunteers_needed
-                              ? "Volunteer limit reached"
-                              : "Assign this volunteer to the project"}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )} */}
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => selectedVolunteer && handleSendRequest(selectedVolunteer)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Send Request
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isDeactivateDialogOpen} onOpenChange={setIsDeactivateDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {project.status === "active" ? "Deactivate Project" : "Activate Project"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to {project.status === "active" ? "deactivate" : "activate"} {project.title}?
+                    {project.status === "active"
+                      ? " This will set the project status to 'cancelled'."
+                      : " This will set the project status to 'active'."}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDeactivateDialogOpen(false)}
+                    className="hover:bg-gray-100"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleToggleStatus}
+                    className={
+                      project.status === "active"
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-green-600 hover:bg-green-700"
+                    }
+                  >
+                    {project.status === "active" ? "Deactivate" : "Activate"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
-
-        <Button
-          variant="outline"
-          onClick={() =>
-            router.push(`/dashboard/agency/projects/${project.id}/edit`)
-          }
-          className="transition-colors duration-200 action-btn"
-        >
-          Edit Project
-        </Button>
-
-        <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirm Volunteer Assignment</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to assign {selectedVolunteer?.full_name}{" "}
-                to {project.title}?
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsAssignDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() =>
-                  selectedVolunteer && handleAssignVolunteer(selectedVolunteer)
-                }
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Confirm
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </TooltipProvider>
   );
