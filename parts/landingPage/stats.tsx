@@ -86,7 +86,7 @@ const StatsSection = () => {
   };
 
   return (
-    <section className="py-20 bg-gray-100 dark:bg-gray-700 transition-colors duration-500">
+    <div className="py-20 bg-gray-100 dark:bg-gray-700 transition-colors duration-500">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -116,7 +116,7 @@ const StatsSection = () => {
               <motion.div
                 key={index}//@ts-ignore
                 variants={cardVariants}
-                className={`relative p-8 bg-white dark:bg-gray-600 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 group overflow-hidden border border-gray-200 dark:border-gray-500 hover:-translate-y-1 ${stat.color} bg-opacity-20`}
+                className={`relative p-8 bg-${stat.color} dark:bg-gray-600 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 group overflow-hidden border border-gray-200 dark:border-gray-500 hover:-translate-y-1 ${stat.color} bg-opacity-20`}
                 role="region"
                 aria-label={`Statistic: ${stat.label}`}
               >
@@ -139,7 +139,7 @@ const StatsSection = () => {
           })}
         </motion.div>
       </div>
-    </section>
+    </div>
   );
 };
 

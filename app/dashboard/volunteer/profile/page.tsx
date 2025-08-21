@@ -29,6 +29,7 @@ import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
+import LocationSelector from "@/components/location-selector";
 
 interface ProfileData {
   full_name: string | null;
@@ -72,7 +73,8 @@ export default function VolunteerProfilePage() {
   const [userPhone, setUserPhone] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null); // State for image file
   const [imagePreview, setImagePreview] = useState<string | null>(null); // State for image preview
-
+  const [location, setLocation] = useState()
+ 
   const supabase = createClient();
   const router = useRouter();
 
@@ -564,7 +566,9 @@ export default function VolunteerProfilePage() {
             )}
           </div>
 
-          <div className="grid gap-2">
+          <LocationSelector/>
+
+          {/* <div className="grid gap-2">
             <Label htmlFor="experience">Previous Volunteer Experience</Label>
             <Textarea
               id="experience"
@@ -573,7 +577,7 @@ export default function VolunteerProfilePage() {
               onChange={(e) => handleInputChange("experience", e.target.value)}
               rows={3}
             />
-          </div>
+          </div> */}
 
           <div className="grid gap-2">
             <Label>Country of Residence</Label>

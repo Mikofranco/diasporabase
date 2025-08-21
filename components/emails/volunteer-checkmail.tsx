@@ -114,7 +114,7 @@ const VolunteerCheckMail: React.FC<VolunteerCheckMailProps> = ({ email: propEmai
       </div>
 
       {/* Troubleshooting Section */}
-      <section className="mt-6">
+      <div className="mt-6">
         <Separator className="my-4" />
         <div className="text-center">
           <h3 className="text-lg font-medium">Didn&apos;t Receive the Email?</h3>
@@ -124,7 +124,7 @@ const VolunteerCheckMail: React.FC<VolunteerCheckMailProps> = ({ email: propEmai
             <li>Wait a few minutes and try resending the email.</li>
           </ul>
         </div>
-      </section>
+      </div>
     </div>
   );
 };

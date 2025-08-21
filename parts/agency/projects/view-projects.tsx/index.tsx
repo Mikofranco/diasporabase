@@ -508,7 +508,7 @@ const ProjectDetails: React.FC = () => {
               </div>
             )}
 
-            <ProjectRecommendation projectId={projectId as string} />
+            <ProjectRecommendation projectId={projectId as string} volunteersNeeded={project.volunteers_needed} volunteersRegistered={project.volunteers_registered}/>
 
             <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
               <DialogContent>

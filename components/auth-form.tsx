@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -38,7 +39,8 @@ export default function LoginForm() {
               setLoading(false);
               return;
             }
-            setMessage({ text: "Logged in successfully!", isError: false });
+            toast.success("Logged in successfully!")
+            // setMessage({ text: "Logged in successfully!", isError: false });
             console.log("Redirecting to:", `/dashboard/${profile.role}`);
             router.replace(`/dashboard/${profile.role}`);
             
@@ -77,6 +79,7 @@ export default function LoginForm() {
 
     if (signInError) {
       console.error("SignIn Error:", signInError.message);
+      toast.error(signInError.message)
       setMessage({ text: signInError.message, isError: true });
       setLoading(false);
       return;
@@ -84,11 +87,6 @@ export default function LoginForm() {
 
     // Let onAuthStateChange handle the redirect
     setLoading(false);
-    localStorage.setItem("supabase.auth.token", data.session?.access_token || "");
-    localStorage.setItem("supabase.auth.refresh_token", data.session?.refresh_token || "");
-    localStorage.setItem("supabase.auth.user", JSON.stringify(data.session?.user || null));
-    localStorage.setItem("supabase.auth.expires_at", data.session?.expires_at?.toString() || "");
-    localStorage.setItem("suprebase.auth.metadata", JSON.stringify(data.session?.user_metadata || {}));
 
   };
 

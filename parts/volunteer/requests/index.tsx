@@ -77,7 +77,7 @@ const VolunteerRequests: React.FC = () => {
       // Check project volunteer limit
       const { data: project, error: projectError } = await supabase
         .from("projects")
-        .select("volunteers_needed, volunteers_registered")
+        .select("volunteers_registered")
         .eq("id", projectId)
         .single();
 
@@ -145,7 +145,7 @@ const VolunteerRequests: React.FC = () => {
   };
 
   if (loading) return <div className="container mx-auto p-6">Loading...</div>;
-  if (error) return <div className="container mx-auto p-6 text-red-500 bg-red-100 rounded-md">{error}</div>;
+  if (error) return <div className="container mx-auto p-6 text-red-500 bg-red-100z rounded-md">{error}</div>;
 
   return (
     <div className="container mx-auto p-6">

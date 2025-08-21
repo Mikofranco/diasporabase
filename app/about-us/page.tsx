@@ -8,7 +8,7 @@ const AboutUs = () => {
     <div className="w-full bg-gray-50">
         <NavBar/>
       {/* Hero Section */}
-      <section
+      <div
         className="relative bg-cover bg-center h-[60vh] flex items-center justify-center"
         style={{ backgroundImage: `url('https://diasporabase.com/lifestyle-people-office.jpg')` }}
       >
@@ -35,10 +35,10 @@ const AboutUs = () => {
             </a>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Why DiasporaBase Section */}
-      <section className="py-16 px-4 md:px-8 max-w-7xl mx-auto">
+      <div className="py-16 px-4 md:px-8 max-w-7xl mx-auto">
         <h2 className="text-3xl md:text-4xl font-bold text-center text-teal-900 font-poppins mb-12">
           Why DiasporaBase?
         </h2>
@@ -84,10 +84,10 @@ const AboutUs = () => {
             </ul>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Mission Section */}
-      <section className="py-16 px-4 md:px-8 bg-gradient-to-r from-[#F8FAFD] to-[#EFF6FF]">
+      <div className="py-16 px-4 md:px-8 bg-gradient-to-r from-[#F8FAFD] to-[#EFF6FF]">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-teal-900 font-poppins mb-6">
             Our Mission
@@ -99,10 +99,10 @@ const AboutUs = () => {
             “Expertise knows no borders.”
           </p>
         </div>
-      </section>
+      </div>
 
       {/* How It Works Section */}
-      <section className="py-16 px-4 md:px-8 max-w-7xl mx-auto">
+      <div className="py-16 px-4 md:px-8 max-w-7xl mx-auto">
         <h2 className="text-3xl md:text-4xl font-bold text-center text-teal-900 font-poppins mb-12">
           How It Works
         </h2>
@@ -123,10 +123,10 @@ const AboutUs = () => {
             </div>
           ))}
         </div>
-      </section>
+      </div>
 
       {/* CTA Section */}
-      <section className="py-16 px-4 bg-[#E5F4F9] text-[#0F172A] text-center">
+      <div className="py-16 px-4 bg-[#E5F4F9] text-[#0F172A] text-center">
         <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-6">
           Join the Movement
         </h2>
@@ -147,7 +147,7 @@ const AboutUs = () => {
             Learn More
           </a>
         </div>
-      </section>
+      </div>
       <Footer/>
     </div>
   );

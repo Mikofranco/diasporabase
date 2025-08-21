@@ -1,3 +1,11 @@
+export interface Location {
+  country: string;
+  states: {
+    state: string;
+    lgas: string[];
+  }[];
+}
+
 export const africanLocations = [
   {
     country: "Nigeria",

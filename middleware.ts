@@ -29,7 +29,7 @@ export async function middleware(req: NextRequest) {
 
   // Define protected paths and their allowed roles
   const protectedPaths = {
-    "/dashboard/admin": ["admin"],
+    // "/dashboard/admin": ["admin"],
     // "/dashboard/volunteer": ["volunteer"],
     // "/dashboard/agency": ["agency"],
   };

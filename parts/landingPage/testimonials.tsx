@@ -30,7 +30,7 @@ const TestimonialsSection = () => {
   ];
 
   return (
-    <section className="py-20 bg-[#E5F4F9] dark:bg-gray-900 transition-colors duration-500 p-6">
+    <div className="py-20 bg-[#E5F4F9] dark:bg-gray-900 transition-colors duration-500 p-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px- flex flex-col items-center gap-10">
         <div className="text-center mb-14">
           <h2 className="text-[38px] font-bold text-[#1E293B] mb-4">What People Are Saying</h2>
@@ -62,7 +62,7 @@ const TestimonialsSection = () => {
           ))}
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 

@@ -40,7 +40,7 @@ import { createClient } from "@/lib/supabase/client"; //@ts-ignore
 import debounce from "lodash.debounce";
 import Image from "next/image";
 
-type UserRole = "admin" | "volunteer" | "agency" | null;
+type UserRole = "admin" | "volunteer" | "agency" | "super_admin" | null;
 
 interface Profile {
   role: UserRole;
@@ -54,6 +54,16 @@ const ROUTES = {
     volunteers: "/dashboard/admin/volunteers",
     agencies: "/dashboard/admin/agencies",
     settings: "/dashboard/admin/settings",
+    profile: "/dashboard/admin/profile", // Added for consistency
+  },
+  super_admin: {
+    dashboard: "/dashboard/admin",
+    projects: "/dashboard/admin/projects",
+    volunteers: "/dashboard/admin/volunteers",
+    agencies: "/dashboard/admin/agencies",
+    settings: "/dashboard/super_admin/settings", // Updated to a specific super admin settings path
+    profile: "/dashboard/super_admin/profile", // Added for super admin
+    invite_admin: "/dashboard/super_admin/invite_admin",
   },
   volunteer: {
     dashboard: "/dashboard/volunteer",
@@ -61,6 +71,7 @@ const ROUTES = {
     profile: "/dashboard/volunteer/profile",
     findOpportunity: "/dashboard/volunteer/find-opportunity",
     settings: "/dashboard/volunteer/settings",
+    requests: "/dashboard/volunteer/requests",
   },
   agency: {
     dashboard: "/dashboard/agency",
@@ -83,6 +94,14 @@ const MENU_ITEMS = {
     { path: ROUTES.admin.agencies, label: "Agencies", icon: Home },
     { path: ROUTES.admin.settings, label: "Settings", icon: Settings },
   ],
+  super_admin: [
+    { path: ROUTES.admin.dashboard, label: "Dashboard", icon: LayoutDashboard },
+    { path: ROUTES.admin.projects, label: "Projects", icon: Briefcase },
+    { path: ROUTES.admin.volunteers, label: "Volunteers", icon: Users },
+    { path: ROUTES.admin.agencies, label: "Agencies", icon: Home },
+    { path: ROUTES.admin.settings, label: "Settings", icon: Settings },
+    { path: ROUTES.super_admin.invite_admin, label: "Invite Admin", icon: Settings },
+  ],
   volunteer: [
     {
       path: ROUTES.volunteer.dashboard,
@@ -91,6 +110,7 @@ const MENU_ITEMS = {
     },
     { path: ROUTES.volunteer.projects, label: "My Projects", icon: Briefcase },
     { path: ROUTES.volunteer.profile, label: "Profile", icon: User },
+    { path: ROUTES.volunteer.requests, label: "requests", icon: User },
     {
       path: ROUTES.volunteer.findOpportunity,
       label: "Find Opportunity",
@@ -165,6 +185,7 @@ export function AppSidebar() {
     fetchUser();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
+      //@ts-ignore
       (_event, session) => {
         if (session) {
           fetchUser();
@@ -233,17 +254,19 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               {/* <DropdownMenuTrigger asChild> */}
-                <SidebarMenuButton>
-                  <Image
-                    src="/svg/logo.svg"
-                    alt="Diaspora Logo"
-                    width={32}
-                    height={32}
-                    className="rounded-full mr-2"
-                  />
-                  <span className="hidden md:inline text-[20px] font-bold">DiasporaBase</span>
-                  {/* <ChevronDown className="ml-auto" /> */}
-                </SidebarMenuButton>
+              <SidebarMenuButton>
+                <Image
+                  src="/svg/logo.svg"
+                  alt="Diaspora Logo"
+                  width={32}
+                  height={32}
+                  className="rounded-full mr-2"
+                />
+                <span className="hidden md:inline text-[20px] font-bold">
+                  DiasporaBase
+                </span>
+                {/* <ChevronDown className="ml-auto" /> */}
+              </SidebarMenuButton>
               {/* </DropdownMenuTrigger> */}
               <DropdownMenuContent className="w-[--radix-popper-anchor-width]">
                 <DropdownMenuItem>
@@ -299,7 +322,10 @@ export function AppSidebar() {
                 {userRole && (
                   <>
                     <DropdownMenuItem>
-                      <Link href={ROUTES[userRole].profile} className="w-full">
+                      <Link // @ts-ignore
+                        href={ROUTES[userRole].profile}
+                        className="w-full"
+                      >
                         <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>

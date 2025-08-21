@@ -1,14 +1,36 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Users, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 
 interface Project {
   id: string;
@@ -30,40 +52,6 @@ interface Volunteer {
   email: string;
 }
 
-const dummyProjects: Project[] = [
-  {
-    id: "dummy-1",
-    title: "Community Cleanup",
-    description: "Join us to clean up local parks and streets, making our community greener and safer.",
-    organization_name: "Green Earth Initiative",
-    location: "Local Park",
-    start_date: "2025-09-01",
-    end_date: "2025-09-02",
-    volunteers_needed: 20,
-    volunteers_registered: 5,
-    status: "active",
-    category: "Environmental",
-  },
-  {
-    id: "dummy-2",
-    title: "Food Drive",
-    description: "Help collect and distribute food to those in need in our community.",
-    organization_name: "Hope Food Bank",
-    location: "Community Center",
-    start_date: "2025-10-01",
-    end_date: "2025-10-03",
-    volunteers_needed: 15,
-    volunteers_registered: 8,
-    status: "active",
-    category: "Social Services",
-  },
-];
-
-const dummyVolunteers: Volunteer[] = [
-  { user_id: "dummy-1", user_name: "John Doe", email: "john.doe@example.com" },
-  { user_id: "dummy-2", user_name: "Jane Smith", email: "jane.smith@example.com" },
-];
-
 export default function VolunteerProjectsView() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -75,7 +63,7 @@ export default function VolunteerProjectsView() {
   const [submitting, setSubmitting] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
-
+  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
@@ -83,14 +71,16 @@ export default function VolunteerProjectsView() {
       setLoading(true);
 
       // Fetch authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
         await fetchProjects(user.id);
       } else {
-        // If no user, show dummy data
-        setProjects(dummyProjects);
-        setVolunteers(dummyVolunteers);
+        // No user authenticated, set empty projects and volunteers
+        setProjects([]);
+        setVolunteers([]);
         setLoading(false);
       }
     };
@@ -101,7 +91,8 @@ export default function VolunteerProjectsView() {
   const fetchProjects = async (userId: string) => {
     const { data, error } = await supabase
       .from("volunteer_projects")
-      .select(`
+      .select(
+        `
         id,
         title,
         description,
@@ -114,27 +105,25 @@ export default function VolunteerProjectsView() {
         status,
         category,
         project_volunteers!project_volunteers_project_id_fkey(user_id)
-      `)
+      `
+      )
       .eq("status", "active")
       .eq("project_volunteers.user_id", userId)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching projects:", error);
-      setProjects(dummyProjects);
-      setVolunteers(dummyVolunteers);
-    } else if (data && data.length > 0) {
-      setProjects(data);
+      setProjects([]);
+      setVolunteers([]);
     } else {
-      setProjects(dummyProjects);
-      setVolunteers(dummyVolunteers);
+      setProjects(data || []);
     }
     setLoading(false);
   };
 
   const fetchVolunteers = async (projectId: string) => {
     if (!userId) {
-      setVolunteers(dummyVolunteers);
+      setVolunteers([]);
       return;
     }
 
@@ -146,7 +135,7 @@ export default function VolunteerProjectsView() {
 
     if (error) {
       console.error("Error fetching volunteers:", error);
-      setVolunteers(dummyVolunteers);
+      setVolunteers([]);
     } else {
       setVolunteers(data || []);
     }
@@ -175,12 +164,14 @@ export default function VolunteerProjectsView() {
     }
 
     // Record the reason for leaving
-    const { error: reasonError } = await supabase.from("project_leave_reasons").insert({
-      project_id: selectedProject.id,
-      user_id: userId,
-      reason: leaveReason.trim(),
-      created_at: new Date().toISOString(),
-    });
+    const { error: reasonError } = await supabase
+      .from("project_leave_reasons")
+      .insert({
+        project_id: selectedProject.id,
+        user_id: userId,
+        reason: leaveReason.trim(),
+        created_at: new Date().toISOString(),
+      });
 
     if (reasonError) {
       console.error("Error submitting leave reason:", reasonError);
@@ -198,6 +189,10 @@ export default function VolunteerProjectsView() {
     }
 
     setSubmitting(false);
+  };
+
+  const handlRouteToViewProject = () => {
+    router.push("/dashboard/volunteer/find-opportunity");
   };
 
   const handleViewVolunteers = () => {
@@ -233,55 +228,75 @@ export default function VolunteerProjectsView() {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Volunteer Projects</h1>
-        <p className="text-muted-foreground">
-          View your assigned volunteer projects and manage your participation.
-        </p>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold mb-2">Volunteer Projects</h1>
+          <Button className="action-btn" onClick={handlRouteToViewProject}>
+            View Ongoing Projects
+          </Button>
+        </div>
       </div>
 
       {!selectedProject ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <Card key={project.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="text-lg">{project.title}</CardTitle>
-                <CardDescription>{project.organization_name}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{project.description}</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      {new Date(project.start_date).toLocaleDateString()} -{" "}
-                      {new Date(project.end_date).toLocaleDateString()}
-                    </span>
+        projects.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
+              <Card
+                key={project.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+              >
+                <CardHeader>
+                  <CardTitle className="text-lg">{project.title}</CardTitle>
+                  <CardDescription>{project.organization_name}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+                    {project.description}
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        {new Date(project.start_date).toLocaleDateString()} -{" "}
+                        {new Date(project.end_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span>
+                        {project.volunteers_registered}/
+                        {project.volunteers_needed} volunteers
+                      </span>
+                    </div>
+                    <Badge variant="secondary">{project.category}</Badge>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>
-                      {project.volunteers_registered}/{project.volunteers_needed} volunteers
-                    </span>
-                  </div>
-                  <Badge variant="secondary">{project.category}</Badge>
-                </div>
-                <Button
-                  className="w-full mt-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
-                  onClick={() => setSelectedProject(project)}
-                >
-                  View Details
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <Button
+                    className="w-full mt-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
+                    onClick={() => setSelectedProject(project)}
+                  >
+                    View Details
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground">
+            <p>
+              No volunteer projects found. Please join a project to get started.
+            </p>
+          </div>
+        )
       ) : (
         <div className="max-w-4xl mx-auto">
-          <Button variant="outline" className="mb-6 bg-transparent" onClick={() => {
-            setSelectedProject(null);
-            setShowVolunteers(false);
-            setShowLeaveForm(false);
-          }}>
+          <Button
+            variant="outline"
+            className="mb-6 bg-transparent"
+            onClick={() => {
+              setSelectedProject(null);
+              setShowVolunteers(false);
+              setShowLeaveForm(false);
+            }}
+          >
             ← Back to Projects
           </Button>
 
@@ -290,8 +305,12 @@ export default function VolunteerProjectsView() {
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-2xl">{selectedProject.title}</CardTitle>
-                  <CardDescription className="text-lg">{selectedProject.organization_name}</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {selectedProject.title}
+                  </CardTitle>
+                  <CardDescription className="text-lg">
+                    {selectedProject.organization_name}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p>{selectedProject.description}</p>
@@ -302,17 +321,25 @@ export default function VolunteerProjectsView() {
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           <span>
-                            {new Date(selectedProject.start_date).toLocaleDateString()} -{" "}
-                            {new Date(selectedProject.end_date).toLocaleDateString()}
+                            {new Date(
+                              selectedProject.start_date
+                            ).toLocaleDateString()}{" "}
+                            -{" "}
+                            {new Date(
+                              selectedProject.end_date
+                            ).toLocaleDateString()}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4" />
                           <span>
-                            {selectedProject.volunteers_registered}/{selectedProject.volunteers_needed} volunteers
+                            {selectedProject.volunteers_registered}/
+                            {selectedProject.volunteers_needed} volunteers
                           </span>
                         </div>
-                        <Badge variant="secondary">{selectedProject.category}</Badge>
+                        <Badge variant="secondary">
+                          {selectedProject.category}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -340,7 +367,9 @@ export default function VolunteerProjectsView() {
                 <Card className="mt-6">
                   <CardHeader>
                     <CardTitle>Other Volunteers</CardTitle>
-                    <CardDescription>Volunteers currently assigned to this project</CardDescription>
+                    <CardDescription>
+                      Volunteers currently assigned to this project
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Table>
@@ -360,7 +389,10 @@ export default function VolunteerProjectsView() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={2} className="text-center text-muted-foreground">
+                            <TableCell
+                              colSpan={2}
+                              className="text-center text-muted-foreground"
+                            >
                               No other volunteers found for this project.
                             </TableCell>
                           </TableRow>
@@ -399,18 +431,25 @@ export default function VolunteerProjectsView() {
                           className="w-full bg-gradient-to-r from-[#EF4444] to-[#B91C1C] hover:from-[#EF4444]/90 hover:to-[#B91C1C]/90"
                           disabled={submitting || !leaveReason.trim()}
                         >
-                          {submitting ? "Submitting..." : "Submit Leave Request"}
+                          {submitting
+                            ? "Submitting..."
+                            : "Submit Leave Request"}
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Confirm Leaving Project</DialogTitle>
                           <DialogDescription>
-                            Are you sure you want to leave <strong>{selectedProject.title}</strong>? This action cannot be undone.
+                            Are you sure you want to leave{" "}
+                            <strong>{selectedProject.title}</strong>? This
+                            action cannot be undone.
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
-                          <Button variant="outline" onClick={() => setOpenDialog(false)}>
+                          <Button
+                            variant="outline"
+                            onClick={() => setOpenDialog(false)}
+                          >
                             Cancel
                           </Button>
                           <Button

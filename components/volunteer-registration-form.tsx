@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 export default function VolunteerRegistrationForm() {
   const [formData, setFormData] = useState({
@@ -77,6 +78,7 @@ export default function VolunteerRegistrationForm() {
       localStorage.setItem("diaporabse-email", formData.email)
       
       setMessage({ text: "Registration successful! Please check your email to confirm your account.", isError: false })
+      toast.success("Registration successful! Please check your email to confirm your account.")
       setTimeout(() => {
         router.push("/volunteer-checkmail")
       }, 2000)
