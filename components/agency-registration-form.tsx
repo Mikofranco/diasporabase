@@ -127,7 +127,7 @@ export default function AgencyRegistrationForm() {
             <Input
               id="companyName"
               type="text"
-              placeholder="Helping Hands Foundation"
+              placeholder="Enter name of Organisation"
               value={formData.companyName}
               onChange={(e) => handleInputChange("companyName", e.target.value)}
               required
@@ -139,7 +139,7 @@ export default function AgencyRegistrationForm() {
             <Input
               id="email"
               type="email"
-              placeholder="contact@organization.org"
+              placeholder="Enter email"
               value={formData.email}
               onChange={(e) => handleInputChange("email", e.target.value)}
               required

@@ -1,4 +1,3 @@
-// app/dashboard/volunteer/requests/page.tsx
 "use client";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
@@ -15,6 +14,7 @@ interface Request {
   project_title: string;
   organization_name: string;
   status: string;
+  request_type: "volunteer" | "agency"; // Distinguish request source
 }
 
 const VolunteerRequests: React.FC = () => {
@@ -32,22 +32,45 @@ const VolunteerRequests: React.FC = () => {
         if (userIdError) throw new Error(userIdError);
         if (!userId) throw new Error("Please log in to view requests.");
 
-        const { data, error } = await supabase
+        // Fetch volunteer-initiated requests
+        const { data: volunteerData, error: volunteerError } = await supabase
           .from("volunteer_requests")
           .select("id, project_id, status, projects(title, organization_name)")
           .eq("volunteer_id", userId);
 
-        if (error) throw new Error("Error fetching requests: " + error.message);
+        if (volunteerError)
+          throw new Error("Error fetching volunteer requests: " + volunteerError.message);
 
-        setRequests(
-          data?.map((item: any) => ({
+        // Fetch agency-initiated requests
+        const { data: agencyData, error: agencyError } = await supabase
+          .from("agency_requests")
+          .select("id, project_id, status, projects(title, organization_name)")
+          .eq("volunteer_id", userId);
+
+        if (agencyError)
+          throw new Error("Error fetching agency requests: " + agencyError.message);
+
+        // Combine requests
+        const combinedRequests: Request[] = [
+          ...(volunteerData?.map((item: any) => ({
             id: item.id,
             project_id: item.project_id,
             project_title: item.projects.title,
             organization_name: item.projects.organization_name,
             status: item.status,
-          })) || []
-        );
+            request_type: "volunteer" as const,
+          })) || []),
+          ...(agencyData?.map((item: any) => ({
+            id: item.id,
+            project_id: item.project_id,
+            project_title: item.projects.title,
+            organization_name: item.projects.organization_name,
+            status: item.status,
+            request_type: "agency" as const,
+          })) || []),
+        ];
+
+        setRequests(combinedRequests);
       } catch (err: any) {
         setError(err.message);
         toast.error(err.message);
@@ -59,25 +82,31 @@ const VolunteerRequests: React.FC = () => {
     fetchRequests();
   }, []);
 
-  const handleAcceptRequest = async (requestId: string, projectId: string) => {
+  const handleAcceptRequest = async (requestId: string, projectId: string, requestType: "volunteer" | "agency") => {
     try {
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
       if (!userId) throw new Error("Please log in to accept requests.");
 
-      // Update request status to accepted
-      const { error: updateError } = await supabase
-        .from("volunteer_requests")
-        .update({ status: "accepted" })
-        .eq("id", requestId)
-        .eq("volunteer_id", userId);
+      // Check if volunteer is already assigned to the project
+      const { data: existingAssignment, error: assignmentError } = await supabase
+        .from("project_volunteers")
+        .select("project_id")
+        .eq("project_id", projectId)
+        .eq("volunteer_id", userId)
+        .single();
 
-      if (updateError) throw new Error("Error accepting request: " + updateError.message);
+      if (assignmentError && assignmentError.code !== "PGRST116") // PGRST116 = no rows found
+        throw new Error("Error checking assignment: " + assignmentError.message);
+      if (existingAssignment) {
+        toast.error("You are already assigned to this project.");
+        return;
+      }
 
       // Check project volunteer limit
       const { data: project, error: projectError } = await supabase
         .from("projects")
-        .select("volunteers_registered")
+        .select("volunteers_registered, volunteers_needed")
         .eq("id", projectId)
         .single();
 
@@ -86,6 +115,16 @@ const VolunteerRequests: React.FC = () => {
         toast.error("Volunteer limit reached for this project.");
         return;
       }
+
+      // Update request status to accepted
+      const table = requestType === "volunteer" ? "volunteer_requests" : "agency_requests";
+      const { error: updateError } = await supabase
+        .from(table)
+        .update({ status: "accepted" })
+        .eq("id", requestId)
+        .eq("volunteer_id", userId);
+
+      if (updateError) throw new Error(`Error accepting ${requestType} request: ${updateError.message}`);
 
       // Add to project_volunteers
       const { error: assignError } = await supabase.from("project_volunteers").insert([
@@ -118,19 +157,20 @@ const VolunteerRequests: React.FC = () => {
     }
   };
 
-  const handleRejectRequest = async (requestId: string) => {
+  const handleRejectRequest = async (requestId: string, requestType: "volunteer" | "agency") => {
     try {
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
       if (!userId) throw new Error("Please log in to reject requests.");
 
+      const table = requestType === "volunteer" ? "volunteer_requests" : "agency_requests";
       const { error } = await supabase
-        .from("volunteer_requests")
+        .from(table)
         .update({ status: "rejected" })
         .eq("id", requestId)
         .eq("volunteer_id", userId);
 
-      if (error) throw new Error("Error rejecting request: " + error.message);
+      if (error) throw new Error(`Error rejecting ${requestType} request: ${error.message}`);
 
       setRequests(
         requests.map((r) =>
@@ -145,7 +185,7 @@ const VolunteerRequests: React.FC = () => {
   };
 
   if (loading) return <div className="container mx-auto p-6">Loading...</div>;
-  if (error) return <div className="container mx-auto p-6 text-red-500 bg-red-100z rounded-md">{error}</div>;
+  if (error) return <div className="container mx-auto p-6 text-red-500 bg-red-100 rounded-md">{error}</div>;
 
   return (
     <div className="container mx-auto p-6">
@@ -155,12 +195,13 @@ const VolunteerRequests: React.FC = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {requests.map((request) => (
-            <Card key={request.id}>
+            <Card key={`${request.request_type}-${request.id}`}>
               <CardHeader>
                 <CardTitle>{request.project_title}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p><strong>Organization:</strong> {request.organization_name}</p>
+                <p><strong>Request Type:</strong> {request.request_type === "volunteer" ? "Volunteer-Initiated" : "Agency-Initiated"}</p>
                 <p>
                   <strong>Status:</strong>{" "}
                   <span
@@ -179,13 +220,13 @@ const VolunteerRequests: React.FC = () => {
                   <div className="mt-4 flex gap-2">
                     <Button
                       className="bg-green-600 hover:bg-green-700"
-                      onClick={() => handleAcceptRequest(request.id, request.project_id)}
+                      onClick={() => handleAcceptRequest(request.id, request.project_id, request.request_type)}
                     >
                       Accept
                     </Button>
                     <Button
                       variant="destructive"
-                      onClick={() => handleRejectRequest(request.id)}
+                      onClick={() => handleRejectRequest(request.id, request.request_type)}
                     >
                       Reject
                     </Button>

@@ -252,7 +252,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
             location: formData.location,
             start_date: formData.start_date,
             end_date: formData.end_date,
-            volunteers_needed: formData.volunteers_needed,
+            // volunteers_needed: formData.volunteers_needed,
             volunteers_registered: 0,
             status: "active",
             category: formData.category,

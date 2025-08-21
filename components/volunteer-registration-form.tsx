@@ -1,95 +1,107 @@
-"use client"
-import { cn } from "@/lib/utils"
-import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import Link from "next/link"
-import { Loader2 } from "lucide-react"
-import { toast } from "sonner"
+"use client";
+import { cn } from "@/lib/utils";
+import type React from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import Link from "next/link";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function VolunteerRegistrationForm() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
-    fullName: "",
+    firstName: "",
+    lastName: "",
     phone: "",
-  })
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null)
-  const router = useRouter()
-  const supabase = createClient()
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  const router = useRouter();
+  const supabase = createClient();
 
-  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  const isValidPassword = (password: string) => password.length >= 8
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidPassword = (password: string) => password.length >= 8;
 
   const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setLoading(true)
-    setMessage(null)
+    event.preventDefault();
+    setLoading(true);
+    setMessage(null);
 
     // Client-side validation
-    if (!formData.fullName) {
-      setMessage({ text: "Please enter your full name.", isError: true })
-      setLoading(false)
-      return
+    if (!formData.firstName) {
+      setMessage({ text: "Please enter your first name.", isError: true });
+      setLoading(false);
+      return;
+    }
+    if (!formData.lastName) {
+      setMessage({ text: "Please enter your last name.", isError: true });
+      setLoading(false);
+      return;
     }
     if (!isValidEmail(formData.email)) {
-      setMessage({ text: "Please enter a valid email address.", isError: true })
-      setLoading(false)
-      return
+      setMessage({ text: "Please enter a valid email address.", isError: true });
+      setLoading(false);
+      return;
     }
     if (!isValidPassword(formData.password)) {
-      setMessage({ text: "Password must be at least 8 characters long.", isError: true })
-      setLoading(false)
-      return
+      setMessage({ text: "Password must be at least 8 characters long.", isError: true });
+      setLoading(false);
+      return;
     }
     if (formData.password !== formData.confirmPassword) {
-      setMessage({ text: "Passwords do not match.", isError: true })
-      setLoading(false)
-      return
+      setMessage({ text: "Passwords do not match.", isError: true });
+      setLoading(false);
+      return;
     }
+
+    // Combine firstName and lastName for full_name
+    const fullName = `${formData.firstName} ${formData.lastName}`.trim();
 
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
       options: {
         data: {
-          full_name: formData.fullName,
+          full_name: fullName,
           role: "volunteer",
           phone: formData.phone,
         },
       },
-    })
+    });
 
     if (signUpError) {
-      setMessage({ text: signUpError.message, isError: true })
-      setLoading(false)
-      return
+      setMessage({ text: signUpError.message, isError: true });
+      setLoading(false);
+      return;
     }
 
     if (data?.user) {
-      // Store email in local storage with key 'diaporabse-emil'
-      localStorage.setItem("diaporabse-email", formData.email)
-      
-      setMessage({ text: "Registration successful! Please check your email to confirm your account.", isError: false })
-      toast.success("Registration successful! Please check your email to confirm your account.")
+      // Store email in local storage with key 'diaporabse-email'
+      localStorage.setItem("diaporabse-email", formData.email);
+
+      setMessage({
+        text: "Registration successful! Please check your email to confirm your account.",
+        isError: false,
+      });
+      toast.success("Registration successful! Please check your email to confirm your account.");
       setTimeout(() => {
-        router.push("/volunteer-checkmail")
-      }, 2000)
+        router.push("/volunteer-checkmail");
+      }, 2000);
     }
 
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   return (
     <Card className="w-full max-w-2xl">
@@ -99,19 +111,34 @@ export default function VolunteerRegistrationForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-4" aria-live="polite">
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="full-name">Full Name *</Label>
+              <Label htmlFor="first-name">First Name *</Label>
               <Input
-                id="full-name"
+                id="first-name"
                 type="text"
-                placeholder="John Doe"
-                value={formData.fullName}
-                onChange={(e) => handleInputChange("fullName", e.target.value)}
+                placeholder="John"
+                value={formData.firstName}
+                onChange={(e) => handleInputChange("firstName", e.target.value)}
                 required
                 aria-required="true"
               />
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="last-name">Last Name *</Label>
+              <Input
+                id="last-name"
+                type="text"
+                placeholder="Doe"
+                value={formData.lastName}
+                onChange={(e) => handleInputChange("lastName", e.target.value)}
+                required
+                aria-required="true"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email *</Label>
               <Input
@@ -197,5 +224,5 @@ export default function VolunteerRegistrationForm() {
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

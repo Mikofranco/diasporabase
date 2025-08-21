@@ -222,7 +222,7 @@ const EditProject: React.FC = () => {
           location: data.location,
           start_date: data.start_date,
           end_date: data.end_date,
-          volunteers_needed: data.volunteers_needed,
+          // volunteers_needed: data.volunteers_needed,
           status: data.status,
           category: data.category,
           required_skills: data.required_skills,

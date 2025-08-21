@@ -423,7 +423,7 @@ const ProjectDetails: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-gray-500" />
                 <p className="text-gray-700">
-                  <strong>Volunteers:</strong> {project.volunteers_registered}/{project.volunteers_needed}
+                  <strong>Volunteers:</strong> {project.volunteers_registered}
                 </p>
               </div>
             </div>

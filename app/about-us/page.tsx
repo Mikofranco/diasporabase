@@ -39,13 +39,13 @@ const AboutUs = () => {
 
       {/* Why DiasporaBase Section */}
       <div className="py-16 px-4 md:px-8 max-w-7xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-bold text-center text-teal-900 font-poppins mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold text-center text-[#1E293B] font-poppins mb-12">
           Why DiasporaBase?
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* For Professionals */}
           <div className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition duration-300">
-            <h3 className="text-2xl font-semibold text-teal-900 font-poppins mb-4">
+            <h3 className="text-2xl font-semibold text-[#1E293B] font-poppins mb-4">
               For Diaspora Professionals
             </h3>
             <ul className="space-y-3 text-gray-700 font-inter">
@@ -70,15 +70,15 @@ const AboutUs = () => {
             </h3>
             <ul className="space-y-3 text-gray-700 font-inter">
               <li className="flex items-start">
-                <span className="text-teal-500 mr-2">•</span>
+                <span className="text-[#0EA5E9] mr-2">•</span>
                 <span><strong>Access Global Talent:</strong> Connect with experts at no cost.</span>
               </li>
               <li className="flex items-start">
-                <span className="text-teal-500 mr-2">•</span>
+                <span className="text-[#0EA5E9] mr-2">•</span>
                 <span><strong>Solve Local Challenges:</strong> Address technical and resource gaps.</span>
               </li>
               <li className="flex items-start">
-                <span className="text-teal-500 mr-2">•</span>
+                <span className="text-[#0EA5E9] mr-2">•</span>
                 <span><strong>Transparent Collaboration:</strong> Track projects with accountability.</span>
               </li>
             </ul>
@@ -89,7 +89,7 @@ const AboutUs = () => {
       {/* Mission Section */}
       <div className="py-16 px-4 md:px-8 bg-gradient-to-r from-[#F8FAFD] to-[#EFF6FF]">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-teal-900 font-poppins mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold text-[#0F172A] font-poppins mb-6">
             Our Mission
           </h2>
           <p className="text-lg text-gray-700 font-inter mb-8">
@@ -117,8 +117,8 @@ const AboutUs = () => {
               key={item.step}
               className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition duration-300 text-center"
             >
-              <div className="text-teal-500 text-4xl font-bold font-poppins mb-4">{item.step}</div>
-              <h3 className="text-xl font-semibold text-teal-900 font-poppins mb-2">{item.title}</h3>
+              <div className="text-[#0EA5E9] text-4xl font-bold font-poppins mb-4">{item.step}</div>
+              <h3 className="text-xl font-semibold text-[#0F172A] font-poppins mb-2">{item.title}</h3>
               <p className="text-gray-600 font-inter">{item.desc}</p>
             </div>
           ))}

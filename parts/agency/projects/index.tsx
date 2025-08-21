@@ -142,7 +142,7 @@ const OrganizationsProjects: React.FC = () => {
                   className="w-full mt-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
                   onClick={() => handleProjectSelect(project)}
                 >
-                  View Details & Rate
+                  View Details
                 </Button>
               </CardContent>
             </Card>
