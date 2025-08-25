@@ -1,8 +1,7 @@
-// app/onboarding/agency/page.tsx
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { getUserId } from "@/lib/utils";
+import { getUserId, getUserLocation } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -14,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,7 +23,6 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { MapPin, User, Globe, Phone, Mail, Building } from "lucide-react";
-import Select from "react-select";
 import {
   Form,
   FormField,
@@ -35,7 +32,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  // Select,
+  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -49,7 +46,6 @@ import { CategoryCheckBox } from "@/components/ui/select-caegories";
 
 const supabase = createClient();
 
-// Predefined organization types
 const organizationTypes = [
   "NGO",
   "Government Agency",
@@ -59,7 +55,14 @@ const organizationTypes = [
   "Other",
 ];
 
-// Updated form validation schemas to align with Profile interface
+const focusAreaOptions = [
+  { id: "education", label: "Education" },
+  { id: "healthcare", label: "Healthcare" },
+  { id: "environment", label: "Environment" },
+  { id: "technology", label: "Technology" },
+  { id: "social_services", label: "Social Services" },
+];
+
 const generalSchema = z.object({
   organization_name: z.string().min(1, "Organization name is required.").trim(),
   full_name: z.string().min(1, "Display name is required.").trim(),
@@ -67,7 +70,9 @@ const generalSchema = z.object({
     .string()
     .max(500, "Description cannot exceed 500 characters.")
     .nullable(),
-  organization_type: z.string().min(1, "Organization type is required.").trim(),
+  organization_type: z.enum(organizationTypes as [string, ...string[]], {
+    errorMap: () => ({ message: "Please select a valid organization type." }),
+  }),
   tax_id: z.string().min(1, "Tax ID is required.").trim(),
 });
 
@@ -87,8 +92,8 @@ const operationalSchema = z.object({
   focus_areas: z
     .array(z.string())
     .min(1, "At least one focus area is required."),
-  environment_cities: z.array(z.string()).nullable(),
-  environment_states: z.array(z.string()).nullable(),
+  environment_cities: z.array(z.string()).optional().nullable(),
+  environment_states: z.array(z.string()).optional().nullable(),
 });
 
 const pictureSchema = z.object({
@@ -102,15 +107,6 @@ const formSchema = z.object({
   ...pictureSchema.shape,
 });
 
-const focusAreaOptions = [
-  { value: "education", label: "Education" },
-  { value: "healthcare", label: "Healthcare" },
-  { value: "environment", label: "Environment" },
-  { value: "technology", label: "Technology" },
-  { value: "social_services", label: "Social Services" },
-];
-
-// Profile interface (unchanged)
 interface Profile {
   id: string;
   full_name: string;
@@ -137,12 +133,9 @@ const AgencyOnboarding: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
-    null
-  );
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const router = useRouter();
 
-  // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -155,7 +148,7 @@ const AgencyOnboarding: React.FC = () => {
       contact_person_email: "",
       contact_person_phone: "",
       website: null,
-      organization_type: "",
+      organization_type: organizationTypes[0], // Default to first option
       tax_id: "",
       focus_areas: [],
       environment_cities: [],
@@ -165,7 +158,7 @@ const AgencyOnboarding: React.FC = () => {
   });
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndLocation = async () => {
       setLoading(true);
       setError(null);
 
@@ -218,7 +211,7 @@ const AgencyOnboarding: React.FC = () => {
           contact_person_email: profileData.contact_person_email || "",
           contact_person_phone: profileData.contact_person_phone || "",
           website: profileData.website || null,
-          organization_type: profileData.organization_type || "",
+          organization_type: profileData.organization_type || organizationTypes[0],
           tax_id: profileData.tax_id || "",
           focus_areas: profileData.focus_areas || [],
           environment_cities: profileData.environment_cities || [],
@@ -226,7 +219,34 @@ const AgencyOnboarding: React.FC = () => {
           profile_picture: profileData.profile_picture || null,
         });
 
-        // Check if profile is complete
+        // Fetch and set location
+        try {
+          const location = await getUserLocation();
+          if (location) {
+            const updatedCities = location.city ? [location.city] : [];
+            const updatedStates = location.region ? [location.region] : [];
+            form.setValue("environment_cities", updatedCities, { shouldValidate: false });
+            form.setValue("environment_states", updatedStates, { shouldValidate: false });
+            setProfile((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    environment_cities: updatedCities,
+                    environment_states: updatedStates,
+                  }
+                : profileData
+            );
+            console.log("Location fetched and set:", {
+              environment_cities: updatedCities,
+              environment_states: updatedStates,
+            });
+          } else {
+            console.warn("No location data returned from getUserLocation");
+          }
+        } catch (locationError) {
+          console.error("Error fetching user location:", locationError);
+        }
+
         if (
           profileData.organization_name &&
           profileData.focus_areas &&
@@ -243,7 +263,7 @@ const AgencyOnboarding: React.FC = () => {
       }
     };
 
-    fetchProfile();
+    fetchProfileAndLocation();
   }, [form, router]);
 
   const handleProfilePictureChange = (
@@ -264,6 +284,9 @@ const AgencyOnboarding: React.FC = () => {
         "organization_type",
         "tax_id",
       ]);
+      if (!isValid) {
+        console.log("Step 1 validation errors:", form.formState.errors);
+      }
     } else if (step === 2) {
       isValid = await form.trigger([
         "first_name",
@@ -273,12 +296,7 @@ const AgencyOnboarding: React.FC = () => {
         "website",
       ]);
     } else if (step === 3) {
-      isValid = await form.trigger([
-        "address",
-        "focus_areas",
-        "environment_cities",
-        "environment_states",
-      ]);
+      isValid = await form.trigger(["address", "focus_areas"]);
     } else if (step === 4) {
       isValid = await form.trigger(["profile_picture"]);
     }
@@ -321,7 +339,6 @@ const AgencyOnboarding: React.FC = () => {
         profilePictureUrl = publicUrlData.publicUrl;
       }
 
-      // Update profile in Supabase
       const { error: updateError } = await supabase
         .from("profiles")
         .update({
@@ -340,22 +357,20 @@ const AgencyOnboarding: React.FC = () => {
           environment_cities: data.environment_cities,
           environment_states: data.environment_states,
           profile_picture: profilePictureUrl,
-          // Do not manually set updated_at; let the database trigger handle it
         })
         .eq("id", userId)
         .eq("role", "agency");
 
       if (updateError)
         throw new Error("Error updating profile: " + updateError.message);
-
-      // Update profile state
+//@ts-ignore
       setProfile((prev) =>
         prev
           ? {
               ...prev,
               full_name: data.full_name,
-              email: prev.email, // Preserve email
-              role: prev.role, // Preserve role
+              email: prev.email,
+              role: prev.role,
               description: data.description,
               address: data.address,
               organization_name: data.organization_name,
@@ -380,6 +395,13 @@ const AgencyOnboarding: React.FC = () => {
       toast.error(err.message);
     }
   };
+
+  const locationDisplay = [
+    form.getValues("environment_states")?.[0],
+    form.getValues("environment_cities")?.[0],
+  ]
+    .filter(Boolean)
+    .join(", ") || "Unknown";
 
   if (loading) {
     return (
@@ -491,7 +513,35 @@ const AgencyOnboarding: React.FC = () => {
                         </FormItem>
                       )}
                     />
-                    <CategoryCheckBox/>\
+                    <FormField
+                      control={form.control}
+                      name="organization_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            Organization Type
+                          </FormLabel>
+                          <FormControl>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <SelectTrigger className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg">
+                                <SelectValue placeholder="Select organization type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {organizationTypes.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage className="text-red-500 text-sm" />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={form.control}
                       name="tax_id"
@@ -668,125 +718,36 @@ const AgencyOnboarding: React.FC = () => {
                         </FormItem>
                       )}
                     />
+                    <FormItem>
+                      <FormLabel className="text-gray-700 font-medium">
+                        Location{" "}
+                        <MapPin className="inline h-4 w-4 text-gray-500 ml-1" />
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          value={locationDisplay}
+                          disabled
+                          className="border-gray-300 bg-gray-100 rounded-lg"
+                          placeholder="Location not available"
+                        />
+                      </FormControl>
+                    </FormItem>
                     <FormField
                       control={form.control}
                       name="focus_areas"
-                      render={({ field }) => (
+                      render={() => (
                         <FormItem className="sm:col-span-2">
-                          <FormLabel className="text-gray-700 font-medium">
-                            Focus Areas
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              value={field.value?.join(", ") || ""}
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.value
-                                    .split(",")
-                                    .map((s) => s.trim())
-                                    .filter(Boolean)
-                                )
-                              }
-                              placeholder="e.g., education, health, environment"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="focus_areas"
-                      render={({ field }) => (
-                        <FormItem className="sm:col-span-2">
-                          <FormLabel className="text-gray-700 font-medium">
-                            Focus Areas{" "}
-                            <span className="text-gray-500 text-sm">
-                              (Select all that apply)
-                            </span>
-                          </FormLabel>
-                          <FormControl>
-                            <Select
-                              isMulti
-                              options={focusAreaOptions}
-                              value={focusAreaOptions.filter((option) =>
-                                field.value.includes(option.value)
-                              )}
-                              onChange={(selected) =>
-                                field.onChange(selected.map((opt) => opt.value))
-                              }
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg"
-                              placeholder="Select focus areas"
-                              styles={{
-                                control: (base) => ({
-                                  ...base,
-                                  borderColor: "#d1d5db",
-                                  "&:hover": { borderColor: "#9ca3af" },
-                                  boxShadow: "none",
-                                }),
-                                menu: (base) => ({
-                                  ...base,
-                                  zIndex: 9999,
-                                }),
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="environment_cities"
-                      render={({ field }) => (
-                        <FormItem className="sm:col-span-2">
-                          <FormLabel className="text-gray-700 font-medium">
-                            Operating Cities
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              value={field.value?.join(", ") || ""}
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.value
-                                    .split(",")
-                                    .map((s) => s.trim())
-                                    .filter(Boolean)
-                                )
-                              }
-                              placeholder="e.g., Lagos, Abuja"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="environment_states"
-                      render={({ field }) => (
-                        <FormItem className="sm:col-span-2">
-                          <FormLabel className="text-gray-700 font-medium">
-                            Operating States
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              value={field.value?.join(", ") || ""}
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.value
-                                    .split(",")
-                                    .map((s) => s.trim())
-                                    .filter(Boolean)
-                                )
-                              }
-                              placeholder="e.g., Lagos State, Ogun State"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
+                          <CategoryCheckBox
+                            control={form.control}
+                            name="focus_areas"
+                            items={focusAreaOptions}
+                            label="Focus Areas"
+                            description="Select the focus areas for your organization."
+                            onSelectionChange={(selected) => {
+                              console.log("Selected focus areas:", selected);
+                            }}
+                            showToast={false}
+                          />
                         </FormItem>
                       )}
                     />
