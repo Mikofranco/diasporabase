@@ -1,37 +1,44 @@
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+// middleware.js
+import { createClient } from '@supabase/supabase-js';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+  // Initialize Supabase client
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+    }
+  );
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  // Get the user from the session
+  const { data: { user }, error: sessionError } = await supabase.auth.getUser();
 
-  if (!session) {
-    console.log("No session found, user is not authenticated.");
-  } else {
-    console.log("Session found:", session);
+  if (sessionError) {
+    console.error('Middleware auth error:', sessionError.message);
   }
 
   const path = req.nextUrl.pathname;
 
   // Allow public routes
   if (
-    path === "/" ||
-    path === "/projects" ||
-    path.startsWith("/auth/callback")
+    path === '/' ||
+    path === '/projects' ||
+    path.startsWith('/auth/callback')
   ) {
-    return res;
+    return NextResponse.next();
   }
 
   // Define protected paths and their allowed roles
   const protectedPaths = {
-    // "/dashboard/admin": ["admin"],
-    // "/dashboard/volunteer": ["volunteer"],
-    // "/dashboard/agency": ["agency"],
+    '/dashboard/admin': ['admin', 'super_admin'], // Include super_admin if applicable
+    '/dashboard/volunteer': ['volunteer'],
+    '/dashboard/agency': ['agency'],
   };
 
   // Check if the path is a protected dashboard route
@@ -39,49 +46,46 @@ export async function middleware(req: NextRequest) {
     path.startsWith(prefix)
   );
 
-  // If no session, redirect to login for protected routes
-  if (!session && isProtectedDashboardRoute) {
+  // If no user, redirect to login for protected routes
+  if (!user && isProtectedDashboardRoute) {
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    redirectUrl.pathname = '/login';
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If no session, allow access to non-protected routes
-  if (!session) {
-    return res;
+  // If no user, allow access to non-protected routes
+  if (!user) {
+    return NextResponse.next();
   }
 
   // Fetch user role
   let userRole = null;
   try {
     const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", session.user.id)
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
       .single();
 
     if (profileError || !profileData?.role) {
-      console.error(
-        "Profile fetch error in middleware:",
-        profileError?.message
-      );
+      console.error('Profile fetch error in middleware:', profileError?.message);
       const redirectUrl = req.nextUrl.clone();
-      redirectUrl.pathname = "/login";
-      return NextResponse.redirect(redirectUrl); // Redirect to login if profile fetch fails
+      redirectUrl.pathname = '/login';
+      return NextResponse.redirect(redirectUrl);
     }
     userRole = profileData.role;
   } catch (error) {
-    console.error("Middleware profile fetch error:", error);
+    console.error('Middleware profile fetch error:', error);
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    redirectUrl.pathname = '/login';
     return NextResponse.redirect(redirectUrl);
   }
 
   // If logged in and accessing auth pages, redirect to their dashboard
   if (
-    path === "/login" ||
-    path === "/register-agency" ||
-    path === "/register-volunteer"
+    path === '/login' ||
+    path === '/register-agency' ||
+    path === '/register-volunteer'
   ) {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = `/dashboard/${userRole}`;
@@ -89,7 +93,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Handle generic /dashboard redirect
-  if (path === "/dashboard") {
+  if (path === '/dashboard') {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = `/dashboard/${userRole}`;
     return NextResponse.redirect(redirectUrl);
@@ -98,7 +102,6 @@ export async function middleware(req: NextRequest) {
   // Check role-based access for protected routes
   for (const prefix in protectedPaths) {
     if (path.startsWith(prefix)) {
-      //@ts-ignore
       if (!protectedPaths[prefix].includes(userRole)) {
         const redirectUrl = req.nextUrl.clone();
         redirectUrl.pathname = `/dashboard/${userRole}`;
@@ -107,11 +110,11 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return res;
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

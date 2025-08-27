@@ -26,15 +26,21 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { cn, getUserLocation } from "@/lib/utils";
+import { cn, getSkillsets, getUserLocation } from "@/lib/utils";
 import { toast } from "sonner";
-import { expertiseData } from "@/data/expertise";
+// import { expertiseData } from "@/data/expertise";
 import LocationSelector from "@/components/location-selector";
 
 interface SelectedLocation {
   country: string;
   states: string[];
   lgas: string[];
+}
+export interface Item {
+  id: string;
+  label: string;
+  children?: Item[];
+  subChildren?: Item[];
 }
 
 interface ProfileData {
@@ -78,23 +84,40 @@ export default function VolunteerProfilePage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userPhone, setUserPhone] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] =  useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<File | null>(null);
   const [selectedLocations, setSelectedLocations] = useState<
     SelectedLocation[]
   >([]);
+   const [expertiseData, setExpertiseData] = useState<Item[]>([]);
 
   const supabase = createClient();
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchSkillsets = async () => {
+      const skillsets = await getSkillsets();
+     console.log("Fetched skillsets:", skillsets);
+    setExpertiseData(skillsets);
+
+    };
+    fetchSkillsets();
+  }, []);
 
   useEffect(() => {
     const fetchProfileAndLocation = async () => {
       setLoading(true);
 
       // Fetch user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
       if (userError || !user) {
         console.error("Error fetching user:", userError);
-        setMessage({ text: "Please log in to view your profile.", isError: true });
+        setMessage({
+          text: "Please log in to view your profile.",
+          isError: true,
+        });
         setLoading(false);
         return;
       }
@@ -140,10 +163,14 @@ export default function VolunteerProfilePage() {
           const parsedAvailability = JSON.parse(data.availability);
           setAvailabilityType("specific-period");
           setAvailabilityStartDate(
-            parsedAvailability.startDate ? new Date(parsedAvailability.startDate) : undefined
+            parsedAvailability.startDate
+              ? new Date(parsedAvailability.startDate)
+              : undefined
           );
           setAvailabilityEndDate(
-            parsedAvailability.endDate ? new Date(parsedAvailability.endDate) : undefined
+            parsedAvailability.endDate
+              ? new Date(parsedAvailability.endDate)
+              : undefined
           );
         } catch (e) {
           console.error("Error parsing availability dates:", e);
@@ -163,14 +190,19 @@ export default function VolunteerProfilePage() {
             lgas: location.city ? [location.city] : [],
           };
           setSelectedLocations([selectedLocation]);
-          console.log("Location fetched and set for volunteer preferences:", selectedLocation);
+          console.log(
+            "Location fetched and set for volunteer preferences:",
+            selectedLocation
+          );
 
-          setProfile(prev => {
+          setProfile((prev) => {
             if (!prev) return profileData; // Use fetched profile data if prev is null
             return {
               ...prev,
-              residence_country: location.country || prev.residence_country || "Unknown",
-              residence_state: location.region || prev.residence_state || "Unknown",
+              residence_country:
+                location.country || prev.residence_country || "Unknown",
+              residence_state:
+                location.region || prev.residence_state || "Unknown",
             };
           });
           console.log("Profile updated with residence location:", {
@@ -195,7 +227,8 @@ export default function VolunteerProfilePage() {
     if (file) {
       setImageFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {//@ts-ignore
+      reader.onloadend = () => {
+        //@ts-ignore
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
@@ -345,7 +378,8 @@ export default function VolunteerProfilePage() {
         origin_country: profile.origin_country,
         origin_state: profile.origin_state,
         origin_lga: profile.origin_lga,
-        volunteer_countries: volunteerCountries.length > 0 ? volunteerCountries : null,
+        volunteer_countries:
+          volunteerCountries.length > 0 ? volunteerCountries : null,
         volunteer_states: volunteerStates.length > 0 ? volunteerStates : null,
         volunteer_lgas: volunteerLgas.length > 0 ? volunteerLgas : null,
         email: user.email,
@@ -399,9 +433,10 @@ export default function VolunteerProfilePage() {
   }
 
   // Combine residence_country and residence_state for display
-  const locationDisplay = [profile.residence_country, profile.residence_state]
-    .filter(Boolean)
-    .join(", ") || "Unknown";
+  const locationDisplay =
+    [profile.residence_country, profile.residence_state]
+      .filter(Boolean)
+      .join(", ") || "Unknown";
 
   return (
     <Card className="w-full max-w-3xl mx-auto">
@@ -419,7 +454,7 @@ export default function VolunteerProfilePage() {
             <div className="flex items-center gap-4">
               <div className="relative h-24 w-24 rounded-full overflow-hidden bg-muted">
                 {imagePreview ? (
-                  <img//@ts-ignore
+                  <img //@ts-ignore
                     src={imagePreview}
                     alt="Profile"
                     className="h-full w-full object-cover"
@@ -653,7 +688,8 @@ export default function VolunteerProfilePage() {
             <Label>Volunteer Location Preferences</Label>
             <LocationSelector onSelectionChange={setSelectedLocations} />
             <p className="text-sm text-muted-foreground">
-              Select your preferred countries, states, and LGAs for volunteering.
+              Select your preferred countries, states, and LGAs for
+              volunteering.
             </p>
           </div>
 

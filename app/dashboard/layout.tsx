@@ -23,9 +23,12 @@ interface Profile {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [unreadNotifications] = useState<number>(3);
+  const [unreadNotifications, setUnredNotifications] = useState<number>(3);
 
   useEffect(() => {
+
+    const fetchedUnreadNotifications = localStorage.getItem("unreadNotifications");
+    setUnredNotifications(fetchedUnreadNotifications ? parseInt(fetchedUnreadNotifications) : 0);
     const fetchProfile = async () => {
       setLoading(true);
       try {

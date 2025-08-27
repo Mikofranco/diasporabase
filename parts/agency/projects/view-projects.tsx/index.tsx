@@ -30,16 +30,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Users, Star } from "lucide-react";
 import ProjectRecommendation from "../project-recommendation";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
 
 const supabase = createClient();
 
@@ -67,21 +63,50 @@ interface Volunteer {
   skills: string[];
   availability: string;
   residence_country: string;
-  volunteer_state: string;
+  volunteer_states: string[];
   average_rating: number;
   request_status?: string;
+}
+
+interface Milestone {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  due_date: string;
+  status: string;
+  created_at: string;
+}
+
+interface Deliverable {
+  id: string;
+  project_id: string | null;
+  milestone_id: string | null;
+  title: string;
+  description: string | null;
+  due_date: string;
+  status: string;
+  created_at: string;
 }
 
 const ProjectDetails: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [assignedVolunteers, setAssignedVolunteers] = useState<Volunteer[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [rating, setRating] = useState<string>("");
   const [comment, setComment] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState<boolean>(false);
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState<boolean>(false);
+  const [isProjectEditModalOpen, setIsProjectEditModalOpen] = useState<boolean>(false);
+  const [isMilestoneEditModalOpen, setIsMilestoneEditModalOpen] = useState<boolean>(false);
+  const [isDeliverableEditModalOpen, setIsDeliverableEditModalOpen] = useState<boolean>(false);
+  const [projectEditForm, setProjectEditForm] = useState<Partial<Project>>({});
+  const [milestoneEditForms, setMilestoneEditForms] = useState<{ [key: string]: Partial<Milestone> }>({});
+  const [deliverableEditForms, setDeliverableEditForms] = useState<{ [key: string]: Partial<Deliverable> }>({});
   const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
   const router = useRouter();
   const { projectId } = useParams();
@@ -96,6 +121,7 @@ const ProjectDetails: React.FC = () => {
         if (userIdError) throw new Error(userIdError);
         if (!userId) throw new Error("Please log in to view project details.");
 
+        // Fetch project
         const { data: projectData, error: projectError } = await supabase
           .from("projects")
           .select("*, required_skills")
@@ -105,20 +131,58 @@ const ProjectDetails: React.FC = () => {
 
         if (projectError) throw new Error("Error fetching project: " + projectError.message);
         if (!projectData) throw new Error("Project not found or you don’t have access.");
-
         setProject(projectData);
 
-        const requiredSkills = projectData.required_skills?.length > 0 ? projectData.required_skills : ["general"];
-        const { data: volunteerData, error: volunteerError } = await supabase.rpc(
-          "select_volunteers_for_project",
-          {
-            p_project_id: projectId,
-            p_required_skills: requiredSkills,
-          }
+        // Fetch milestones
+        const { data: milestoneData, error: milestoneError } = await supabase
+          .from("milestones")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("due_date", { ascending: true });
+
+        if (milestoneError) throw new Error("Error fetching milestones: " + milestoneError.message);
+        setMilestones(milestoneData || []);
+        setMilestoneEditForms(
+          milestoneData?.reduce(
+            (acc, m) => ({
+              ...acc,
+              [m.id]: { title: m.title, description: m.description, due_date: m.due_date },
+            }),
+            {}
+          ) || {}
         );
 
-        if (volunteerError) throw new Error("Error fetching volunteers: " + volunteerError.message);
-        if (!volunteerData) throw new Error("No volunteers found.");
+        // Fetch deliverables
+        const { data: deliverableData, error: deliverableError } = await supabase
+          .from("deliverables")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("due_date", { ascending: true });
+
+        if (deliverableError) throw new Error("Error fetching deliverables: " + deliverableError.message);
+        setDeliverables(deliverableData || []);
+        setDeliverableEditForms(
+          deliverableData?.reduce(
+            (acc, d) => ({
+              ...acc,
+              [d.id]: { title: d.title, description: d.description, due_date: d.due_date, status: d.status },
+            }),
+            {}
+          ) || {}
+        );
+
+        // Fetch volunteers
+        const requiredSkills = projectData.required_skills?.length > 0 ? projectData.required_skills : ["general"];
+        // const { data: volunteerData, error: volunteerError } = await supabase.rpc(
+        //   "select_volunteers_for_project",
+        //   {
+        //     p_project_id: projectId,
+        //     p_required_skills: requiredSkills,
+        //   }
+        // );
+
+        // if (volunteerError) throw new Error("Error fetching volunteers: " + volunteerError.message);
+        // if (!volunteerData) throw new Error("No volunteers found.");
 
         const { data: requestData, error: requestError } = await supabase
           .from("volunteer_requests")
@@ -127,15 +191,16 @@ const ProjectDetails: React.FC = () => {
 
         if (requestError) throw new Error("Error fetching request statuses: " + requestError.message);
 
-        const volunteersWithStatus = volunteerData.map((v: Volunteer) => ({
-          ...v,
-          request_status: requestData.find((r: any) => r.volunteer_id === v.volunteer_id)?.status || null,
-        }));
-        setVolunteers(volunteersWithStatus);
+        // const volunteersWithStatus = volunteerData.map((v: Volunteer) => ({
+        //   ...v,
+        //   request_status: requestData.find((r: any) => r.volunteer_id === v.volunteer_id)?.status || null,
+        // }));
+        // setVolunteers(volunteersWithStatus);
 
+        // Fetch assigned volunteers
         const { data: assignedData, error: assignedError } = await supabase
           .from("project_volunteers")
-          .select("volunteer_id, profiles!inner(id, full_name, email, skills, availability, residence_country, volunteer_state)")
+          .select("volunteer_id, profiles!inner(id, full_name, email, skills, availability, residence_country, volunteer_states)")
           .eq("project_id", projectId);
 
         if (assignedError) throw new Error("Error fetching assigned volunteers: " + assignedError.message);
@@ -147,7 +212,7 @@ const ProjectDetails: React.FC = () => {
             skills: item.profiles.skills,
             availability: item.profiles.availability,
             residence_country: item.profiles.residence_country,
-            volunteer_state: item.profiles.volunteer_state,
+            volunteer_states: item.profiles.volunteer_states,
             average_rating: 0,
           })) || []
         );
@@ -285,6 +350,152 @@ const ProjectDetails: React.FC = () => {
     }
   };
 
+  const openProjectEditModal = () => {
+    if (project) {
+      setProjectEditForm({
+        title: project.title,
+        description: project.description,
+        location: project.location,
+        start_date: project.start_date,
+        end_date: project.end_date,
+        category: project.category,
+      });
+      setIsProjectEditModalOpen(true);
+    }
+  };
+
+  const handleProjectEditSubmit = async () => {
+    if (!project) return;
+
+    try {
+      const { data: userId, error: userIdError } = await getUserId();
+      if (userIdError) throw new Error(userIdError);
+      if (!userId) throw new Error("Please log in to update project details.");
+
+      const { error: projectError } = await supabase
+        .from("projects")
+        .update({
+          title: projectEditForm.title,
+          description: projectEditForm.description,
+          location: projectEditForm.location,
+          start_date: projectEditForm.start_date,
+          end_date: projectEditForm.end_date,
+          category: projectEditForm.category,
+        })
+        .eq("id", project.id)
+        .eq("organization_id", userId);
+
+      if (projectError) throw new Error("Error updating project: " + projectError.message);
+      setProject((prev) =>
+        prev
+          ? {
+              ...prev,
+              title: projectEditForm.title!,
+              description: projectEditForm.description!,
+              location: projectEditForm.location!,
+              start_date: projectEditForm.start_date!,
+              end_date: projectEditForm.end_date!,
+              category: projectEditForm.category!,
+            }
+          : null
+      );
+      toast.success("Project updated successfully!");
+      setIsProjectEditModalOpen(false);
+      setProjectEditForm({});
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleMilestoneEditChange = (id: string, field: keyof Milestone, value: string | null) => {
+    setMilestoneEditForms((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], [field]: value },
+    }));
+  };
+
+  const handleDeliverableEditChange = (id: string, field: keyof Deliverable, value: string | null) => {
+    setDeliverableEditForms((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], [field]: value },
+    }));
+  };
+
+  const handleMilestoneEditSubmit = async () => {
+    try {
+      const { data: userId, error: userIdError } = await getUserId();
+      if (userIdError) throw new Error(userIdError);
+      if (!userId) throw new Error("Please log in to update milestones.");
+
+      for (const [id, form] of Object.entries(milestoneEditForms)) {
+        if (!form.title || !form.due_date) {
+          toast.error(`Milestone ${form.title || "Untitled"} is missing required fields.`);
+          return;
+        }
+        const { error: milestoneError } = await supabase
+          .from("milestones")
+          .update({
+            title: form.title,
+            description: form.description,
+            due_date: form.due_date,
+          })
+          .eq("id", id)
+          .eq("project_id", projectId);
+
+        if (milestoneError) throw new Error(`Error updating milestone ${form.title}: ${milestoneError.message}`);
+      }
+
+      setMilestones((prev) =>
+        prev.map((m) => ({
+          ...m,
+          ...milestoneEditForms[m.id],
+        }))
+      );
+      toast.success("Milestones updated successfully!");
+      setIsMilestoneEditModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleDeliverableEditSubmit = async () => {
+    try {
+      const { data: userId, error: userIdError } = await getUserId();
+      if (userIdError) throw new Error(userIdError);
+      if (!userId) throw new Error("Please log in to update deliverables.");
+
+      for (const [id, form] of Object.entries(deliverableEditForms)) {
+        if (!form.title || !form.due_date || !form.status) {
+          toast.error(`Deliverable ${form.title || "Untitled"} is missing required fields.`);
+          return;
+        }
+        const { error: deliverableError } = await supabase
+          .from("deliverables")
+          .update({
+            title: form.title,
+            description: form.description,
+            due_date: form.due_date,
+            status: form.status,
+          })
+          .eq("id", id)
+          .eq("project_id", projectId);
+
+        if (deliverableError) throw new Error(`Error updating deliverable ${form.title}: ${deliverableError.message}`);
+      }
+
+      setDeliverables((prev) =>
+        prev.map((d) => ({
+          ...d,
+          ...deliverableEditForms[d.id],
+        }))
+      );
+      toast.success("Deliverables updated successfully!");
+      setIsDeliverableEditModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
@@ -340,7 +551,7 @@ const ProjectDetails: React.FC = () => {
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
-                  onClick={() => router.push(`/dashboard/agency/projects/${project.id}/edit`)}
+                  onClick={openProjectEditModal}
                   className="border-blue-500 text-blue-500 hover:bg-blue-50 transition-colors duration-200"
                 >
                   Edit Project
@@ -423,50 +634,80 @@ const ProjectDetails: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-gray-500" />
                 <p className="text-gray-700">
-                  <strong>Volunteers:</strong> {project.volunteers_registered}
+                  <strong>Volunteers:</strong> {project.volunteers_registered}/{project.volunteers_needed}
                 </p>
               </div>
             </div>
 
-            {/* <h3 className="text-lg font-semibold text-gray-900 mt-6">Rate This Project</h3>
-            <div className="space-y-4 max-w-md">
-              <div>
-                <Label htmlFor="rating" className="text-gray-700">
-                  Rating (1-5)
-                </Label>
-                <Select value={rating} onValueChange={setRating}>
-                  <SelectTrigger id="rating" className="border-gray-300">
-                    <SelectValue placeholder="Select a rating" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} <Star className="inline h-4 w-4 ml-1 text-yellow-400" />
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="comment" className="text-gray-700">
-                  Comment (optional)
-                </Label>
-                <Input
-                  id="comment"
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Add a comment"
-                  className="border-gray-300"
-                />
-              </div>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Milestones</h3>
               <Button
-                onClick={handleRatingSubmit}
-                disabled={!rating}
-                className="w-full bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsMilestoneEditModalOpen(true)}
+                className="text-blue-500 border-blue-500 hover:bg-blue-50"
               >
-                Submit Rating
+                Edit
               </Button>
-            </div> */}
+            </div>
+            {milestones.length === 0 ? (
+              <p className="text-gray-500">No milestones defined yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {milestones.map((milestone) => (
+                  <Card key={milestone.id} className="border-0 bg-gray-50">
+                    <CardContent className="pt-4">
+                      <p className="font-semibold text-gray-900">{milestone.title}</p>
+                      <p className="text-sm text-gray-600">{milestone.description || "No description"}</p>
+                      <p className="text-sm text-gray-600">
+                        <strong>Due Date:</strong> {new Date(milestone.due_date).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <strong>Status:</strong> {milestone.status}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Deliverables</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDeliverableEditModalOpen(true)}
+                className="text-blue-500 border-blue-500 hover:bg-blue-50"
+              >
+                Edit
+              </Button>
+            </div>
+            {deliverables.length === 0 ? (
+              <p className="text-gray-500">No deliverables defined yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {deliverables.map((deliverable) => (
+                  <Card key={deliverable.id} className="border-0 bg-gray-50">
+                    <CardContent className="pt-4">
+                      <p className="font-semibold text-gray-900">{deliverable.title}</p>
+                      <p className="text-sm text-gray-600">{deliverable.description || "No description"}</p>
+                      <p className="text-sm text-gray-600">
+                        <strong>Due Date:</strong> {new Date(deliverable.due_date).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <strong>Status:</strong> {deliverable.status}
+                      </p>
+                      {deliverable.milestone_id && (
+                        <p className="text-sm text-gray-600">
+                          <strong>Milestone:</strong>{" "}
+                          {milestones.find((m) => m.id === deliverable.milestone_id)?.title || "N/A"}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
             <h3 className="text-lg font-semibold text-gray-900 mt-6">Assigned Volunteers</h3>
             {assignedVolunteers.length === 0 ? (
@@ -493,7 +734,10 @@ const ProjectDetails: React.FC = () => {
                         <strong>Availability:</strong> {volunteer.availability}
                       </p>
                       <p className="text-sm">
-                        <strong>Location:</strong> {volunteer.volunteer_state}, {volunteer.residence_country}
+                        <strong>Location:</strong>{" "}
+                        {volunteer.volunteer_states?.length > 0
+                          ? volunteer.volunteer_states.join(", ")
+                          : "N/A"}, {volunteer.residence_country}
                       </p>
                       <p className="text-sm">
                         <strong>Rating:</strong>{" "}
@@ -508,7 +752,11 @@ const ProjectDetails: React.FC = () => {
               </div>
             )}
 
-            <ProjectRecommendation projectId={projectId as string} volunteersNeeded={project.volunteers_needed} volunteersRegistered={project.volunteers_registered}/>
+            <ProjectRecommendation
+              projectId={projectId as string}
+              volunteersNeeded={project.volunteers_needed}
+              volunteersRegistered={project.volunteers_registered}
+            />
 
             <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
               <DialogContent>
@@ -566,6 +814,248 @@ const ProjectDetails: React.FC = () => {
                     }
                   >
                     {project.status === "active" ? "Deactivate" : "Activate"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isProjectEditModalOpen} onOpenChange={setIsProjectEditModalOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Project Details</DialogTitle>
+                  <DialogDescription>
+                    Update project details below. Required fields are marked with *.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="project-title">Title *</Label>
+                    <Input
+                      id="project-title"
+                      value={projectEditForm.title || ""}
+                      onChange={(e) => setProjectEditForm({ ...projectEditForm, title: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="project-description">Description *</Label>
+                    <Textarea
+                      id="project-description"
+                      value={projectEditForm.description || ""}
+                      onChange={(e) => setProjectEditForm({ ...projectEditForm, description: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="project-location">Location *</Label>
+                    <Input
+                      id="project-location"
+                      value={projectEditForm.location || ""}
+                      onChange={(e) => setProjectEditForm({ ...projectEditForm, location: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="project-start-date">Start Date *</Label>
+                    <Input
+                      id="project-start-date"
+                      type="date"
+                      value={projectEditForm.start_date || ""}
+                      onChange={(e) => setProjectEditForm({ ...projectEditForm, start_date: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="project-end-date">End Date *</Label>
+                    <Input
+                      id="project-end-date"
+                      type="date"
+                      value={projectEditForm.end_date || ""}
+                      onChange={(e) => setProjectEditForm({ ...projectEditForm, end_date: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="project-category">Category *</Label>
+                    <Input
+                      id="project-category"
+                      value={projectEditForm.category || ""}
+                      onChange={(e) => setProjectEditForm({ ...projectEditForm, category: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsProjectEditModalOpen(false);
+                      setProjectEditForm({});
+                    }}
+                    className="hover:bg-gray-100"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleProjectEditSubmit}
+                    disabled={
+                      !projectEditForm.title ||
+                      !projectEditForm.description ||
+                      !projectEditForm.location ||
+                      !projectEditForm.start_date ||
+                      !projectEditForm.end_date ||
+                      !projectEditForm.category
+                    }
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isMilestoneEditModalOpen} onOpenChange={setIsMilestoneEditModalOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Milestones</DialogTitle>
+                  <DialogDescription>
+                    Update milestone details below. Required fields are marked with *.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {milestones.map((milestone) => (
+                    <Card key={milestone.id} className="border-0 bg-gray-50">
+                      <CardContent className="pt-4 space-y-4">
+                        <div>
+                          <Label htmlFor={`milestone-title-${milestone.id}`}>Title *</Label>
+                          <Input
+                            id={`milestone-title-${milestone.id}`}
+                            value={milestoneEditForms[milestone.id]?.title || ""}
+                            onChange={(e) => handleMilestoneEditChange(milestone.id, "title", e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`milestone-description-${milestone.id}`}>Description</Label>
+                          <Textarea
+                            id={`milestone-description-${milestone.id}`}
+                            value={milestoneEditForms[milestone.id]?.description || ""}
+                            onChange={(e) => handleMilestoneEditChange(milestone.id, "description", e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`milestone-due-date-${milestone.id}`}>Due Date *</Label>
+                          <Input
+                            id={`milestone-due-date-${milestone.id}`}
+                            type="date"
+                            value={milestoneEditForms[milestone.id]?.due_date || ""}
+                            onChange={(e) => handleMilestoneEditChange(milestone.id, "due_date", e.target.value)}
+                            required
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsMilestoneEditModalOpen(false)}
+                    className="hover:bg-gray-100"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleMilestoneEditSubmit}
+                    disabled={milestones.some((m) => !milestoneEditForms[m.id]?.title || !milestoneEditForms[m.id]?.due_date)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isDeliverableEditModalOpen} onOpenChange={setIsDeliverableEditModalOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Deliverables</DialogTitle>
+                  <DialogDescription>
+                    Update deliverable details below. Required fields are marked with *.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {deliverables.map((deliverable) => (
+                    <Card key={deliverable.id} className="border-0 bg-gray-50">
+                      <CardContent className="pt-4 space-y-4">
+                        <div>
+                          <Label htmlFor={`deliverable-title-${deliverable.id}`}>Title *</Label>
+                          <Input
+                            id={`deliverable-title-${deliverable.id}`}
+                            value={deliverableEditForms[deliverable.id]?.title || ""}
+                            onChange={(e) => handleDeliverableEditChange(deliverable.id, "title", e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`deliverable-description-${deliverable.id}`}>Description</Label>
+                          <Textarea
+                            id={`deliverable-description-${deliverable.id}`}
+                            value={deliverableEditForms[deliverable.id]?.description || ""}
+                            onChange={(e) => handleDeliverableEditChange(deliverable.id, "description", e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`deliverable-due-date-${deliverable.id}`}>Due Date *</Label>
+                          <Input
+                            id={`deliverable-due-date-${deliverable.id}`}
+                            type="date"
+                            value={deliverableEditForms[deliverable.id]?.due_date || ""}
+                            onChange={(e) => handleDeliverableEditChange(deliverable.id, "due_date", e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`deliverable-status-${deliverable.id}`}>Status *</Label>
+                          <Select
+                            value={deliverableEditForms[deliverable.id]?.status || ""}
+                            onValueChange={(value) => handleDeliverableEditChange(deliverable.id, "status", value)}
+                          >
+                            <SelectTrigger id={`deliverable-status-${deliverable.id}`}>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {["Done", "Pending", "In Progress", "Cancelled"].map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDeliverableEditModalOpen(false)}
+                    className="hover:bg-gray-100"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleDeliverableEditSubmit}
+                    disabled={deliverables.some(
+                      (d) =>
+                        !deliverableEditForms[d.id]?.title ||
+                        !deliverableEditForms[d.id]?.due_date ||
+                        !deliverableEditForms[d.id]?.status
+                    )}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Save Changes
                   </Button>
                 </DialogFooter>
               </DialogContent>

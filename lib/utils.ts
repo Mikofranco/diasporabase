@@ -1,6 +1,12 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { supabase } from "./supabase/client";
+import { createClient } from "./supabase/client";
+import { toast } from "sonner";
+// import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Database } from "./database/types";
+
+const supabase = createClient();
+
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -116,4 +122,140 @@ export async function handleEmailConfirmationRedirect() {
     window.location.href = "/login";
   }
 }
-// handleEmailConfirmationRedirect();
+
+
+interface Item {
+  id: string;
+  label: string;
+  children?: Item[];
+  subChildren?: Item[];
+}
+
+interface Skillset {
+  id: string;
+  label: string;
+  parent_id: string | null;
+}
+
+export async function getSkillsets(): Promise<Item[]> {
+  try {
+    const { data, error } = await supabase
+      .from("skillsets")
+      .select("id, label, parent_id")
+      .order("id"); // Optional: Ensures consistent ordering
+
+    if (error) {
+      throw new Error(`Error fetching skillsets: ${error.message}`);
+    }
+
+    // Transform flat skillsets into hierarchical structure
+    const topLevel = data.filter((s: Skillset) => s.parent_id === null);
+    const transformedItems: Item[] = topLevel.map((top: Skillset) => {
+      const children = data
+        .filter((s: Skillset) => s.parent_id === top.id)
+        .map((child: Skillset) => ({
+          id: child.id,
+          label: child.label,
+          subChildren: data
+            .filter((s: Skillset) => s.parent_id === child.id)
+            .map((subChild: Skillset) => ({
+              id: subChild.id,
+              label: subChild.label,
+            })),
+        }));
+      return {
+        id: top.id,
+        label: top.label,
+        children,
+      };
+    });
+
+    return transformedItems;
+  } catch (error: any) {
+    toast.error(error.message);
+    return [];
+  }
+}
+
+
+
+
+// export type Profile = Database['public']['Tables']['profiles']['Row'];
+
+// export const fetchProfile = async (): Promise<{
+//   userId: string | null;
+//   profile: Profile | null;
+//   error: string | null;
+// }> => {
+//   const supabase = createClientComponentClient<Database>();
+
+//   try {
+//     const { data: { user }, error: userError } = await supabase.auth.getUser();
+//     if (userError || !user) {
+//       const errorMsg = 'Please log in to view the dashboard.';
+//       console.error('fetchProfile: Error fetching user:', userError?.message);
+//       toast.error(errorMsg);
+//       return { userId: null, profile: null, error: errorMsg };
+//     }
+
+//     const { data: profileData, error: profileError } = await supabase
+//       .from('profiles')
+//       .select(`
+//         id,
+//         full_name,
+//         email,
+//         role,
+//         phone,
+//         date_of_birth,
+//         address,
+//         skills,
+//         availability,
+//         experience,
+//         residence_country,
+//         residence_state,
+//         origin_country,
+//         origin_state,
+//         origin_lga,
+//         organization_name,
+//         contact_person_first_name,
+//         contact_person_last_name,
+//         contact_person_email,
+//         contact_person_phone,
+//         website,
+//         organization_type,
+//         description,
+//         tax_id,
+//         focus_areas,
+//         environment_cities,
+//         environment_states,
+//         volunteer_countries,
+//         volunteer_states,
+//         volunteer_lgas,
+//         receives_updates,
+//         is_active,
+//         profile_picture,
+//         updated_at,
+//         notification_preferences,
+//         deleted_at
+//       `)
+//       .eq('id', user.id)
+//       .single();
+
+//     if (profileError || !profileData) {
+//       const errorMsg = 'Profile not found.';
+//       console.error('fetchProfile: Error fetching profile:', profileError?.message);
+//       toast.error(errorMsg);
+//       return { userId: user.id, profile: null, error: errorMsg };
+//     }
+
+//     return {
+//       userId: user.id,
+//       profile: profileData as Profile,
+//       error: null,
+//     };
+//   } catch (err: any) {
+//     console.error('fetchProfile: Unexpected error:', err.message);
+//     toast.error(err.message);
+//     return { userId: null, profile: null, error: err.message };
+//   }
+// };

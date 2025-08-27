@@ -13,6 +13,7 @@ import { Loader2, User, Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import SkillsetManagementPage from './skillSetManagent';
 
 interface Profile {
   id: string;
@@ -346,6 +347,7 @@ const AdminSettings: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      <SkillsetManagementPage />
     </div>
   );
 };
