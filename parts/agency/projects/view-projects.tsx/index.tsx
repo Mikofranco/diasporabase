@@ -143,8 +143,8 @@ const ProjectDetails: React.FC = () => {
         if (milestoneError) throw new Error("Error fetching milestones: " + milestoneError.message);
         setMilestones(milestoneData || []);
         setMilestoneEditForms(
-          milestoneData?.reduce(
-            (acc, m) => ({
+          milestoneData?.reduce(//ts-ignore
+            (acc :any, m :any) => ({
               ...acc,
               [m.id]: { title: m.title, description: m.description, due_date: m.due_date },
             }),
@@ -162,7 +162,7 @@ const ProjectDetails: React.FC = () => {
         if (deliverableError) throw new Error("Error fetching deliverables: " + deliverableError.message);
         setDeliverables(deliverableData || []);
         setDeliverableEditForms(
-          deliverableData?.reduce(
+          deliverableData?.reduce(//@ts-ignore
             (acc, d) => ({
               ...acc,
               [d.id]: { title: d.title, description: d.description, due_date: d.due_date, status: d.status },

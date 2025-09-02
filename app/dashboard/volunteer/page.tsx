@@ -1,9 +1,9 @@
-import Volunteerdashboard from "@/parts/landingPage/volunteer";
+import VolunteerDashBoard from "@/parts/volunteer/dashboard";
 
 export default function VolunteerDashboardPage() {
   return (
    <div>
-      <Volunteerdashboard/>
+     <VolunteerDashBoard/>
    </div>
 
 

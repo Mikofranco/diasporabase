@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserId } from '@/lib/utils';
 import { supabase } from '@/lib/supabase/client';
+import { number } from 'framer-motion';
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState([]);
@@ -62,10 +63,10 @@ export default function Notifications() {
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },//@ts-ignore
-        (payload) => {
+        (payload) => {//@ts-ignore
           setNotifications((prev) => [payload.new, ...prev]);
           setUnreadCount((prev) => {
-            const newCount = prev + 1;
+            const newCount = prev + 1;//@ts-ignore
             localStorage.setItem('unreadNotifications', newCount);
             return newCount;
           });
@@ -76,7 +77,7 @@ export default function Notifications() {
     return () => supabase.removeChannel(subscription);
   }, [userId]);
 
-  // Mark notification as read
+  //@ts-ignore
   const markAsRead = async (notificationId) => {
     const { error } = await supabase
       .from('notifications')
@@ -88,7 +89,7 @@ export default function Notifications() {
       setError(error.message);
       return;
     }
-
+    //@ts-ignore
     setNotifications((prev) =>
       prev.map((n) =>
         n.id === notificationId ? { ...n, is_read: true } : n

@@ -180,7 +180,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
           .single();
 
         if (error) throw new Error("Error fetching profile: " + error.message);
-
         setOrganizationId(data.id);
         setOrganizationName(data.organization_name || "Unknown Organization");
       } catch (err: any) {
@@ -609,9 +608,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       disabled={loading}
                       className="mt-2 h-12 text-base"
                     />
-                    {errors.milestones?.[index]?.title && (
+                    {errors//@ts-ignore
+                    .milestones?.[index]?.title && (
                       <p className="text-red-500 text-sm mt-1">
-                        {errors.milestones[index].title}
+                        {errors//@ts-ignore
+                        .milestones[index].title}
                       </p>
                     )}
                   </div>
@@ -628,9 +629,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       disabled={loading}
                       className="mt-2 h-32 text-base"
                     />
-                    {errors.milestones?.[index]?.description && (
+                    {errors//@ts-ignore
+                    .milestones?.[index]?.description && (
                       <p className="text-red-500 text-sm mt-1">
-                        {errors.milestones[index].description}
+                        {errors//@ts-ignore
+                        .milestones[index].description}
                       </p>
                     )}
                   </div>
@@ -647,9 +650,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       disabled={loading}
                       className="mt-2 h-12 text-base"
                     />
-                    {errors.milestones?.[index]?.due_date && (
+                    {errors//@ts-ignore
+                    .milestones?.[index]?.due_date && (
                       <p className="text-red-500 text-sm mt-1">
-                        {errors.milestones[index].due_date}
+                        {errors//@ts-ignore
+                        .milestones[index].due_date}
                       </p>
                     )}
                   </div>
@@ -678,9 +683,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                         <SelectItem value="Cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors.milestones?.[index]?.status && (
+                    {errors//@ts-ignore
+                    .milestones?.[index]?.status && (
                       <p className="text-red-500 text-sm mt-1">
-                        {errors.milestones[index].status}
+                        {errors//@ts-ignore
+                        .milestones[index].status}
                       </p>
                     )}
                   </div>
@@ -730,9 +737,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       disabled={loading}
                       className="mt-2 h-12 text-base"
                     />
-                    {errors.deliverables?.[index]?.title && (
+                    {errors//@ts-ignore
+                    .deliverables?.[index]?.title && (
                       <p className="text-red-500 text-sm mt-1">
-                        {errors.deliverables[index].title}
+                        {errors//@ts-ignore
+                        .deliverables[index].title}
                       </p>
                     )}
                   </div>
@@ -749,9 +758,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       disabled={loading}
                       className="mt-2 h-32 text-base"
                     />
-                    {errors.deliverables?.[index]?.description && (
+                    {errors//@ts-ignore
+                    .deliverables?.[index]?.description && (
                       <p className="text-red-500 text-sm mt-1">
-                        {errors.deliverables[index].description}
+                        {errors//@ts-ignore
+                        .deliverables[index].description}
                       </p>
                     )}
                   </div>
@@ -768,9 +779,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       disabled={loading}
                       className="mt-2 h-12 text-base"
                     />
-                    {errors.deliverables?.[index]?.due_date && (
+                    {errors//@ts-ignore
+                    .deliverables?.[index]?.due_date && (
                       <p className="text-red-500 text-sm mt-1">
-                        {errors.deliverables[index].due_date}
+                        {errors//@ts-ignore
+                        .deliverables[index].due_date}
                       </p>
                     )}
                   </div>
@@ -799,9 +812,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                         <SelectItem value="Cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors.deliverables?.[index]?.status && (
+                    {errors//@ts-ignore
+                    .deliverables?.[index]?.status && (
                       <p className="text-red-500 text-sm mt-1">
-                        {errors.deliverables[index].status}
+                        {errors//@ts-ignore
+                        .deliverables[index].status}
                       </p>
                     )}
                   </div>
@@ -832,9 +847,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                         ))}
                       </SelectContent>
                     </Select>
-                    {errors.deliverables?.[index]?.milestone_id && (
+                    {errors//@ts-ignore
+                    .deliverables?.[index]?.milestone_id && (
                       <p className="text-red-500 text-sm mt-1">
-                        {errors.deliverables[index].milestone_id}
+                        {errors//@ts-ignore
+                        .deliverables[index].milestone_id}
                       </p>
                     )}
                   </div>

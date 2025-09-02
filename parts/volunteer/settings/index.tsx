@@ -297,7 +297,7 @@ const VolunteerSettings: React.FC = () => {
               />
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg py-6 rounded-lg transition-colors duration-200"
+                className="w-full action-btn text-lg py-6 rounded-lg transition-colors duration-200"
               >
                 Save Profile
               </Button>
@@ -372,7 +372,7 @@ const VolunteerSettings: React.FC = () => {
               />
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg py-6 rounded-lg transition-colors duration-200"
+                className="w-full action-btn text-lg py-6 rounded-lg transition-colors duration-200"
               >
                 Change Password
               </Button>
@@ -394,7 +394,7 @@ const VolunteerSettings: React.FC = () => {
             <Switch
               checked={profile?.notification_preferences.email_notifications}
               onCheckedChange={handleNotificationToggle}
-              className="data-[state=checked]:bg-blue-600"
+              className="data-[state=checked]:bg-[#0EA5E9]"
               aria-label="Toggle email notifications"
             />
           </div>

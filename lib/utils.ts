@@ -178,6 +178,29 @@ export async function getSkillsets(): Promise<Item[]> {
 }
 
 
+export async function getUnreadNotificationCount(): Promise<{
+  data: number | null;
+  error: string | null;
+}> {
+  try {
+    const { data: userId, error: userIdError } = await getUserId();
+    if (userIdError) return { data: null, error: userIdError };
+    if (!userId) return { data: null, error: "Please log in to check notifications." };
+
+    const { count, error } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("is_read", false);
+
+    if (error) return { data: null, error: "Error counting notifications: " + error.message };
+
+    return { data: count, error: null };
+  } catch (err: any) {
+    return { data: null, error: err.message };
+  }
+}
+
 
 
 // export type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -259,3 +282,37 @@ export async function getSkillsets(): Promise<Item[]> {
 //     return { userId: null, profile: null, error: err.message };
 //   }
 // };
+
+
+// lib/checkAgencyStatus.ts
+interface Volunteer {
+  id: string;
+  role: string;
+  is_active?: boolean;
+  [key: string]: any;
+}
+
+export function checkAgencyStatus(volunteer: Volunteer): {
+  status: 'success' | 'error';
+  message: string;
+  isAgencyActive?: boolean;
+} {
+  try {
+    if (!volunteer || typeof volunteer !== 'object') {
+      return { status: 'error', message: 'Invalid volunteer data provided' };
+    }
+    if (volunteer.role.toLowerCase() !== 'agency') {
+      return { status: 'error', message: 'User is not an agency' };
+    }
+    if (typeof volunteer.is_active !== 'boolean') {
+      return { status: 'error', message: 'Agency active status is not defined or invalid' };
+    }
+    return {
+      status: 'success',
+      message: `Agency is ${volunteer.is_active ? 'active' : 'inactive'}`,
+      isAgencyActive: volunteer.is_active,
+    };
+  } catch (error: any) {
+    return { status: 'error', message: `Error checking agency status: ${error.message}` };
+  }
+}

@@ -248,7 +248,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar>
+    <Sidebar >
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

@@ -1,23 +1,22 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Poppins } from "next/font/google"
-import "./globals.css"
-import { Toaster } from "sonner"
-import LoadingBar from "@/components/loading-bar"
+// app/layout.tsx
+import type { Metadata } from 'next';
+import { Poppins } from 'next/font/google';
+import './globals.css';
+import { Toaster } from 'sonner';
+import LoadingBar from '@/components/loading-bar';
 
 const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"], 
-})
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+});
 
 export const metadata: Metadata = {
-  title: "DiaporaBase",
-  description: "Connect volunteers with opportunities and manage agencies and projects.",
-    generator: 'Next.js',
+  title: 'DiasporaBase',
+  description: 'Connect volunteers with opportunities and manage agencies and projects.',
+  generator: 'Next.js',
   applicationName: 'DiasporaBase',
   keywords: ['volunteer', 'community', 'non-profit', 'agency management', 'project management', 'volunteer opportunities'],
-  authors: [{ name: 'DiasporaBase Team',
-    url: 'https://diasporabase.com' }],
+  authors: [{ name: 'DiasporaBase Team', url: 'https://diasporabase.com' }],
   creator: 'DiasporaBase Team',
   publisher: 'DiasporaBase',
   openGraph: {
@@ -27,7 +26,7 @@ export const metadata: Metadata = {
     siteName: 'DiasporaBase',
     images: [
       {
-        url: 'https://diasporabase.org/og-image.png',
+        url: 'https://diasporabase.com/og-image.png', // Ensure this matches your production domain
         width: 1200,
         height: 630,
         alt: 'DiasporaBase Open Graph Image',
@@ -36,14 +35,22 @@ export const metadata: Metadata = {
     locale: 'en_US',
     type: 'website',
   },
-}
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DiasporaBase',
+    description: 'Connect volunteers with opportunities and manage agencies and projects.',
+    images: ['https://diasporabase.com/og-image.png'],
+  },
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <LoadingBar/>
-      <body className={poppins.className}>{children}</body>
-      <Toaster richColors />
+      <body className={poppins.className}>
+        <LoadingBar />
+        {children}
+        <Toaster richColors />
+      </body>
     </html>
-  )
+  );
 }

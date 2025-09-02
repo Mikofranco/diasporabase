@@ -42,6 +42,7 @@ export default function LoginForm() {
             toast.success("Logged in successfully!")
             // setMessage({ text: "Logged in successfully!", isError: false });
             console.log("Redirecting to:", `/dashboard/${profile.role}`);
+            localStorage.setItem("diaspobase_role", profile.role);
             router.replace(`/dashboard/${profile.role}`);
             
           });

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { MapPin, Briefcase, Calendar, Users } from "lucide-react";
 import Link from "next/link";
@@ -35,14 +36,16 @@ interface Project {
 const Opportunities: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [locationFilter, setLocationFilter] = useState<string>("");
+  const [skillsFilter, setSkillsFilter] = useState<string[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchProjectsAndSkills = async () => {
       setLoading(true);
       setError(null);
 
@@ -54,7 +57,7 @@ const Opportunities: React.FC = () => {
         const { data: projectsData, error: projectsError } = await supabase
           .from("projects")
           .select(
-            "id, title, description, organization_name, location, start_date, end_date, volunteers_registered, status, category, required_skills, created_at"
+            "id, title, description, organization_name, location, start_date, end_date, volunteers_needed, volunteers_registered, status, category, required_skills, created_at"
           )
           .eq("status", "active")
           .order("created_at", { ascending: false });
@@ -62,8 +65,18 @@ const Opportunities: React.FC = () => {
         if (projectsError) throw new Error("Error fetching projects: " + projectsError.message);
         if (!projectsData) throw new Error("No active projects found.");
 
+        // Extract unique skills
+        const skillsSet = new Set<string>();//@ts-ignore
+        projectsData.forEach((project) => {
+          if (project.required_skills) {//@ts-ignore
+            project.required_skills.forEach((skill) => skillsSet.add(skill));
+          }
+        });
+        const uniqueSkills = Array.from(skillsSet).sort();
+
         setProjects(projectsData);
         setFilteredProjects(projectsData);
+        setAvailableSkills(uniqueSkills);
       } catch (err: any) {
         setError(err.message);
         toast.error(err.message);
@@ -72,11 +85,11 @@ const Opportunities: React.FC = () => {
       }
     };
 
-    fetchProjects();
+    fetchProjectsAndSkills();
   }, []);
 
   useEffect(() => {
-    // Filter projects based on search query and location
+    // Filter projects based on search query, location, and skills
     const filtered = projects.filter((project) => {
       const matchesSearch =
         searchQuery === "" ||
@@ -85,10 +98,14 @@ const Opportunities: React.FC = () => {
       const matchesLocation =
         locationFilter === "" ||
         project.location.toLowerCase().includes(locationFilter.toLowerCase());
-      return matchesSearch && matchesLocation;
+      const matchesSkills =
+        skillsFilter.length === 0 ||
+        (project.required_skills &&//@ts-ignore
+          skillsFilter.every((skill) => project.required_skills.includes(skill)));
+      return matchesSearch && matchesLocation && matchesSkills;
     });
     setFilteredProjects(filtered);
-  }, [searchQuery, locationFilter, projects]);
+  }, [searchQuery, locationFilter, skillsFilter, projects]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -98,12 +115,21 @@ const Opportunities: React.FC = () => {
     setLocationFilter(e.target.value);
   };
 
+  const handleSkillsFilterChange = (value: string) => {
+    setSkillsFilter((prev) =>
+      prev.includes(value)
+        ? prev.filter((skill) => skill !== value)
+        : [...prev, value]
+    );
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-8 space-y-8 max-w-6xl">
         <Skeleton className="h-12 w-1/3 rounded-lg" />
         <div className="flex gap-4 mb-6">
           <Skeleton className="h-10 w-1/2 rounded-lg" />
+          <Skeleton className="h-10 w-1/4 rounded-lg" />
           <Skeleton className="h-10 w-1/4 rounded-lg" />
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -141,6 +167,47 @@ const Opportunities: React.FC = () => {
           onChange={handleLocationFilterChange}
           className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
         />
+        <Select
+          onValueChange={handleSkillsFilterChange}
+          value=""
+        >
+          <SelectTrigger className="w-full sm:w-1/4 border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg">
+            <SelectValue placeholder="Filter by skills..." />
+          </SelectTrigger>
+          <SelectContent>
+            {availableSkills.length > 0 ? (
+              availableSkills.map((skill) => (
+                <SelectItem key={skill} value={skill}>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={skillsFilter.includes(skill)}
+                      readOnly
+                      className="h-4 w-4"
+                    />
+                    {skill.charAt(0).toUpperCase() + skill.slice(1).replace("_", " ")}
+                  </div>
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="none" disabled>
+                No skills available
+              </SelectItem>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {skillsFilter.map((skill) => (
+          <Badge
+            key={skill}
+            variant="secondary"
+            className="cursor-pointer"
+            onClick={() => handleSkillsFilterChange(skill)}
+          >
+            {skill.charAt(0).toUpperCase() + skill.slice(1).replace("_", " ")} ×
+          </Badge>
+        ))}
       </div>
       {filteredProjects.length === 0 ? (
         <Card className="shadow-md">
@@ -175,7 +242,7 @@ const Opportunities: React.FC = () => {
                   {project.volunteers_registered}/{project.volunteers_needed} volunteers
                 </p>
                 {project.category && (
-                  <Badge className="bg-blue-600 text-white">
+                  <Badge className="action-btn text-white">
                     {project.category.charAt(0).toUpperCase() + project.category.slice(1)}
                   </Badge>
                 )}
@@ -183,7 +250,7 @@ const Opportunities: React.FC = () => {
                   <div className="flex flex-wrap gap-2">
                     {project.required_skills.map((skill) => (
                       <Badge key={skill} variant="outline" className="text-sm">
-                        {skill}
+                        {skill.charAt(0).toUpperCase() + skill.slice(1).replace("_", " ")}
                       </Badge>
                     ))}
                   </div>
@@ -192,7 +259,7 @@ const Opportunities: React.FC = () => {
               <CardFooter>
                 <Button
                   asChild
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  className="w-full action-btn"
                 >
                   <Link href={`/dashboard/volunteer/projects/${project.id}`}>
                     View Details
