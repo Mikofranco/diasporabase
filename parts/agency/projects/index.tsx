@@ -102,7 +102,7 @@ const OrganizationsProjects: React.FC = () => {
         Create Project
       </Button>
 
-      {showCreateForm && (
+      {showCreateForm && (//@ts-ignore
         <CreateProjectForm onClose={handleFormClose} onProjectCreated={handleProjectCreated} />
       )}
 

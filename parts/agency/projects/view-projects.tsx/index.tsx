@@ -752,6 +752,8 @@ const ProjectDetails: React.FC = () => {
               </div>
             )}
 
+
+            <h3 className="text-lg font-semibold text-gray-900 mt-6">Recommend Volunteers</h3>
             <ProjectRecommendation
               projectId={projectId as string}
               volunteersNeeded={project.volunteers_needed}

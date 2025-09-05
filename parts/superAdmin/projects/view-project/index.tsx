@@ -6,6 +6,7 @@ import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import ProjectRecommendation from '@/parts/agency/projects/project-recommendation';
 
 interface Project {
   id: string;
@@ -127,6 +128,8 @@ const ViewProject: React.FC = () => {
           <p><strong>Required Skills:</strong> {project.required_skills?.join(', ') || 'None'}</p>
         </div>
       </div>
+
+      <ProjectRecommendation projectId={projectId as string}  volunteersNeeded={project.volunteers_needed} volunteersRegistered={project.volunteers_registered}/>
     </div>
   );
 };

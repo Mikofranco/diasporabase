@@ -28,6 +28,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { startLoading, stopLoading } from "@/lib/loading"; 
 
 const supabase = createClient();
 
@@ -36,8 +37,12 @@ interface Volunteer {
   full_name: string;
   email: string;
   skills: string[];
+  availability: string;
   residence_country: string;
-  volunteer_state: string;
+  residence_state: string; // Changed from volunteer_state
+  volunteer_countries: string[];
+  volunteer_states: string[];
+  volunteer_lgas: string[];
   average_rating: number;
   request_status?: string;
   matched_skills: string[];
@@ -60,135 +65,207 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState<boolean>(false);
   const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
 
-  useEffect(() => {
-    const fetchRecommendations = async () => {
-      setLoading(true);
-      setError(null);
+useEffect(() => {
+  const fetchRecommendations = async () => {
+    setLoading(true);
+    setError(null);
+    startLoading();
 
-      try {
-        const { data: userId, error: userIdError } = await getUserId();
-        if (userIdError) throw new Error(userIdError);
-        if (!userId) throw new Error("Please log in to view recommendations.");
-
-        // Fetch project required skills and status
-        const { data: projectData, error: projectError } = await supabase
-          .from("projects")
-          .select("required_skills, status")
-          .eq("id", projectId)
-          .eq("organization_id", userId)
-          .single();
-
-        if (projectError) throw new Error("Error fetching project: " + projectError.message);
-        if (!projectData) throw new Error("Project not found or you don’t have access.");
-
-        const requiredSkills = projectData.required_skills?.length > 0 ? projectData.required_skills : ["general"];
-
-        // Fetch recommended volunteers using the function
-        const { data: volunteerData, error: volunteerError } = await supabase.rpc(
-          "select_volunteers_for_project",
-          {
-            p_project_id: projectId,
-            p_required_skills: requiredSkills,
-          }
-        );
-
-        if (volunteerError) throw new Error("Error fetching volunteers: " + volunteerError.message);
-
-        // Fetch existing request statuses
-        const { data: requestData, error: requestError } = await supabase
-          .from("volunteer_requests")
-          .select("volunteer_id, status")
-          .eq("project_id", projectId);
-
-        if (requestError) throw new Error("Error fetching request statuses: " + requestError.message);
-
-        // Map volunteers with request status and matched skills
-        const recommendedVolunteers: Volunteer[] = volunteerData?.map((v: any) => ({
-          volunteer_id: v.volunteer_id,
-          full_name: v.full_name,
-          email: v.email,
-          skills: v.skills,
-          residence_country: v.residence_country,
-          volunteer_state: v.volunteer_state,
-          average_rating: v.average_rating || 0,
-          request_status: requestData?.find((r: any) => r.volunteer_id === v.volunteer_id)?.status || null,
-          matched_skills: v.skills.filter((skill: string) => requiredSkills.includes(skill)),
-        })) || [];
-
-        setVolunteers(recommendedVolunteers);
-      } catch (err: any) {
-        setError(err.message);
-        toast.error(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecommendations();
-  }, [projectId]);
-
-  const handleSendRequest = async (volunteer: Volunteer) => {
     try {
-      const { data: userId, error: userIdError } = await getUserId();
-      if (userIdError) throw new Error(userIdError);
-      if (!userId) throw new Error("Please log in to send requests.");
+      const userId = "daccc5f8-9f45-403a-9b40-d50c6b655c76";
+      const projectId = "1e8fce24-256b-434f-90e3-00820e39782a";
 
-      // Check if a request already exists
-      const { data: existingRequest } = await supabase
-        .from("volunteer_requests")
-        .select("id, status")
-        .eq("project_id", projectId)
-        .eq("volunteer_id", volunteer.volunteer_id)
-        .single();
-
-      if (existingRequest) {
-        toast.error(`Request already sent (Status: ${existingRequest.status})`);
-        return;
+      // Validate projectId
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(projectId)) {
+        throw new Error("Invalid project ID format.");
       }
 
-      // Check if volunteer is already assigned
-      const { data: existingAssignment } = await supabase
-        .from("project_volunteers")
-        .select("volunteer_id")
-        .eq("project_id", projectId)
-        .eq("volunteer_id", volunteer.volunteer_id)
-        .single();
+      // Check admin status
+      const { data: isAdminData, error: isAdminError } = await supabase.rpc("is_admin");
+      if (isAdminError) throw new Error("Error checking admin status: " + isAdminError.message);
+      const isAdmin = isAdminData || false;
 
-      if (existingAssignment) {
-        toast.error("Volunteer is already assigned to this project.");
-        return;
+      console.log("User is admin:", isAdmin, "User ID:", userId, "Project ID:", projectId);
+
+      // Fetch project
+      let query = supabase
+        .from("projects")
+        .select("required_skills, status, title")
+        .eq("id", projectId);
+
+      if (!isAdmin) {
+        query = query.eq("organization_id", userId);
       }
 
-      // Check volunteer limit
-      if (volunteersRegistered >= volunteersNeeded) {
-        toast.error("Volunteer limit reached for this project.");
-        return;
+      const { data: projectData, error: projectError } = await query;
+
+      if (projectError) throw new Error("Error fetching project: " + projectError.message);
+      if (!projectData || projectData.length === 0) {
+        throw new Error("Project not found or you don’t have access.");
       }
 
-      // Send request
-      const { error: requestError } = await supabase.from("volunteer_requests").insert([
+      const project = projectData[0];
+      const requiredSkills = project.required_skills?.length > 0 ? project.required_skills : ["general"];
+
+      // Fetch recommended volunteers
+      const { data: volunteerData, error: volunteerError } = await supabase.rpc(
+        "select_volunteers_for_project",
         {
-          project_id: projectId,
-          volunteer_id: volunteer.volunteer_id,
-          status: "pending",
-        },
-      ]);
-
-      if (requestError) throw new Error("Error sending request: " + requestError.message);
-
-      // Update local state to reflect request status
-      setVolunteers(
-        volunteers.map((v) =>
-          v.volunteer_id === volunteer.volunteer_id ? { ...v, request_status: "pending" } : v
-        )
+          p_project_id: projectId,
+          p_required_skills: requiredSkills,
+        }
       );
-      toast.success(`Request sent to ${volunteer.full_name}!`);
-      setIsRequestDialogOpen(false);
+      if (volunteerError) throw new Error("Error fetching volunteers: " + volunteerError.message);
+
+      // Fetch existing request statuses from agency_requests
+      let requestQuery = supabase
+        .from("agency_requests")
+        .select("volunteer_id, status")
+        .eq("project_id", projectId);
+
+      if (!isAdmin) {
+        requestQuery = requestQuery.eq("requester_id", userId);
+      }
+
+      const { data: requestData, error: requestError } = await requestQuery;
+      if (requestError) throw new Error("Error fetching request statuses: " + requestError.message);
+
+      // Map volunteers
+      const recommendedVolunteers: Volunteer[] = volunteerData?.map((v: any) => ({
+        volunteer_id: v.volunteer_id,
+        full_name: v.full_name,
+        email: v.email,
+        skills: v.skills,
+        availability: v.availability,
+        residence_country: v.residence_country,
+        residence_state: v.residence_state,
+        volunteer_countries: v.volunteer_countries || [],
+        volunteer_states: v.volunteer_states || [],
+        volunteer_lgas: v.volunteer_lgas || [],
+        average_rating: v.average_rating || 0,
+        request_status: requestData?.find((r: any) => r.volunteer_id === v.volunteer_id)?.status || null,
+        matched_skills: v.skills.filter((skill: string) => requiredSkills.includes(skill)),
+      })) || [];
+
+      setVolunteers(recommendedVolunteers);
     } catch (err: any) {
       setError(err.message);
       toast.error(err.message);
+    } finally {
+      setLoading(false);
+      stopLoading();
     }
   };
+
+  console.log("Fetching recommendations for project:", projectId);
+  fetchRecommendations();
+}, [projectId]);
+
+
+const handleSendRequest = async (volunteer: Volunteer) => {
+  try {
+    startLoading();
+    const { data: userId, error: userIdError } = await getUserId();
+    if (userIdError) throw new Error(userIdError);
+    if (!userId) throw new Error("Please log in to send requests.");
+
+    // Check admin status
+    const { data: isAdminData, error: isAdminError } = await supabase.rpc("is_admin");
+    if (isAdminError) throw new Error("Error checking admin status: " + isAdminError.message);
+    const isAdmin = isAdminData || false;
+
+    // Check existing request in agency_requests
+    let query = supabase
+      .from("agency_requests")
+      .select("id, status")
+      .eq("project_id", projectId)
+      .eq("volunteer_id", volunteer.volunteer_id);
+
+    if (!isAdmin) {
+      query = query.eq("requester_id", userId);
+    }
+
+    const { data: existingRequest, error: requestCheckError } = await query;
+    if (requestCheckError) throw new Error("Error checking existing request: " + requestCheckError.message);
+
+    if (existingRequest && existingRequest.length > 0) {
+      toast.error(`Request already sent (Status: ${existingRequest[0].status})`);
+      return;
+    }
+
+    // Check if volunteer is already assigned
+    let assignmentQuery = supabase
+      .from("project_volunteers")
+      .select("volunteer_id")
+      .eq("project_id", projectId)
+      .eq("volunteer_id", volunteer.volunteer_id);
+
+    if (!isAdmin) {
+      assignmentQuery = assignmentQuery.eq("organization_id", userId);
+    }
+
+    const { data: existingAssignment, error: assignmentError } = await assignmentQuery;
+    if (assignmentError) throw new Error("Error checking assignment: " + assignmentError.message);
+    if (existingAssignment && existingAssignment.length > 0) {
+      toast.error("Volunteer is already assigned to this project.");
+      return;
+    }
+
+    // Check volunteer limit
+    if (volunteersRegistered >= volunteersNeeded) {
+      toast.error("Volunteer limit reached for this project.");
+      return;
+    }
+
+    // Fetch project title for notification
+    const { data: projectData, error: projectError } = await supabase
+      .from("projects")
+      .select("title")
+      .eq("id", projectId)
+      .single();
+
+    if (projectError) throw new Error("Error fetching project title: " + projectError.message);
+
+    // Send request to agency_requests
+    const { error: requestError } = await supabase.from("agency_requests").insert([
+      {
+        project_id: projectId,
+        volunteer_id: volunteer.volunteer_id,
+        requester_id: userId,
+        status: "pending",
+      },
+    ]);
+
+    if (requestError) throw new Error("Error sending request: " + requestError.message);
+
+    // Create notification for volunteer
+    const { error: notificationError } = await supabase.from("notifications").insert([
+      {
+        user_id: volunteer.volunteer_id,
+        message: `You have received a volunteer request for the project "${projectData.title}" from an agency.`,
+        type: "request_status_change",
+        related_id: projectId,
+      },
+    ]);
+
+    if (notificationError) throw new Error("Error creating notification: " + notificationError.message);
+
+    // Update local state
+    setVolunteers(
+      volunteers.map((v) =>
+        v.volunteer_id === volunteer.volunteer_id ? { ...v, request_status: "pending" } : v
+      )
+    );
+    toast.success(`Request sent to ${volunteer.full_name} with notification!`);
+    setIsRequestDialogOpen(false);
+  } catch (err: any) {
+    setError(err.message);
+    toast.error(err.message);
+  } finally {
+    stopLoading();
+  }
+};
 
   if (loading) {
     return (
@@ -216,7 +293,7 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
       <div className="space-y-6">
         <h3 className="text-lg font-semibold text-gray-900">Recommended Volunteers</h3>
         {volunteers.length === 0 ? (
-          <p className="text-gray-500">No volunteers found with matching skills.</p>
+          <p className="text-gray-500">No volunteers found with matching skills or location.</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {volunteers.map((volunteer) => (
@@ -258,7 +335,8 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                   <p className="text-sm flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-gray-500" />
                     <span>
-                      {volunteer.volunteer_state}, {volunteer.residence_country}
+                      {volunteer.residence_state || volunteer.volunteer_states.join(", ") || "N/A"},{" "}
+                      {volunteer.residence_country || volunteer.volunteer_countries.join(", ") || "N/A"}
                     </span>
                   </p>
                   <p className="text-sm flex items-center gap-2">
