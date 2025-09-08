@@ -54,13 +54,14 @@ export default function PublicProjectView() {
     const { data, error } = await supabase
       .from("projects")
       .select("*")
-      .eq("status", "active")
+      .or("status.eq.active,status.eq.completed")
       .order("created_at", { ascending: false })
 
     if (error) {
       console.error("Error fetching projects:", error)
     } else {
       setProjects(data || [])
+      console.log
     }
     setLoading(false)
   }

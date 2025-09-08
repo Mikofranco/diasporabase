@@ -47,8 +47,8 @@ interface Project {
 }
 
 interface Volunteer {
-  user_id: string;
-  user_name: string;
+  volunteer_id: string;
+  full_name: string;
   email: string;
 }
 
@@ -75,6 +75,7 @@ export default function VolunteerProjectsView() {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
+        console.log("Authenticated user id:", user.id);
         setUserId(user.id);
         await fetchProjects(user.id);
       } else {
@@ -89,26 +90,29 @@ export default function VolunteerProjectsView() {
   }, []);
 
   const fetchProjects = async (userId: string) => {
+    // Fetch projects where the user is a volunteer
     const { data, error } = await supabase
-      .from("volunteer_projects")
+      .from("project_volunteers")
       .select(
         `
-        id,
-        title,
-        description,
-        organization_name,
-        location,
-        start_date,
-        end_date,
-        volunteers_needed,
-        volunteers_registered,
-        status,
-        category,
-        project_volunteers!project_volunteers_project_id_fkey(user_id)
+        project_id,
+        projects!inner(
+          id,
+          title,
+          description,
+          organization_name,
+          location,
+          start_date,
+          end_date,
+          volunteers_needed,
+          volunteers_registered,
+          status,
+          category
+        )
       `
       )
-      .eq("status", "active")
-      .eq("project_volunteers.user_id", userId)
+      .eq("volunteer_id", userId)
+      .eq("projects.status", "active")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -116,7 +120,21 @@ export default function VolunteerProjectsView() {
       setProjects([]);
       setVolunteers([]);
     } else {
-      setProjects(data || []);
+      // Map data to match Project interface
+      const mappedProjects = data.map((item: any) => ({
+        id: item.projects.id,
+        title: item.projects.title,
+        description: item.projects.description,
+        organization_name: item.projects.organization_name,
+        location: item.projects.location,
+        start_date: item.projects.start_date,
+        end_date: item.projects.end_date,
+        volunteers_needed: item.projects.volunteers_needed,
+        volunteers_registered: item.projects.volunteers_registered,
+        status: item.projects.status,
+        category: item.projects.category,
+      }));
+      setProjects(mappedProjects || []);
     }
     setLoading(false);
   };
@@ -127,17 +145,29 @@ export default function VolunteerProjectsView() {
       return;
     }
 
+    // Fetch volunteers for the project, excluding the current user
     const { data, error } = await supabase
       .from("project_volunteers")
-      .select("user_id, user_name, email")
+      .select(
+        `
+        volunteer_id,
+        profiles!inner(full_name, email)
+      `
+      )
       .eq("project_id", projectId)
-      .neq("user_id", userId);
+      .neq("volunteer_id", userId);
 
     if (error) {
       console.error("Error fetching volunteers:", error);
       setVolunteers([]);
     } else {
-      setVolunteers(data || []);
+      // Map data to match Volunteer interface
+      const mappedVolunteers = data.map((item: any) => ({
+        volunteer_id: item.volunteer_id,
+        full_name: item.profiles.full_name,
+        email: item.profiles.email,
+      }));
+      setVolunteers(mappedVolunteers || []);
     }
   };
 
@@ -154,7 +184,7 @@ export default function VolunteerProjectsView() {
       .from("project_volunteers")
       .delete()
       .eq("project_id", selectedProject.id)
-      .eq("user_id", userId);
+      .eq("volunteer_id", userId);
 
     if (deleteError) {
       console.error("Error leaving project:", deleteError);
@@ -163,12 +193,12 @@ export default function VolunteerProjectsView() {
       return;
     }
 
-    // Record the reason for leaving
+    // Record the reason for leaving (assuming project_leave_reasons table)
     const { error: reasonError } = await supabase
       .from("project_leave_reasons")
       .insert({
         project_id: selectedProject.id,
-        user_id: userId,
+        volunteer_id: userId,
         reason: leaveReason.trim(),
         created_at: new Date().toISOString(),
       });
@@ -191,7 +221,7 @@ export default function VolunteerProjectsView() {
     setSubmitting(false);
   };
 
-  const handlRouteToViewProject = () => {
+  const handleRouteToViewProject = () => {
     router.push("/dashboard/volunteer/find-opportunity");
   };
 
@@ -230,7 +260,7 @@ export default function VolunteerProjectsView() {
       <div className="mb-8">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold mb-2">Volunteer Projects</h1>
-          <Button className="action-btn" onClick={handlRouteToViewProject}>
+          <Button className="action-btn" onClick={handleRouteToViewProject}>
             View Ongoing Projects
           </Button>
         </div>
@@ -382,8 +412,8 @@ export default function VolunteerProjectsView() {
                       <TableBody>
                         {volunteers.length > 0 ? (
                           volunteers.map((volunteer) => (
-                            <TableRow key={volunteer.user_id}>
-                              <TableCell>{volunteer.user_name}</TableCell>
+                            <TableRow key={volunteer.volunteer_id}>
+                              <TableCell>{volunteer.full_name}</TableCell>
                               <TableCell>{volunteer.email}</TableCell>
                             </TableRow>
                           ))

@@ -57,7 +57,7 @@ interface Notification {
   is_read: boolean;
   created_at: string;
   related_id: string | null;
-  project?: Project; // Optional, joined for related_id
+  project?: Project; 
 }
 
 const NotificationManagement: React.FC = () => {
@@ -81,7 +81,7 @@ const NotificationManagement: React.FC = () => {
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const pageSize = 10;
-  const [user, setUser] = useState<any>(null); // Replace with Supabase's User type if available
+  const [user, setUser] = useState<any>(null); 
   const router = useRouter();
 
   // Check user authentication and role
@@ -101,7 +101,7 @@ const NotificationManagement: React.FC = () => {
         .eq("id", user.id)
         .single();
 
-      if (error || !["admin", "super_admin"].includes(profile.role)) {
+      if (error || !["admin", "super_admin", "volunteer", "agency"].includes(profile.role)) {
         router.push("/unauthorized");
         return;
       }

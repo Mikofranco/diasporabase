@@ -147,7 +147,7 @@ const AdminVolunteerDetails: React.FC = () => {
           full_name: data.full_name,
           email: data.email,
           skills: data.skills,
-          updated_at: new Date().toISOString(),
+          // updated_at: new Date().toISOString(),
         })
         .eq('id', volunteerId);
 
