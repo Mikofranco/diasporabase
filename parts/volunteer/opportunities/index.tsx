@@ -152,7 +152,7 @@ const Opportunities: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-8 space-y-8 max-w-6xl">
+    <div className="container mx-auto p-8 space-y-8 ">
       <h1 className="text-3xl font-bold text-gray-900">Volunteer Opportunities</h1>
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <Input

@@ -12,7 +12,7 @@ export function createClient() {
 }
 
 export function createAdminClient() {
-  if (!adminClient) {
+  if (!adminClient) {//@ts-ignore
     adminClient = createBrowserClient(SUPABASE_URL, SUPABASE_ROLE_KEY);
   }
   return adminClient;

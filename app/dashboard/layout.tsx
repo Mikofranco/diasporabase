@@ -52,6 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           profile_picture: profileData.profile_picture || null,
         });
         setUserRole(profileData.role)
+        localStorage.setItem("disporabase_fullName",profileData.full_name)
       } catch (err: any) {
         toast.error(err.message);
       } finally {

@@ -439,7 +439,7 @@ export default function VolunteerProfilePage() {
       .join(", ") || "Unknown";
 
   return (
-    <Card className="w-full max-w-3xl mx-auto">
+    <Card className="w-full mx-auto">
       <CardHeader>
         <CardTitle className="text-2xl">Volunteer Profile</CardTitle>
         <CardDescription>
