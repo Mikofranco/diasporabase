@@ -72,6 +72,7 @@ export default function VolunteerRegistrationForm() {
           full_name: fullName,
           role: "volunteer",
           phone: formData.phone,
+          email: formData.email
         },
       },
     });

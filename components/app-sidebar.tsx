@@ -57,10 +57,10 @@ const ROUTES = {
     profile: "/dashboard/admin/profile", // Added for consistency
   },
   super_admin: {
-    dashboard: "/dashboard/admin",
-    projects: "/dashboard/admin/projects",
-    volunteers: "/dashboard/admin/volunteers",
-    agencies: "/dashboard/admin/agencies",
+    dashboard: "/dashboard/super_admin",
+    projects: "/dashboard/super_admin/projects",
+    volunteers: "/dashboard/super_admin/volunteers",
+    agencies: "/dashboard/super_admin/agencies",
     settings: "/dashboard/super_admin/settings", // Updated to a specific super admin settings path
     profile: "/dashboard/super_admin/profile", // Added for super admin
     invite_admin: "/dashboard/super_admin/invite_admin",
@@ -95,11 +95,11 @@ const MENU_ITEMS = {
     { path: ROUTES.admin.settings, label: "Settings", icon: Settings },
   ],
   super_admin: [
-    { path: ROUTES.admin.dashboard, label: "Dashboard", icon: LayoutDashboard },
-    { path: ROUTES.admin.projects, label: "Projects", icon: Briefcase },
-    { path: ROUTES.admin.volunteers, label: "Volunteers", icon: Users },
-    { path: ROUTES.admin.agencies, label: "Agencies", icon: Home },
-    { path: ROUTES.admin.settings, label: "Settings", icon: Settings },
+    { path: ROUTES.super_admin.dashboard, label: "Dashboard", icon: LayoutDashboard },
+    { path: ROUTES.super_admin.projects, label: "Projects", icon: Briefcase },
+    { path: ROUTES.super_admin.volunteers, label: "Volunteers", icon: Users },
+    { path: ROUTES.super_admin.agencies, label: "Agencies", icon: Home },
+    { path: ROUTES.super_admin.settings, label: "Settings", icon: Settings },
     { path: ROUTES.super_admin.invite_admin, label: "Invite Admin", icon: Settings },
   ],
   volunteer: [
