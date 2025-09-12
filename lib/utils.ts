@@ -316,3 +316,39 @@ export function checkAgencyStatus(volunteer: Volunteer): {
     return { status: 'error', message: `Error checking agency status: ${error.message}` };
   }
 }
+
+
+export function checkIfAgencyIsActive() {//@ts-ignore
+  const { data: userIdData, error: userError } = getUserId();
+
+  if (userError || !userIdData?.userId) {
+    toast.error("Please login again");
+    return Promise.resolve(false); // Return resolved Promise<boolean>
+  }
+
+  return supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", userIdData.userId)
+    .single()//@ts-ignore
+    .then(({ data: profile, error: profileError }) => {
+      if (profileError || !profile) {
+        toast.error("Failed to fetch user profile");
+        return false;
+      }
+
+      const isAgencyActive = profile.role === "agency" && profile.is_active === true;
+
+      if (!isAgencyActive) {
+        toast.error("Agency account is not active. Contact admin for approval.");
+        return false;
+      }
+
+      return true; 
+    })//@ts-ignore
+    .catch((err) => {
+      console.error("Unexpected error:", err);
+      toast.error("An error occurred checking agency status");
+      return false;
+    });
+}

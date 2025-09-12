@@ -86,7 +86,8 @@ export default function AgencyRegistrationForm() {
         data: {
           phone: formData.phone,
           full_name: formData.companyName, // Stored as metadata
-          role: "agency"
+          role: "agency",
+          email: formData.email
         },
       },
     });

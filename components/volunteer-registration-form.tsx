@@ -68,6 +68,7 @@ export default function VolunteerRegistrationForm() {
       email: formData.email,
       password: formData.password,
       options: {
+        emailRedirectTo: `${window.location.origin}/onboarding`,
         data: {
           full_name: fullName,
           role: "volunteer",
