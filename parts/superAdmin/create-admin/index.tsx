@@ -23,8 +23,10 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "@/components/ui/use-toast";
+// import { toast } from "@/components/ui/use-toast";
 import { supabase, adminSupabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { error } from "console";
 
 // Role constants
 const ROLES = {
@@ -97,22 +99,14 @@ export default function AdminManagement() {
           error: userError,
         } = await supabase.auth.getUser();
         if (userError || !user) {
-          toast({
-            title: "Authentication Error",
-            description: "You must be logged in to access this page.",
-            variant: "destructive",
-          });
+          toast.error("Authentication error");
           router.push("/login");
           return;
         }
 
         const userRole = user.user_metadata.role;
         if (userRole !== ROLES.SUPER_ADMIN) {
-          toast({
-            title: "Authorization Error",
-            description: "You must be a super admin to access this page.",
-            variant: "destructive",
-          });
+          toast.error("You must be a super admin to access this page.");
           router.push("/dashboard");
           return;
         }
@@ -129,13 +123,7 @@ export default function AdminManagement() {
         setAdmins(adminData || []);
         setIsAuthorized(true);
       } catch (error) {
-        toast({
-          title: "Error",
-          description://@ts-ignore
-            error.message ||
-            "An unexpected error occurred while loading the page.",
-          variant: "destructive",
-        });
+        toast.error("An unexpected error occurred while loading the page.");
       } finally {
         setIsLoading(false);
       }
@@ -158,7 +146,7 @@ export default function AdminManagement() {
 
       // Check if user already exists
       const { data: existingUser, error: userCheckError } = await adminSupabase
-        .from("Users")
+        .from("profiles")
         .select("id")
         .eq("email", data.email)
         .maybeSingle();
@@ -173,40 +161,40 @@ export default function AdminManagement() {
       }
 
       // Create new admin user
-      const { data: newUser, error: authError } =
-        await adminSupabase.auth.signUp({
-          full_name: data.fullName,
-          email: data.email,
-          password: data.password,
-          options: {
-            data: {
-              full_name: data.fullName,
-              phone: data.phoneNumber || null,
-              role: ROLES.ADMIN,
-            },
+      const { data: newUser, error: authError } = await supabase.auth.signUp({
+        full_name: data.fullName,
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.fullName,
+            phone: data.phoneNumber || null,
+            role: ROLES.ADMIN,
           },
-        });
+        },
+      });
 
       if (authError || !newUser.user) {
+        toast(authError?.message || "Could not add admin");
         throw new Error(authError?.message || "Failed to create admin user");
       }
 
-      // Upsert profile to avoid duplicate key error
-      const { error: profileError } = await supabase.from("profiles").upsert(
-        {
-          id: newUser.user.id,
-          full_name: data.fullName,
-          email: data.email,
-          phone: data.phoneNumber || null,
-          role: ROLES.ADMIN,
-          is_active: true,
-        },
-        { onConflict: "id" }
-      );
+      // // Upsert profile to avoid duplicate key error
+      // const { error: profileError } = await supabase.from("profiles").upsert(
+      //   {
+      //     id: newUser.user.id,
+      //     full_name: data.fullName,
+      //     email: data.email,
+      //     phone: data.phoneNumber || null,
+      //     role: ROLES.ADMIN,
+      //     is_active: true,
+      //   },
+      //   { onConflict: "id" }
+      // );
 
-      if (profileError) {
-        throw new Error(`Profile upsert error: ${profileError.message}`);
-      }
+      // if (profileError) {
+      //   throw new Error(`Profile upsert error: ${profileError.message}`);
+      // }
 
       //@ts-ignore
       setAdmins((prev) => [
@@ -220,19 +208,13 @@ export default function AdminManagement() {
         },
       ]);
 
-      toast({
-        title: "Success",
-        description: "Admin user created successfully.",
-      });
+      toast.success("Admin user created successfully.");
       setOpen(false);
       reset();
     } catch (error) {
-      toast({
-        title: "Error",
-        description://@ts-ignore
-          error.message || "An error occurred while creating the admin user.",
-        variant: "destructive",
-      });
+      toast.error(//@ts-ignore
+        error?.message || "An error occurred while creating the admin user."
+      );
     } finally {
       setLoading(false);
     }
@@ -340,30 +322,33 @@ export default function AdminManagement() {
               </TableRow>
             ) : (
               admins.map((admin) => (
-                <TableRow
+                <TableRow//@ts-ignore
                   key={admin.id}
-                  className="cursor-pointer hover:bg-gray-50"
+                  className="cursor-pointer hover:bg-gray-50" //@ts-ignore
                   onClick={() => router.push(`/super-admin/admins/${admin.id}`)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
+                    if (e.key === "Enter" || e.key === " ") { //@ts-ignore
                       router.push(`/super-admin/admins/${admin.id}`);
                     }
                   }}
                   tabIndex={0}
-                  role="button"//@ts-ignore
+                  role="button" //@ts-ignore
                   aria-label={`View details for ${admin.full_name || "admin"}`}
                 >
-                  <TableCell>{admin.full_name || "N/A"}</TableCell>
-                  <TableCell>{admin.email}</TableCell>
-                  <TableCell>{admin.phone || "N/A"}</TableCell>
+                  <TableCell //@ts-ignore
+                  >{admin.full_name || "N/A"}</TableCell>
+                  <TableCell //@ts-ignore
+                  >{admin.email}</TableCell>
+                  <TableCell //@ts-ignore
+                  >{admin.phone || "N/A"}</TableCell>
                   <TableCell>
                     <span
-                      className={`px-2 py-1 rounded-full text-sm ${
+                      className={`px-2 py-1 rounded-full text-sm ${ //@ts-ignore
                         admin.is_active
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
                       }`}
-                    >
+                    > 
                       {admin.is_active ? "Active" : "Disabled"}
                     </span>
                   </TableCell>
