@@ -10,11 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form'; // Add Controller
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from '@/components/ui/use-toast';
 import Image from 'next/image';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 
 // Initialize Supabase client
 const supabase = createClient();
@@ -33,6 +35,7 @@ interface AgencyProfile {
   environment_cities: string[] | null;
   environment_states: string[] | null;
   profile_picture: string | null;
+  is_active: boolean;
 }
 
 // Zod schema for form validation
@@ -47,6 +50,7 @@ const profileSchema = z.object({
   focus_areas: z.string().optional().or(z.literal('')),
   environment_cities: z.string().optional().or(z.literal('')),
   environment_states: z.string().optional().or(z.literal('')),
+  is_active: z.boolean(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -64,6 +68,7 @@ const AgencyProfile: React.FC = () => {
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
+    control, // Add control for Controller
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -77,6 +82,7 @@ const AgencyProfile: React.FC = () => {
       focus_areas: '',
       environment_cities: '',
       environment_states: '',
+      is_active: true,
     },
   });
 
@@ -88,7 +94,7 @@ const AgencyProfile: React.FC = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          'id, organization_name, contact_person_email, contact_person_phone, website, focus_areas, address, organization_type, description, environment_cities, environment_states, profile_picture',
+          'id, organization_name, contact_person_email, contact_person_phone, website, focus_areas, address, organization_type, description, environment_cities, environment_states, profile_picture, is_active',
         )
         .eq('id', id)
         .eq('role', 'agency')
@@ -110,6 +116,7 @@ const AgencyProfile: React.FC = () => {
           focus_areas: data.focus_areas?.join(', ') || '',
           environment_cities: data.environment_cities?.join(', ') || '',
           environment_states: data.environment_states?.join(', ') || '',
+          is_active: data.is_active ?? true,
         });
       }
       setLoading(false);
@@ -133,6 +140,7 @@ const AgencyProfile: React.FC = () => {
         focus_areas: data.focus_areas ? data.focus_areas.split(',').map((item) => item.trim()) : null,
         environment_cities: data.environment_cities ? data.environment_cities.split(',').map((item) => item.trim()) : null,
         environment_states: data.environment_states ? data.environment_states.split(',').map((item) => item.trim()) : null,
+        is_active: data.is_active,
         updated_at: new Date().toISOString(),
       };
 
@@ -223,6 +231,9 @@ const AgencyProfile: React.FC = () => {
           </div>
 
           {/* Profile Details */}
+          <Badge>
+            {profile.is_active ? <p>Active</p> : <p>in active</p>} 
+          </Badge>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white shadow-sm rounded-lg p-6">
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-900">Details</h2>
@@ -256,6 +267,10 @@ const AgencyProfile: React.FC = () => {
                 </p>
                 <p className="text-gray-600">
                   <strong className="font-medium">Address:</strong> {profile.address || 'N/A'}
+                </p>
+                <p className="text-gray-600">
+                  <strong className="font-medium">Active Status:</strong>{' '}
+                  {profile.is_active ? 'Active' : 'Inactive'}
                 </p>
               </div>
             </div>
@@ -420,6 +435,29 @@ const AgencyProfile: React.FC = () => {
                   className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
                 />
               </div>
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="is_active" className="text-gray-700">
+                  Active Status
+                </Label>
+                <Controller
+                  name="is_active"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch
+                      id="is_active"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                        ${field.value ? 'bg-blue-600' : 'bg-red-600'}`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                          ${field.value ? 'translate-x-6' : 'translate-x-1'}`}
+                      />
+                    </Switch>
+                  )}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button
@@ -427,6 +465,7 @@ const AgencyProfile: React.FC = () => {
                 variant="outline"
                 onClick={() => setIsModalOpen(false)}
                 className="border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg"
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>

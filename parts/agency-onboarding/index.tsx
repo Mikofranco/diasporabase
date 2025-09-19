@@ -43,6 +43,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Image from "next/image";
 import { CategoryCheckBox } from "@/components/ui/select-caegories";
+import CategorySelect from "@/components/category-select";
 
 const supabase = createClient();
 
@@ -133,7 +134,9 @@ const AgencyOnboarding: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
+    null
+  );
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -211,7 +214,8 @@ const AgencyOnboarding: React.FC = () => {
           contact_person_email: profileData.contact_person_email || "",
           contact_person_phone: profileData.contact_person_phone || "",
           website: profileData.website || null,
-          organization_type: profileData.organization_type || organizationTypes[0],
+          organization_type:
+            profileData.organization_type || organizationTypes[0],
           tax_id: profileData.tax_id || "",
           focus_areas: profileData.focus_areas || [],
           environment_cities: profileData.environment_cities || [],
@@ -225,8 +229,12 @@ const AgencyOnboarding: React.FC = () => {
           if (location) {
             const updatedCities = location.city ? [location.city] : [];
             const updatedStates = location.region ? [location.region] : [];
-            form.setValue("environment_cities", updatedCities, { shouldValidate: false });
-            form.setValue("environment_states", updatedStates, { shouldValidate: false });
+            form.setValue("environment_cities", updatedCities, {
+              shouldValidate: false,
+            });
+            form.setValue("environment_states", updatedStates, {
+              shouldValidate: false,
+            });
             setProfile((prev) =>
               prev
                 ? {
@@ -363,7 +371,7 @@ const AgencyOnboarding: React.FC = () => {
 
       if (updateError)
         throw new Error("Error updating profile: " + updateError.message);
-//@ts-ignore
+      //@ts-ignore
       setProfile((prev) =>
         prev
           ? {
@@ -396,12 +404,13 @@ const AgencyOnboarding: React.FC = () => {
     }
   };
 
-  const locationDisplay = [
-    form.getValues("environment_states")?.[0],
-    form.getValues("environment_cities")?.[0],
-  ]
-    .filter(Boolean)
-    .join(", ") || "Unknown";
+  const locationDisplay =
+    [
+      form.getValues("environment_states")?.[0],
+      form.getValues("environment_cities")?.[0],
+    ]
+      .filter(Boolean)
+      .join(", ") || "Unknown";
 
   if (loading) {
     return (
@@ -762,7 +771,7 @@ const AgencyOnboarding: React.FC = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-gray-700 font-medium">
-                            Profile Picture
+                            Business Logo
                           </FormLabel>
                           <FormControl>
                             <Input

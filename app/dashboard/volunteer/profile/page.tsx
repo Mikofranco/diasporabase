@@ -1,7 +1,6 @@
 "use client";
 
-import type React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,20 +27,7 @@ import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, getSkillsets, getUserLocation } from "@/lib/utils";
 import { toast } from "sonner";
-// import { expertiseData } from "@/data/expertise";
 import LocationSelector from "@/components/location-selector";
-
-interface SelectedLocation {
-  country: string;
-  states: string[];
-  lgas: string[];
-}
-export interface Item {
-  id: string;
-  label: string;
-  children?: Item[];
-  subChildren?: Item[];
-}
 
 interface ProfileData {
   full_name: string | null;
@@ -61,6 +47,19 @@ interface ProfileData {
   volunteer_states: string[] | null;
   volunteer_lgas: string[] | null;
   profile_picture: string | null;
+}
+
+export interface Item {
+  id: string;
+  label: string;
+  children?: Item[];
+  subChildren?: Item[];
+}
+
+interface SelectedData {
+  selectedCountries: string[];
+  selectedStates: string[];
+  selectedLgas: string[];
 }
 
 export default function VolunteerProfilePage() {
@@ -84,25 +83,28 @@ export default function VolunteerProfilePage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userPhone, setUserPhone] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<File | null>(null);
-  const [selectedLocations, setSelectedLocations] = useState<
-    SelectedLocation[]
-  >([]);
-   const [expertiseData, setExpertiseData] = useState<Item[]>([]);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [expertiseData, setExpertiseData] = useState<Item[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<SelectedData>({
+    selectedCountries: [],
+    selectedStates: [],
+    selectedLgas: [],
+  });
 
   const supabase = createClient();
   const router = useRouter();
 
+  // Fetch skillsets
   useEffect(() => {
     const fetchSkillsets = async () => {
       const skillsets = await getSkillsets();
-     console.log("Fetched skillsets:", skillsets);
-    setExpertiseData(skillsets);
-
+      console.log("Fetched skillsets:", skillsets);
+      setExpertiseData(skillsets);
     };
     fetchSkillsets();
   }, []);
 
+  // Fetch profile and location
   useEffect(() => {
     const fetchProfileAndLocation = async () => {
       setLoading(true);
@@ -152,6 +154,11 @@ export default function VolunteerProfilePage() {
       };
       setProfile(profileData);
       setSelectedSkill(data.skills || []);
+      setSelectedLocations({
+        selectedCountries: data.volunteer_countries || [],
+        selectedStates: data.volunteer_states || [],
+        selectedLgas: data.volunteer_lgas || [],
+      });
       setImagePreview(data.profile_picture || null);
 
       if (data.availability === "full-time") {
@@ -184,19 +191,8 @@ export default function VolunteerProfilePage() {
       try {
         const location = await getUserLocation();
         if (location) {
-          const selectedLocation = {
-            country: location.country || "Unknown",
-            states: location.region ? [location.region] : [],
-            lgas: location.city ? [location.city] : [],
-          };
-          setSelectedLocations([selectedLocation]);
-          console.log(
-            "Location fetched and set for volunteer preferences:",
-            selectedLocation
-          );
-
           setProfile((prev) => {
-            if (!prev) return profileData; // Use fetched profile data if prev is null
+            if (!prev) return profileData;
             return {
               ...prev,
               residence_country:
@@ -222,13 +218,17 @@ export default function VolunteerProfilePage() {
     fetchProfileAndLocation();
   }, [supabase]);
 
+  // Handle image upload
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image size must be less than 5MB");
+        return;
+      }
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        //@ts-ignore
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
@@ -269,13 +269,19 @@ export default function VolunteerProfilePage() {
     handleInputChange("skills", skills);
   };
 
+  // Handle location selection changes
+  const handleLocationChange = (data: SelectedData) => {
+    setSelectedLocations(data);
+  };
+
+  // Handle form submission
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
     setMessage(null);
 
     if (!profile) {
-      setMessage({ text: "No profile data to save.", isError: true });
+      toast.error("No profile data to save.");
       setSubmitting(false);
       return;
     }
@@ -285,10 +291,7 @@ export default function VolunteerProfilePage() {
       availabilityType === "specific-period" &&
       (!availabilityStartDate || !availabilityEndDate)
     ) {
-      setMessage({
-        text: "Please select both a start and end date for your availability period.",
-        isError: true,
-      });
+      toast.error("Please select both a start and end date for your availability period.");
       setSubmitting(false);
       return;
     }
@@ -298,20 +301,14 @@ export default function VolunteerProfilePage() {
       availabilityEndDate &&
       availabilityStartDate > availabilityEndDate
     ) {
-      setMessage({
-        text: "Start date cannot be after end date.",
-        isError: true,
-      });
+      toast.error("Start date cannot be after end date.");
       setSubmitting(false);
       return;
     }
 
     // Validate volunteer locations
-    if (selectedLocations.length === 0) {
-      setMessage({
-        text: "Please select at least one volunteer location preference.",
-        isError: true,
-      });
+    if (selectedLocations.selectedCountries.length === 0) {
+      toast.error("Please select at least one volunteer location preference.");
       setSubmitting(false);
       return;
     }
@@ -321,10 +318,7 @@ export default function VolunteerProfilePage() {
       error: userError,
     } = await supabase.auth.getUser();
     if (userError || !user) {
-      setMessage({
-        text: "Authentication error. Please log in again.",
-        isError: true,
-      });
+      toast.error("Authentication error. Please log in again.");
       setSubmitting(false);
       return;
     }
@@ -338,10 +332,7 @@ export default function VolunteerProfilePage() {
           prev ? { ...prev, profile_picture: uploadedUrl } : null
         );
       } else {
-        setMessage({
-          text: "Failed to upload profile picture.",
-          isError: true,
-        });
+        toast.error("Failed to upload profile picture.");
         setSubmitting(false);
         return;
       }
@@ -359,10 +350,6 @@ export default function VolunteerProfilePage() {
               : null,
           });
 
-    const volunteerCountries = selectedLocations.map((loc) => loc.country);
-    const volunteerStates = selectedLocations.flatMap((loc) => loc.states);
-    const volunteerLgas = selectedLocations.flatMap((loc) => loc.lgas);
-
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -379,9 +366,17 @@ export default function VolunteerProfilePage() {
         origin_state: profile.origin_state,
         origin_lga: profile.origin_lga,
         volunteer_countries:
-          volunteerCountries.length > 0 ? volunteerCountries : null,
-        volunteer_states: volunteerStates.length > 0 ? volunteerStates : null,
-        volunteer_lgas: volunteerLgas.length > 0 ? volunteerLgas : null,
+          selectedLocations.selectedCountries.length > 0
+            ? selectedLocations.selectedCountries
+            : null,
+        volunteer_states:
+          selectedLocations.selectedStates.length > 0
+            ? selectedLocations.selectedStates
+            : null,
+        volunteer_lgas:
+          selectedLocations.selectedLgas.length > 0
+            ? selectedLocations.selectedLgas
+            : null,
         email: user.email,
         profile_picture: profilePictureUrl,
       })
@@ -389,10 +384,7 @@ export default function VolunteerProfilePage() {
 
     if (error) {
       console.error("Error updating profile:", error);
-      setMessage({
-        text: `Failed to update profile: ${error.message}`,
-        isError: true,
-      });
+      toast.error(`Failed to update profile: ${error.message}`);
     } else {
       toast.success("Profile updated successfully!");
       router.refresh();
@@ -401,17 +393,41 @@ export default function VolunteerProfilePage() {
     setSubmitting(false);
   };
 
+  // Display selected locations
+  const selectedLocationsDisplay = useMemo(() => {
+    const { selectedCountries, selectedStates, selectedLgas } = selectedLocations;
+    return (
+      <div className="text-sm text-gray-600 mt-2">
+        {selectedCountries.length > 0 ? (
+          <>
+            <p>
+              <strong>Countries:</strong> {selectedCountries.join(", ")}
+            </p>
+            {selectedStates.length > 0 && (
+              <p>
+                <strong>States:</strong> {selectedStates.join(", ")}
+              </p>
+            )}
+            {selectedLgas.length > 0 && (
+              <p>
+                <strong>LGAs:</strong> {selectedLgas.join(", ")}
+              </p>
+            )}
+          </>
+        ) : (
+          <p>No locations selected.</p>
+        )}
+      </div>
+    );
+  }, [selectedLocations]);
+
   if (loading) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <h3 className="text-2xl font-bold tracking-tight">
-            Loading Profile...
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Please wait while we fetch your data.
-          </p>
+      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm p-6">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <h3 className="text-2xl font-bold text-gray-900">Loading Profile...</h3>
+          <p className="text-sm text-gray-500">Please wait while we fetch your data.</p>
         </div>
       </div>
     );
@@ -419,14 +435,10 @@ export default function VolunteerProfilePage() {
 
   if (!profile) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h3 className="text-2xl font-bold tracking-tight">
-            Profile Not Found
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Could not load your profile data. Please try again later.
-          </p>
+      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm p-6">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h3 className="text-2xl font-bold text-gray-900">Profile Not Found</h3>
+          <p className="text-sm text-gray-500">Could not load your profile data. Please try again later.</p>
         </div>
       </div>
     );
@@ -439,29 +451,34 @@ export default function VolunteerProfilePage() {
       .join(", ") || "Unknown";
 
   return (
-    <Card className="w-full mx-auto">
+    <Card className="w-full max-w-4xl mx-auto border-gray-200 rounded-xl shadow-sm">
+      <style>
+        {`@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap'); * { font-family: 'Roboto', sans-serif; }`}
+      </style>
       <CardHeader>
-        <CardTitle className="text-2xl">Volunteer Profile</CardTitle>
-        <CardDescription>
-          Manage your personal information and skills.
+        <CardTitle className="text-2xl font-semibold text-gray-900">Volunteer Profile</CardTitle>
+        <CardDescription className="text-gray-600">
+          Manage your personal information, skills, and volunteer preferences.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-6" aria-live="polite">
           {/* Profile Picture Section */}
           <div className="grid gap-2">
-            <Label>Profile Picture</Label>
+            <Label htmlFor="profile-picture" className="text-base font-medium text-gray-800">
+              Profile Picture
+            </Label>
             <div className="flex items-center gap-4">
-              <div className="relative h-24 w-24 rounded-full overflow-hidden bg-muted">
+              <div className="relative h-24 w-24 rounded-full overflow-hidden bg-gray-100">
                 {imagePreview ? (
-                  <img //@ts-ignore
+                  <img
                     src={imagePreview}
-                    alt="Profile"
+                    alt="Profile picture"
                     className="h-full w-full object-cover"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
-                    <User className="h-12 w-12 text-muted-foreground" />
+                    <User className="h-12 w-12 text-gray-400" />
                   </div>
                 )}
               </div>
@@ -471,17 +488,19 @@ export default function VolunteerProfilePage() {
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
+                  className="text-gray-600"
+                  aria-label="Upload profile picture"
                 />
-                <p className="text-sm text-muted-foreground">
-                  Upload a profile picture (JPEG, PNG, max 5MB)
-                </p>
+                <p className="text-sm text-gray-500">Upload a profile picture (JPEG, PNG, max 5MB)</p>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="full-name">Full Name</Label>
+              <Label htmlFor="full-name" className="text-base font-medium text-gray-800">
+                Full Name
+              </Label>
               <Input
                 id="full-name"
                 type="text"
@@ -490,77 +509,96 @@ export default function VolunteerProfilePage() {
                 onChange={(e) => handleInputChange("full_name", e.target.value)}
                 required
                 aria-required="true"
+                className="border-gray-300 focus:ring-blue-500"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-base font-medium text-gray-800">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
                 placeholder={userEmail || ""}
                 value={profile.email || ""}
                 disabled
+                className="bg-gray-100"
+                aria-label="User email (disabled)"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone" className="text-base font-medium text-gray-800">
+                Phone Number
+              </Label>
               <Input
                 id="phone"
                 type="tel"
                 placeholder={userPhone || ""}
                 value={profile.phone || ""}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
+                className="border-gray-300 focus:ring-blue-500"
+                aria-label="Phone number"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="date-of-birth">Date of Birth</Label>
+              <Label htmlFor="date-of-birth" className="text-base font-medium text-gray-800">
+                Date of Birth
+              </Label>
               <Input
                 id="date-of-birth"
                 type="date"
                 value={profile.date_of_birth || ""}
-                onChange={(e) =>
-                  handleInputChange("date_of_birth", e.target.value)
-                }
+                onChange={(e) => handleInputChange("date_of_birth", e.target.value)}
+                className="border-gray-300 focus:ring-blue-500"
+                aria-label="Date of birth"
               />
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="address">Address</Label>
+            <Label htmlFor="address" className="text-base font-medium text-gray-800">
+              Address
+            </Label>
             <Input
               id="address"
               type="text"
               placeholder="123 Main St, City, State, ZIP"
               value={profile.address || ""}
               onChange={(e) => handleInputChange("address", e.target.value)}
+              className="border-gray-300 focus:ring-blue-500"
+              aria-label="Address"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="location">Location</Label>
+            <Label htmlFor="location" className="text-base font-medium text-gray-800">
+              Location
+            </Label>
             <Input
               id="location"
               type="text"
               value={locationDisplay}
               disabled
-              className="bg-muted"
+              className="bg-gray-100"
+              aria-label="Current location (disabled)"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label>Skills & Interests</Label>
+            <Label className="text-base font-medium text-gray-800">Skills & Interests</Label>
             <CheckboxReactHookFormMultiple
               items={expertiseData}
               onChange={handleSkillsChange}
               initialValues={profile.skills || []}
+              aria-label="Select skills and interests"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label>Availability</Label>
+            <Label className="text-base font-medium text-gray-800">Availability</Label>
             <RadioGroup
               value={availabilityType}
               onValueChange={(value: "full-time" | "specific-period") => {
@@ -571,13 +609,15 @@ export default function VolunteerProfilePage() {
                 }
               }}
               className="flex items-center space-x-4"
+              aria-label="Select availability type"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem
                   value="full-time"
                   id="availability-full-time-profile"
+                  className="text-blue-600"
                 />
-                <Label htmlFor="availability-full-time-profile">
+                <Label htmlFor="availability-full-time-profile" className="text-gray-700">
                   Full-time
                 </Label>
               </div>
@@ -585,8 +625,9 @@ export default function VolunteerProfilePage() {
                 <RadioGroupItem
                   value="specific-period"
                   id="availability-specific-period-profile"
+                  className="text-blue-600"
                 />
-                <Label htmlFor="availability-specific-period-profile">
+                <Label htmlFor="availability-specific-period-profile" className="text-gray-700">
                   Specific Period
                 </Label>
               </div>
@@ -594,17 +635,20 @@ export default function VolunteerProfilePage() {
             {availabilityType === "specific-period" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="start-date-profile">Start Date</Label>
+                  <Label htmlFor="start-date-profile" className="text-base font-medium text-gray-800">
+                    Start Date
+                  </Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
-                        variant={"outline"}
+                        variant="outline"
                         className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !availabilityStartDate && "text-muted-foreground"
+                          "w-full justify-start text-left font-normal border-gray-300",
+                          !availabilityStartDate && "text-gray-500"
                         )}
+                        aria-label="Select availability start date"
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
                         {availabilityStartDate ? (
                           format(availabilityStartDate, "PPP")
                         ) : (
@@ -623,17 +667,20 @@ export default function VolunteerProfilePage() {
                   </Popover>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="end-date-profile">End Date</Label>
+                  <Label htmlFor="end-date-profile" className="text-base font-medium text-gray-800">
+                    End Date
+                  </Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
-                        variant={"outline"}
+                        variant="outline"
                         className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !availabilityEndDate && "text-muted-foreground"
+                          "w-full justify-start text-left font-normal border-gray-300",
+                          !availabilityEndDate && "text-gray-500"
                         )}
+                        aria-label="Select availability end date"
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
                         {availabilityEndDate ? (
                           format(availabilityEndDate, "PPP")
                         ) : (
@@ -656,13 +703,17 @@ export default function VolunteerProfilePage() {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="experience">Previous Volunteer Experience</Label>
+            <Label htmlFor="experience" className="text-base font-medium text-gray-800">
+              Previous Volunteer Experience
+            </Label>
             <Textarea
               id="experience"
               placeholder="Tell us about your previous volunteer experience..."
               value={profile.experience || ""}
               onChange={(e) => handleInputChange("experience", e.target.value)}
-              rows={3}
+              rows={4}
+              className="border-gray-300 focus:ring-blue-500"
+              aria-label="Previous volunteer experience"
             />
           </div>
 
@@ -682,21 +733,25 @@ export default function VolunteerProfilePage() {
             }}
             onChangeLga={(value) => handleInputChange("origin_lga", value)}
             required
+            aria-label="Select country of origin"
           />
 
           <div className="grid gap-2">
-            <Label>Volunteer Location Preferences</Label>
-            <LocationSelector onSelectionChange={setSelectedLocations} />
-            <p className="text-sm text-muted-foreground">
-              Select your preferred countries, states, and LGAs for
-              volunteering.
+            <Label className="text-base font-medium text-gray-800">
+              Volunteer Location Preferences
+            </Label>
+            <LocationSelector onSelectionChange={handleLocationChange} />
+            {selectedLocationsDisplay}
+            <p className="text-sm text-gray-500">
+              Select your preferred countries, states, and LGAs for volunteering.
             </p>
           </div>
 
           <Button
             type="submit"
-            className="w-full action-btn"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white hover:from-blue-700 hover:to-blue-500 transition-all"
             disabled={submitting}
+            aria-label="Save profile changes"
           >
             {submitting ? (
               <>

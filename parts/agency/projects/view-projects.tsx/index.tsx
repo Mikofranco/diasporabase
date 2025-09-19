@@ -592,7 +592,7 @@ const ProjectDetails: React.FC = () => {
                     ? "destructive"
                     : "secondary"
                 }
-                className="text-sm"
+                className={`text-sm ${project.status === "actve" ? "bg-green-600": ""}`}
               >
                 {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
               </Badge>

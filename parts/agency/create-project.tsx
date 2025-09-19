@@ -318,12 +318,12 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     setErrors({});
 
     const result = projectSchema.safeParse(formData);
-    if (!result.success) {
-      setErrors(result.error.flatten().fieldErrors);
-      console.log("Form validation errors:", result.error.flatten().fieldErrors);
-      toast.error("Please correct the errors in the form.");
-      return;
-    }
+    // if (!result.success) {
+    //   setErrors(result.error.flatten().fieldErrors);
+    //   console.log("Form validation errors:", result.error.flatten().fieldErrors);
+    //   toast.error("Please correct the errors in the form.");
+    //   return;
+    // }
 
     if (!organizationId) {
       setServerError("Organization ID is missing.");
