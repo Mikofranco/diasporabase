@@ -92,12 +92,13 @@ const OrganizationsProjects: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 space-y-4">
       <h1 className="text-2xl font-bold mb-4">My Organization&apos;s Projects</h1>
 
       <Button
         onClick={handleCreateProjectClick}
-        className="mb-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        variant={"outline"}
+        // className="mb-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
       >
         Create Project
       </Button>

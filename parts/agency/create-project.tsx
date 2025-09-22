@@ -1,9 +1,8 @@
-// components/CreateProjectForm.tsx
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { z } from "zod";
 import {
   Dialog,
@@ -28,6 +27,9 @@ import {
 import { toast } from "sonner";
 
 const supabase = createClient();
+
+// Predefined categories
+const CATEGORIES = ["Agriculture", "Health", "Technology", "Construction", "Others"];
 
 // Define schemas for milestones and deliverables
 const milestoneSchema = z.object({
@@ -62,7 +64,7 @@ const deliverableSchema = z.object({
   status: z.enum(["Done", "Pending", "In Progress", "Cancelled"], {
     errorMap: () => ({ message: "Please select a valid status" }),
   }),
-  milestone_id: z.string().optional(), // Stores index as string temporarily
+  milestone_id: z.string().optional(),
 });
 
 // Define base project schema
@@ -89,10 +91,9 @@ const baseProjectSchema = z.object({
   end_date: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), "Invalid end date"),
-  category: z
-    .string()
-    .min(2, "Category must be at least 2 characters")
-    .max(50, "Category must be 50 characters or less"),
+  category: z.enum(CATEGORIES as [string, ...string[]], {
+    errorMap: () => ({ message: "Please select a valid category" }),
+  }),
   milestones: z
     .array(milestoneSchema)
     .min(1, "At least one milestone is required"),
@@ -140,7 +141,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     location: "",
     start_date: "",
     end_date: "",
-    category: "",
+    category: "" as typeof CATEGORIES[number],
     milestones: [] as Array<{
       title: string;
       description?: string;
@@ -152,7 +153,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
       description?: string;
       due_date: string;
       status: "Done" | "Pending" | "In Progress" | "Cancelled";
-      milestone_id?: string; // Stores index as string
+      milestone_id?: string;
     }>,
   });
   const [errors, setErrors] = useState<
@@ -192,16 +193,33 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     fetchProfile();
   }, []);
 
-  useEffect(() => {
-    console.log("Current form values:", formData);
-  }, [formData]);
-
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     index?: number,
     field?: string
   ) => {
     const { name, value } = e.target;
+    if (index !== undefined && field && (name.startsWith("milestones") || name.startsWith("deliverables"))) {
+      setFormData((prev) => {
+        const newArray = name.startsWith("milestones")
+          ? [...prev.milestones]
+          : [...prev.deliverables];
+        newArray[index] = { ...newArray[index], [field]: value || undefined };
+        return {
+          ...prev,
+          [name.split(".")[0]]: newArray,
+        };
+      });
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
+
+  const handleSelectChange = (name: string, value: string, index?: number, field?: string) => {
     if (index !== undefined && field && (name.startsWith("milestones") || name.startsWith("deliverables"))) {
       setFormData((prev) => {
         const newArray = name.startsWith("milestones")
@@ -261,22 +279,20 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     }));
   };
 
-  // Define step schemas
+  // Define step schemas for progressive validation
   const stepSchemas = {
     1: z.object({
       title: baseProjectSchema.shape.title,
       description: baseProjectSchema.shape.description,
     }),
-    2: z
-      .object({
-        location: baseProjectSchema.shape.location,
-        start_date: baseProjectSchema.shape.start_date,
-        end_date: baseProjectSchema.shape.end_date,
-      })
-      .refine((data) => new Date(data.end_date) >= new Date(data.start_date), {
-        message: "End date must be after start date",
-        path: ["end_date"],
-      }),
+    2: z.object({
+      location: baseProjectSchema.shape.location,
+      start_date: baseProjectSchema.shape.start_date,
+      end_date: baseProjectSchema.shape.end_date,
+    }).refine((data) => new Date(data.end_date) >= new Date(data.start_date), {
+      message: "End date must be after start date",
+      path: ["end_date"],
+    }),
     3: z.object({
       category: baseProjectSchema.shape.category,
     }),
@@ -293,7 +309,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     const result = schema.safeParse(formData);
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors);
-      console.log("Step validation errors:", result.error.flatten().fieldErrors);
+      toast.error("Please correct the errors in the current step.");
       return false;
     }
     setErrors({});
@@ -318,12 +334,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     setErrors({});
 
     const result = projectSchema.safeParse(formData);
-    // if (!result.success) {
-    //   setErrors(result.error.flatten().fieldErrors);
-    //   console.log("Form validation errors:", result.error.flatten().fieldErrors);
-    //   toast.error("Please correct the errors in the form.");
-    //   return;
-    // }
+    if (!result.success) {
+      setErrors(result.error.flatten().fieldErrors);
+      toast.error("Please correct the errors in the form.");
+      return;
+    }
 
     if (!organizationId) {
       setServerError("Organization ID is missing.");
@@ -333,7 +348,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
 
     setLoading(true);
     try {
-      console.log("Submitting form data:", formData);
       const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .insert([
@@ -357,8 +371,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         throw new Error(projectError ? `Error creating project: ${projectError.message}` : "No project data returned");
       }
 
-      console.log("Project created:", projectData);
-
       let milestoneIds: string[] = [];
       if (formData.milestones.length > 0) {
         const { data: milestoneData, error: milestoneError } = await supabase
@@ -374,7 +386,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
           )
           .select();
         if (milestoneError) throw new Error("Error creating milestones: " + milestoneError.message);
-        console.log("Milestones created:", milestoneData);
         milestoneIds = milestoneData.map((m: any) => m.id);
       }
 
@@ -395,12 +406,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
           )
           .select();
         if (deliverableError) throw new Error("Error creating deliverables: " + deliverableError.message);
-        console.log("Deliverables created:", deliverableData);
-      }
-
-      if (!projectData.title) {
-        console.warn("Project data missing title:", projectData);
-        throw new Error("Project data missing title");
       }
 
       onProjectCreated(projectData);
@@ -417,7 +422,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
       toast.success("Project created successfully!");
       onClose();
     } catch (err: any) {
-      console.error("Submission error:", err);
       setServerError(err.message);
       toast.error(err.message);
     } finally {
@@ -425,7 +429,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     }
   };
 
-  const renderStepIndicator = () => (
+  const renderStepIndicator = useCallback(() => (
     <div className="mb-6">
       <div className="flex justify-between mb-2">
         {["Basic Info", "Logistics", "Category", "Milestones & Deliverables"].map(
@@ -434,29 +438,28 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center ${
                   currentStep >= index + 1
-                    ? "bg-blue-600 text-white"
+                    ? "bg-[#0284C7] text-white"
                     : "bg-gray-200 text-gray-600"
                 }`}
               >
                 {index + 1}
               </div>
-              <span className="text-sm mt-1">{label}</span>
+              <span className="text-xs mt-1">{label}</span>
             </div>
           )
         )}
       </div>
-      <Progress value={(currentStep / totalSteps) * 100} className="h-2" />
+      <Progress value={(currentStep / totalSteps) * 100} className="h-2 bg-gray-200" />
     </div>
-  );
+  ), [currentStep]);
 
-  const renderStepContent = () => {
-    console.log("Rendering step:", currentStep, "Title value:", formData.title);
+  const renderStepContent = useCallback(() => {
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-6">
             <div>
-              <Label htmlFor="title" className="text-lg font-medium">
+              <Label htmlFor="title" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 Project Title *
               </Label>
               <Input
@@ -466,14 +469,18 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 onChange={handleChange}
                 placeholder="Enter a compelling project title"
                 disabled={loading}
-                className="mt-2 h-12 text-base"
+                className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
+                aria-invalid={!!errors.title}
+                aria-describedby={errors.title ? "title-error" : undefined}
               />
               {errors.title && (
-                <p className="text-red-500 text-sm mt-1">{errors.title[0]}</p>
+                <p id="title-error" className="text-red-500 text-xs mt-1">
+                  {errors.title[0]}
+                </p>
               )}
             </div>
             <div>
-              <Label htmlFor="description" className="text-lg font-medium">
+              <Label htmlFor="description" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 Description *
               </Label>
               <Textarea
@@ -483,10 +490,14 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 onChange={handleChange}
                 placeholder="Describe your project in detail"
                 disabled={loading}
-                className="mt-2 h-32 text-base"
+                className="mt-2 h-24 text-sm border-gray-300 dark:border-gray-700"
+                aria-invalid={!!errors.description}
+                aria-describedby={errors.description ? "description-error" : undefined}
               />
               {errors.description && (
-                <p className="text-red-500 text-sm mt-1">{errors.description[0]}</p>
+                <p id="description-error" className="text-red-500 text-xs mt-1">
+                  {errors.description[0]}
+                </p>
               )}
             </div>
           </div>
@@ -495,7 +506,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         return (
           <div className="space-y-6">
             <div>
-              <Label htmlFor="location" className="text-lg font-medium">
+              <Label htmlFor="location" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 Location *
               </Label>
               <Input
@@ -505,15 +516,19 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 onChange={handleChange}
                 placeholder="Enter project location"
                 disabled={loading}
-                className="mt-2 h-12 text-base"
+                className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
+                aria-invalid={!!errors.location}
+                aria-describedby={errors.location ? "location-error" : undefined}
               />
               {errors.location && (
-                <p className="text-red-500 text-sm mt-1">{errors.location[0]}</p>
+                <p id="location-error" className="text-red-500 text-xs mt-1">
+                  {errors.location[0]}
+                </p>
               )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="start_date" className="text-lg font-medium">
+                <Label htmlFor="start_date" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   Start Date *
                 </Label>
                 <Input
@@ -523,14 +538,18 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                   value={formData.start_date}
                   onChange={handleChange}
                   disabled={loading}
-                  className="mt-2 h-12 text-base"
+                  className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
+                  aria-invalid={!!errors.start_date}
+                  aria-describedby={errors.start_date ? "start_date-error" : undefined}
                 />
                 {errors.start_date && (
-                  <p className="text-red-500 text-sm mt-1">{errors.start_date[0]}</p>
+                  <p id="start_date-error" className="text-red-500 text-xs mt-1">
+                    {errors.start_date[0]}
+                  </p>
                 )}
               </div>
               <div>
-                <Label htmlFor="end_date" className="text-lg font-medium">
+                <Label htmlFor="end_date" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   End Date *
                 </Label>
                 <Input
@@ -540,10 +559,14 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                   value={formData.end_date}
                   onChange={handleChange}
                   disabled={loading}
-                  className="mt-2 h-12 text-base"
+                  className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
+                  aria-invalid={!!errors.end_date}
+                  aria-describedby={errors.end_date ? "end_date-error" : undefined}
                 />
                 {errors.end_date && (
-                  <p className="text-red-500 text-sm mt-1">{errors.end_date[0]}</p>
+                  <p id="end_date-error" className="text-red-500 text-xs mt-1">
+                    {errors.end_date[0]}
+                  </p>
                 )}
               </div>
             </div>
@@ -553,20 +576,29 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         return (
           <div className="space-y-6">
             <div>
-              <Label htmlFor="category" className="text-lg font-medium">
+              <Label htmlFor="category" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 Category *
               </Label>
-              <Input
-                id="category"
-                name="category"
+              <Select
+                onValueChange={(value) => handleSelectChange("category", value)}
                 value={formData.category}
-                onChange={handleChange}
-                placeholder="Enter project category"
                 disabled={loading}
-                className="mt-2 h-12 text-base"
-              />
+              >
+                <SelectTrigger className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.category && (
-                <p className="text-red-500 text-sm mt-1">{errors.category[0]}</p>
+                <p id="category-error" className="text-red-500 text-xs mt-1">
+                  {errors.category[0]}
+                </p>
               )}
             </div>
           </div>
@@ -575,16 +607,18 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium">Milestones *</h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Milestones *</h3>
               {formData.milestones.length === 0 && (
-                <p className="text-red-500 text-sm mt-1">
+                <p className="text-red-500 text-xs mt-1">
                   At least one milestone is required.
                 </p>
               )}
               {formData.milestones.map((milestone, index) => (
-                <div key={index} className="border p-4 rounded-md mb-4">
+                <div key={index} className="border p-4 rounded-md mb-4 bg-white dark:bg-gray-900">
                   <div className="flex justify-between items-center">
-                    <h4 className="text-md font-medium">Milestone {index + 1}</h4>
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Milestone {index + 1}
+                    </h4>
                     <Button
                       type="button"
                       variant="destructive"
@@ -596,7 +630,10 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                     </Button>
                   </div>
                   <div>
-                    <Label htmlFor={`milestones.${index}.title`} className="text-lg font-medium">
+                    <Label
+                      htmlFor={`milestones.${index}.title`}
+                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                    >
                       Title *
                     </Label>
                     <Input
@@ -606,18 +643,28 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       onChange={(e) => handleChange(e, index, "title")}
                       placeholder="Enter milestone title"
                       disabled={loading}
-                      className="mt-2 h-12 text-base"
+                      className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
+                      aria-invalid={!!errors.milestones?.[index]?.title}
+                      aria-describedby={
+                        errors.milestones?.[index]?.title
+                          ? `milestones.${index}.title-error`
+                          : undefined
+                      }
                     />
-                    {errors//@ts-ignore
-                    .milestones?.[index]?.title && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors//@ts-ignore
-                        .milestones[index].title}
+                    {errors.milestones?.[index]?.title && (
+                      <p
+                        id={`milestones.${index}.title-error`}
+                        className="text-red-500 text-xs mt-1"
+                      >
+                        {errors.milestones[index].title}
                       </p>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor={`milestones.${index}.description`} className="text-lg font-medium">
+                    <Label
+                      htmlFor={`milestones.${index}.description`}
+                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                    >
                       Description
                     </Label>
                     <Textarea
@@ -627,18 +674,28 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       onChange={(e) => handleChange(e, index, "description")}
                       placeholder="Enter milestone description (optional)"
                       disabled={loading}
-                      className="mt-2 h-32 text-base"
+                      className="mt-2 h-24 text-sm border-gray-300 dark:border-gray-700"
+                      aria-invalid={!!errors.milestones?.[index]?.description}
+                      aria-describedby={
+                        errors.milestones?.[index]?.description
+                          ? `milestones.${index}.description-error`
+                          : undefined
+                      }
                     />
-                    {errors//@ts-ignore
-                    .milestones?.[index]?.description && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors//@ts-ignore
-                        .milestones[index].description}
+                    {errors.milestones?.[index]?.description && (
+                      <p
+                        id={`milestones.${index}.description-error`}
+                        className="text-red-500 text-xs mt-1"
+                      >
+                        {errors.milestones[index].description}
                       </p>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor={`milestones.${index}.due_date`} className="text-lg font-medium">
+                    <Label
+                      htmlFor={`milestones.${index}.due_date`}
+                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                    >
                       Due Date *
                     </Label>
                     <Input
@@ -648,32 +705,38 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       value={milestone.due_date}
                       onChange={(e) => handleChange(e, index, "due_date")}
                       disabled={loading}
-                      className="mt-2 h-12 text-base"
+                      className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
+                      aria-invalid={!!errors.milestones?.[index]?.due_date}
+                      aria-describedby={
+                        errors.milestones?.[index]?.due_date
+                          ? `milestones.${index}.due_date-error`
+                          : undefined
+                      }
                     />
-                    {errors//@ts-ignore
-                    .milestones?.[index]?.due_date && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors//@ts-ignore
-                        .milestones[index].due_date}
+                    {errors.milestones?.[index]?.due_date && (
+                      <p
+                        id={`milestones.${index}.due_date-error`}
+                        className="text-red-500 text-xs mt-1"
+                      >
+                        {errors.milestones[index].due_date}
                       </p>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor={`milestones.${index}.status`} className="text-lg font-medium">
+                    <Label
+                      htmlFor={`milestones.${index}.status`}
+                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                    >
                       Status *
                     </Label>
                     <Select
                       onValueChange={(value) =>
-                        handleChange(
-                          { target: { name: `milestones.${index}.status`, value } } as any,
-                          index,
-                          "status"
-                        )
+                        handleSelectChange(`milestones.${index}.status`, value, index, "status")
                       }
                       value={milestone.status}
                       disabled={loading}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -683,11 +746,12 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                         <SelectItem value="Cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors//@ts-ignore
-                    .milestones?.[index]?.status && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors//@ts-ignore
-                        .milestones[index].status}
+                    {errors.milestones?.[index]?.status && (
+                      <p
+                        id={`milestones.${index}.status-error`}
+                        className="text-red-500 text-xs mt-1"
+                      >
+                        {errors.milestones[index].status}
                       </p>
                     )}
                   </div>
@@ -698,22 +762,25 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 variant="outline"
                 onClick={addMilestone}
                 disabled={loading}
+                className="text-sm border-gray-300 dark:border-gray-700"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Milestone
               </Button>
             </div>
             <div>
-              <h3 className="text-lg font-medium">Deliverables *</h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Deliverables *</h3>
               {formData.deliverables.length === 0 && (
-                <p className="text-red-500 text-sm mt-1">
+                <p className="text-red-500 text-xs mt-1">
                   At least one deliverable is required.
                 </p>
               )}
               {formData.deliverables.map((deliverable, index) => (
-                <div key={index} className="border p-4 rounded-md mb-4">
+                <div key={index} className="border p-4 rounded-md mb-4 bg-white dark:bg-gray-900">
                   <div className="flex justify-between items-center">
-                    <h4 className="text-md font-medium">Deliverable {index + 1}</h4>
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Deliverable {index + 1}
+                    </h4>
                     <Button
                       type="button"
                       variant="destructive"
@@ -725,7 +792,10 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                     </Button>
                   </div>
                   <div>
-                    <Label htmlFor={`deliverables.${index}.title`} className="text-lg font-medium">
+                    <Label
+                      htmlFor={`deliverables.${index}.title`}
+                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                    >
                       Title *
                     </Label>
                     <Input
@@ -735,18 +805,28 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       onChange={(e) => handleChange(e, index, "title")}
                       placeholder="Enter deliverable title"
                       disabled={loading}
-                      className="mt-2 h-12 text-base"
+                      className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
+                      aria-invalid={!!errors.deliverables?.[index]?.title}
+                      aria-describedby={
+                        errors.deliverables?.[index]?.title
+                          ? `deliverables.${index}.title-error`
+                          : undefined
+                      }
                     />
-                    {errors//@ts-ignore
-                    .deliverables?.[index]?.title && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors//@ts-ignore
-                        .deliverables[index].title}
+                    {errors.deliverables?.[index]?.title && (
+                      <p
+                        id={`deliverables.${index}.title-error`}
+                        className="text-red-500 text-xs mt-1"
+                      >
+                        {errors.deliverables[index].title}
                       </p>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor={`deliverables.${index}.description`} className="text-lg font-medium">
+                    <Label
+                      htmlFor={`deliverables.${index}.description`}
+                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                    >
                       Description
                     </Label>
                     <Textarea
@@ -756,18 +836,28 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       onChange={(e) => handleChange(e, index, "description")}
                       placeholder="Enter deliverable description (optional)"
                       disabled={loading}
-                      className="mt-2 h-32 text-base"
+                      className="mt-2 h-24 text-sm border-gray-300 dark:border-gray-700"
+                      aria-invalid={!!errors.deliverables?.[index]?.description}
+                      aria-describedby={
+                        errors.deliverables?.[index]?.description
+                          ? `deliverables.${index}.description-error`
+                          : undefined
+                      }
                     />
-                    {errors//@ts-ignore
-                    .deliverables?.[index]?.description && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors//@ts-ignore
-                        .deliverables[index].description}
+                    {errors.deliverables?.[index]?.description && (
+                      <p
+                        id={`deliverables.${index}.description-error`}
+                        className="text-red-500 text-xs mt-1"
+                      >
+                        {errors.deliverables[index].description}
                       </p>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor={`deliverables.${index}.due_date`} className="text-lg font-medium">
+                    <Label
+                      htmlFor={`deliverables.${index}.due_date`}
+                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                    >
                       Due Date *
                     </Label>
                     <Input
@@ -777,32 +867,38 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       value={deliverable.due_date}
                       onChange={(e) => handleChange(e, index, "due_date")}
                       disabled={loading}
-                      className="mt-2 h-12 text-base"
+                      className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
+                      aria-invalid={!!errors.deliverables?.[index]?.due_date}
+                      aria-describedby={
+                        errors.deliverables?.[index]?.due_date
+                          ? `deliverables.${index}.due_date-error`
+                          : undefined
+                      }
                     />
-                    {errors//@ts-ignore
-                    .deliverables?.[index]?.due_date && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors//@ts-ignore
-                        .deliverables[index].due_date}
+                    {errors.deliverables?.[index]?.due_date && (
+                      <p
+                        id={`deliverables.${index}.due_date-error`}
+                        className="text-red-500 text-xs mt-1"
+                      >
+                        {errors.deliverables[index].due_date}
                       </p>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor={`deliverables.${index}.status`} className="text-lg font-medium">
+                    <Label
+                      htmlFor={`deliverables.${index}.status`}
+                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                    >
                       Status *
                     </Label>
                     <Select
                       onValueChange={(value) =>
-                        handleChange(
-                          { target: { name: `deliverables.${index}.status`, value } } as any,
-                          index,
-                          "status"
-                        )
+                        handleSelectChange(`deliverables.${index}.status`, value, index, "status")
                       }
                       value={deliverable.status}
                       disabled={loading}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -812,30 +908,30 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                         <SelectItem value="Cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors//@ts-ignore
-                    .deliverables?.[index]?.status && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors//@ts-ignore
-                        .deliverables[index].status}
+                    {errors.deliverables?.[index]?.status && (
+                      <p
+                        id={`deliverables.${index}.status-error`}
+                        className="text-red-500 text-xs mt-1"
+                      >
+                        {errors.deliverables[index].status}
                       </p>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor={`deliverables.${index}.milestone_id`} className="text-lg font-medium">
+                    <Label
+                      htmlFor={`deliverables.${index}.milestone_id`}
+                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                    >
                       Associated Milestone (Optional)
                     </Label>
                     <Select
                       onValueChange={(value) =>
-                        handleChange(
-                          { target: { name: `deliverables.${index}.milestone_id`, value } } as any,
-                          index,
-                          "milestone_id"
-                        )
+                        handleSelectChange(`deliverables.${index}.milestone_id`, value, index, "milestone_id")
                       }
                       value={deliverable.milestone_id || "none"}
                       disabled={loading || formData.milestones.length === 0}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700">
                         <SelectValue placeholder="Select a milestone" />
                       </SelectTrigger>
                       <SelectContent>
@@ -847,11 +943,12 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                         ))}
                       </SelectContent>
                     </Select>
-                    {errors//@ts-ignore
-                    .deliverables?.[index]?.milestone_id && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors//@ts-ignore
-                        .deliverables[index].milestone_id}
+                    {errors.deliverables?.[index]?.milestone_id && (
+                      <p
+                        id={`deliverables.${index}.milestone_id-error`}
+                        className="text-red-500 text-xs mt-1"
+                      >
+                        {errors.deliverables[index].milestone_id}
                       </p>
                     )}
                   </div>
@@ -862,6 +959,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 variant="outline"
                 onClick={addDeliverable}
                 disabled={loading}
+                className="text-sm border-gray-300 dark:border-gray-700"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Deliverable
@@ -870,18 +968,18 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
           </div>
         );
     }
-  };
+  }, [currentStep, formData, errors, loading]);
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-w-[90vw] p-6 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-w-[90vw] p-6 max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">
+          <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100">
             Create New Project
           </DialogTitle>
         </DialogHeader>
         {serverError && (
-          <p className="text-red-500 text-sm mb-4 bg-red-50 p-3 rounded-md">
+          <p className="text-red-500 text-xs mb-4 bg-red-50 dark:bg-red-900/50 p-3 rounded-md">
             {serverError}
           </p>
         )}
@@ -896,7 +994,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                   variant="outline"
                   onClick={handlePrevious}
                   disabled={loading}
-                  className="mr-2"
+                  className="mr-2 text-sm border-gray-300 dark:border-gray-700"
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   Previous
@@ -907,6 +1005,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 variant="outline"
                 onClick={onClose}
                 disabled={loading}
+                className="text-sm border-gray-300 dark:border-gray-700"
               >
                 Cancel
               </Button>
@@ -917,7 +1016,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                   type="button"
                   onClick={handleNext}
                   disabled={loading}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-[#0284C7] hover:bg-blue-700 text-white text-sm"
                 >
                   Next
                   <ChevronRight className="ml-2 h-4 w-4" />
@@ -926,7 +1025,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-[#0284C7] hover:bg-blue-700 text-white text-sm"
                 >
                   {loading ? "Creating..." : "Create Project"}
                 </Button>

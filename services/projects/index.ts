@@ -16,7 +16,7 @@ export async function getProjectsByStatus(status: ProjectStatus): Promise<{
     const { data: projects, error } = await supabase
       .from("projects")
       .select("*")
-    //   .eq("organization_id", userData.id)
+      //   .eq("organization_id", userData.id)
       .eq("status", status)
       .order("created_at", { ascending: false });
 
@@ -26,7 +26,11 @@ export async function getProjectsByStatus(status: ProjectStatus): Promise<{
 
     return { data: projects as Project[], error: null };
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "An unexpected error occurred" };
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err.message : "An unexpected error occurred",
+    };
   }
 }
 
@@ -54,7 +58,11 @@ export async function getProjectsByCategory(category: string): Promise<{
 
     return { data: projects as Project[], error: null };
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "An unexpected error occurred" };
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err.message : "An unexpected error occurred",
+    };
   }
 }
 
@@ -81,7 +89,11 @@ export async function getVolunteerProjects(): Promise<{
 
     return { data: projects as Project[], error: null };
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "An unexpected error occurred" };
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err.message : "An unexpected error occurred",
+    };
   }
 }
 
@@ -109,12 +121,18 @@ export async function getProjectById(projectId: string): Promise<{
 
     return { data: project as Project, error: null };
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "An unexpected error occurred" };
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err.message : "An unexpected error occurred",
+    };
   }
 }
 
 // Create a new project
-export async function createProject(project: Omit<Project, "id" | "createdAt" | "updatedAt">): Promise<{
+export async function createProject(
+  project: Omit<Project, "id" | "createdAt" | "updatedAt">
+): Promise<{
   data: Project | null;
   error: string | null;
 }> {
@@ -136,12 +154,19 @@ export async function createProject(project: Omit<Project, "id" | "createdAt" | 
 
     return { data: newProject as Project, error: null };
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "An unexpected error occurred" };
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err.message : "An unexpected error occurred",
+    };
   }
 }
 
 // Update a project's status
-export async function updateProjectStatus(projectId: string, status: ProjectStatus): Promise<{
+export async function updateProjectStatus(
+  projectId: string,
+  status: ProjectStatus
+): Promise<{
   data: Project | null;
   error: string | null;
 }> {
@@ -165,14 +190,18 @@ export async function updateProjectStatus(projectId: string, status: ProjectStat
 
     return { data: updatedProject as Project, error: null };
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "An unexpected error occurred" };
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err.message : "An unexpected error occurred",
+    };
   }
 }
 
 // Update a project's details
 export async function updateProjectDetails(
   projectId: string,
-  updates: Partial<Omit<Project, "id" | "createdAt" | "updatedAt">>,
+  updates: Partial<Omit<Project, "id" | "createdAt" | "updatedAt">>
 ): Promise<{
   data: Project | null;
   error: string | null;
@@ -197,7 +226,11 @@ export async function updateProjectDetails(
 
     return { data: updatedProject as Project, error: null };
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "An unexpected error occurred" };
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err.message : "An unexpected error occurred",
+    };
   }
 }
 
@@ -224,7 +257,11 @@ export async function deleteProject(projectId: string): Promise<{
 
     return { data: null, error: null };
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "An unexpected error occurred" };
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err.message : "An unexpected error occurred",
+    };
   }
 }
 
@@ -246,7 +283,10 @@ export async function getProjectsByUserSkills(): Promise<{
       .single();
 
     if (profileError || !profile?.skills?.length) {
-      return { data: null, error: profileError?.message || "No skills found for user" };
+      return {
+        data: null,
+        error: profileError?.message || "No skills found for user",
+      };
     }
 
     // Fetch projects where required_skills overlap with user skills
@@ -263,6 +303,49 @@ export async function getProjectsByUserSkills(): Promise<{
 
     return { data: projects as Project[], error: null };
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "An unexpected error occurred" };
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err.message : "An unexpected error occurred",
+    };
   }
+}
+
+export async function getActiveProjectForAgecy(organiazation_id: string) {
+  const { data: projects, error: projectsError } = await supabase
+    .form("projects")
+    .select("*")
+    .eq("organiazation_id", organiazation_id)
+    .eq("status", "active");
+
+  if (projectsError) {
+    return { data: null, error: projectsError.message };
+  }
+  return { data: projects as Project[], error: null };
+}
+
+export async function getPendingProjetsForAgecy(organiazation_id: string) {
+  const { data: projects, error: projectsError } = await supabase
+    .form("projects")
+    .select("*")
+    .eq("organiazation_id", organiazation_id)
+    .eq("status", "pending");
+
+  if (projectsError) {
+    return { data: null, error: projectsError.message };
+  }
+  return { data: projects as Project[], error: null };
+}
+
+export async function getCompletedProjetsForAgecy(organiazation_id: string) {
+  const { data: projects, error: projectsError } = await supabase
+    .form("projects")
+    .select("*")
+    .eq("organiazation_id", organiazation_id)
+    .eq("status", "pending");
+
+  if (projectsError) {
+    return { data: null, error: projectsError.message };
+  }
+  return { data: projects as Project[], error: null };
 }

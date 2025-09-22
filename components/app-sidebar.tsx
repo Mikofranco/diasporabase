@@ -36,7 +36,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createClient } from "@/lib/supabase/client"; //@ts-ignore
+import { createClient } from "@/lib/supabase/client";
+import { motion } from "framer-motion";
 import debounce from "lodash.debounce";
 import Image from "next/image";
 
@@ -54,15 +55,15 @@ const ROUTES = {
     volunteers: "/dashboard/admin/volunteers",
     agencies: "/dashboard/admin/agencies",
     settings: "/dashboard/admin/settings",
-    profile: "/dashboard/admin/profile", // Added for consistency
+    profile: "/dashboard/admin/profile",
   },
   super_admin: {
     dashboard: "/dashboard/super_admin",
     projects: "/dashboard/super_admin/projects",
     volunteers: "/dashboard/super_admin/volunteers",
     agencies: "/dashboard/super_admin/agencies",
-    settings: "/dashboard/super_admin/settings", // Updated to a specific super admin settings path
-    profile: "/dashboard/super_admin/profile", // Added for super admin
+    settings: "/dashboard/super_admin/settings",
+    profile: "/dashboard/super_admin/profile",
     invite_admin: "/dashboard/super_admin/invite_admin",
   },
   volunteer: {
@@ -95,12 +96,20 @@ const MENU_ITEMS = {
     { path: ROUTES.admin.settings, label: "Settings", icon: Settings },
   ],
   super_admin: [
-    { path: ROUTES.super_admin.dashboard, label: "Dashboard", icon: LayoutDashboard },
+    {
+      path: ROUTES.super_admin.dashboard,
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
     { path: ROUTES.super_admin.projects, label: "Projects", icon: Briefcase },
     { path: ROUTES.super_admin.volunteers, label: "Volunteers", icon: Users },
     { path: ROUTES.super_admin.agencies, label: "Agencies", icon: Home },
     { path: ROUTES.super_admin.settings, label: "Settings", icon: Settings },
-    { path: ROUTES.super_admin.invite_admin, label: "Invite Admin", icon: Settings },
+    {
+      path: ROUTES.super_admin.invite_admin,
+      label: "Invite Admin",
+      icon: Settings,
+    },
   ],
   volunteer: [
     {
@@ -110,7 +119,7 @@ const MENU_ITEMS = {
     },
     { path: ROUTES.volunteer.projects, label: "My Projects", icon: Briefcase },
     { path: ROUTES.volunteer.profile, label: "Profile", icon: User },
-    { path: ROUTES.volunteer.requests, label: "requests", icon: User },
+    { path: ROUTES.volunteer.requests, label: "Requests", icon: User },
     {
       path: ROUTES.volunteer.findOpportunity,
       label: "Find Opportunity",
@@ -152,13 +161,11 @@ export function AppSidebar() {
         error: sessionError,
       } = await supabase.auth.getSession();
 
-      // Only log actual errors, not null sessions (which are normal for unauthenticated users)
       if (sessionError) {
         console.error("Session error:", sessionError);
       }
 
       if (!session) {
-        // No session is normal for unauthenticated users - don't treat as error
         setUserRole(null);
         setUserName(null);
         setLoading(false);
@@ -184,8 +191,7 @@ export function AppSidebar() {
 
     fetchUser();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      //@ts-ignore
+    const { data: authListener } = supabase.auth.onAuthStateChange(//@ts-ignore
       (_event, session) => {
         if (session) {
           fetchUser();
@@ -213,32 +219,55 @@ export function AppSidebar() {
     setLoading(false);
   }, 300);
 
+  // Helper to determine if a menu item is active
+  const isActive = (itemPath: string, currentPath: string) => {
+    // Exact match for dashboard to avoid always-active issue
+    if (itemPath.includes("dashboard")) {
+      return currentPath === itemPath;
+    }
+    // Allow sub-routes for projects (e.g., /projects/[id])
+    if (itemPath.includes("projects")) {
+      return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`);
+    }
+    // Exact match for other routes
+    return currentPath === itemPath;
+  };
+
   const getMenuItems = (role: UserRole) => {
     const items = MENU_ITEMS[role || "guest"];
     return (
       <SidebarGroup>
-        <SidebarGroupLabel>
+        <SidebarGroupLabel className="text-sm text-white dark:text-gray-100 bg-[#0ea5e9] mb-6 mt-2 p-2 rounded">
           {role
             ? `${role.charAt(0).toUpperCase() + role.slice(1)} Dashboard`
             : "Navigation"}
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            {items.map((item) => (
+            {items.map((item, index) => (
               <SidebarMenuItem key={item.path}>
-                <SidebarMenuButton
-                  asChild
-                  className={
-                    pathname === item.path || pathname.startsWith(item.path)
-                      ? "sidebar-menu-button-active"
-                      : ""
-                  }
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
-                  <Link href={item.path}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
+                  <SidebarMenuButton
+                    asChild
+                    className={`text-sm transition-colors ${
+                      isActive(item.path, pathname)
+                        ? "bg-gray-100 dark:bg-gray-800 text-[#0284C7] dark:text-blue-400 font-semibold"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-[#0284C7] dark:hover:text-blue-400"
+                    }`}
+                    aria-current={
+                      isActive(item.path, pathname) ? "page" : undefined
+                    }
+                  >
+                    <Link href={item.path}>
+                      <item.icon className="h-4 w-4 mr-2" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </motion.div>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
@@ -248,27 +277,27 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar >
+    <Sidebar className="bg-white dark:bg-gray-900">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
-              {/* <DropdownMenuTrigger asChild> */}
-              <SidebarMenuButton>
-                <Image
-                  src="/svg/logo.svg"
-                  alt="Diaspora Logo"
-                  width={32}
-                  height={32}
-                  className="rounded-full mr-2"
-                />
-                <span className="hidden md:inline text-[20px] font-bold">
-                  DiasporaBase
-                </span>
-                {/* <ChevronDown className="ml-auto" /> */}
-              </SidebarMenuButton>
-              {/* </DropdownMenuTrigger> */}
-              <DropdownMenuContent className="w-[--radix-popper-anchor-width]">
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton className="text-sm">
+                  <Image
+                    src="/svg/logo.svg"
+                    alt="Diaspora Logo"
+                    width={24}
+                    height={24}
+                    className="rounded-full mr-2"
+                  />
+                  <span className="hidden md:inline text-sm font-bold text-gray-900 dark:text-gray-100">
+                    DiasporaBase
+                  </span>
+                  <ChevronDown className="h-4 w-4 ml-auto text-gray-500 dark:text-gray-400" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-[--radix-popper-anchor-width] text-xs">
                 <DropdownMenuItem>
                   <span>About Us</span>
                 </DropdownMenuItem>
@@ -280,11 +309,13 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarSeparator />
-      <SidebarContent>
+      <SidebarSeparator className="bg-gray-200 dark:bg-gray-700" />
+      <SidebarContent className="px-2">
         {loading ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Loading...</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sm text-gray-900 dark:text-gray-100">
+              Loading...
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {Array.from({
@@ -304,28 +335,28 @@ export function AppSidebar() {
           getMenuItems(userRole)
         )}
       </SidebarContent>
-      <SidebarSeparator />
+      <SidebarSeparator className="bg-gray-200 dark:bg-gray-700" />
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton>
-                  <User /> {userName || "Guest"}
-                  <ChevronUp className="ml-auto" />
+                <SidebarMenuButton className="text-sm">
+                  <User className="h-4 w-4 mr-2 text-[#0284C7] dark:text-blue-400" />
+                  <span className="text-sm text-gray-900 dark:text-gray-100">
+                    {userName || "Guest"}
+                  </span>
+                  <ChevronUp className="h-4 w-4 ml-auto text-gray-500 dark:text-gray-400" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 side="top"
-                className="w-[--radix-popper-anchor-width]"
+                className="w-[--radix-popper-anchor-width] text-xs"
               >
                 {userRole && (
                   <>
                     <DropdownMenuItem>
-                      <Link // @ts-ignore
-                        href={ROUTES[userRole].profile}
-                        className="w-full"
-                      >
+                      <Link href={ROUTES[userRole].profile} className="w-full">
                         <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>
@@ -355,3 +386,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+export default AppSidebar;

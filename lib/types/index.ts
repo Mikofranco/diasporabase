@@ -111,14 +111,14 @@ export interface ProjectVolunteer {
 
 export interface Project {
   id: string;
-  createdAt: string;
-  title: string;
-  description: string;
+  createdAt?: string;
+  title?: string;
+  description?: string;
   organizationId?: string;
-  organizationName: string;
-  location: string;
-  startDate: string;
-  endDate: string;
+  organizationName?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
   volunteersRegistered?: number;
   status?: ProjectStatus;
   category: string;

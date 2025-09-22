@@ -110,7 +110,7 @@ body {
   background: linear-gradient(90deg, #0EA5E9 0%, #0284C7 100%);
   color: white;
 }
-.actionBtn:hover {
+.action-btn:hover {
   background: linear-gradient(90deg, #38BDF8 0%, #1E88E5 100%); /* Lighter gradient on hover */
   transform: translateY(-1px); /* Subtle lift effect */
 }
