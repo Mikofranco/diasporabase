@@ -22,7 +22,7 @@ const OngoingProjects = () => {
     );
   }
   return (
-    <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4">
+    <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4 bg-white">
       <h2 className="text-gray-600 font-bold">Ongoing Projects</h2>
       {ongoingProjectdata?.length === 0 && (
         <p className="text-gray-500 text-center font-semibold">
@@ -33,8 +33,8 @@ const OngoingProjects = () => {
         <OngoingProjectItem
           key={project.id}
           icon={<BlueCircleSmaall />}
-          organization_name={project.organizationName}
-          title={project.title}
+          organization_name={project.organizationName || "Unknown Organization"}
+          title={project.title || "Untitled Project"}
         />
       ))}
     </div>
