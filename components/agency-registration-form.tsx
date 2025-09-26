@@ -105,7 +105,11 @@ export default function AgencyRegistrationForm() {
       });
       // No immediate redirect; user must confirm email first
     }
-
+    formData.companyName = "";
+    formData.email = "";
+    formData.phone = "";
+    formData.password = "";
+    formData.confirmPassword = "";
     setLoading(false);
   };
 

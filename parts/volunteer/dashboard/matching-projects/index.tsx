@@ -13,7 +13,7 @@ const MatchingProjects = () => {
 
   return (
     <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4">
-      <h2 className="text-gray-600 font-bold">Ongoing Projects</h2>
+      <h2 className="text-gray-600 font-bold">Matching Projects</h2>
       {skillMatchedProjectIsLoading && (
         <div className="flex justify-center items-center py-4">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500" role="status">

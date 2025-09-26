@@ -151,18 +151,7 @@ const VolunteerRequests: React.FC = () => {
         return;
       }
 
-      // Update request status to accepted
-      const table = requestType === "volunteer" ? "volunteer_requests" : "agency_requests";
-      const { error: updateError } = await supabase
-        .from(table)
-        .update({ status: "accepted" })
-        .eq("id", requestId)
-        .eq("volunteer_id", userId);
-
-      if (updateError) throw new Error(`Error accepting ${requestType} request: ${updateError.message}`);
-
-      // Add to project_volunteers
-      const { error: assignError } = await supabase.from("project_volunteers").insert([
+        const { error: assignError } = await supabase.from("project_volunteers").insert([
         {
           project_id: projectId,
           volunteer_id: userId,
@@ -179,6 +168,19 @@ const VolunteerRequests: React.FC = () => {
 
       if (projectUpdateError) throw new Error("Error updating project: " + projectUpdateError.message);
 
+
+      // Update request status to accepted
+      const table = requestType === "volunteer" ? "volunteer_requests" : "agency_requests";
+      const { error: updateError } = await supabase
+        .from(table)
+        .update({ status: "accepted" })
+        .eq("id", requestId)
+        .eq("volunteer_id", userId);
+
+      if (updateError) throw new Error(`Error accepting ${requestType} request: ${updateError.message}`);
+
+      // Add to project_volunteers
+    
       setRequests(
         requests.map((r) =>
           r.id === requestId ? { ...r, status: "accepted" } : r

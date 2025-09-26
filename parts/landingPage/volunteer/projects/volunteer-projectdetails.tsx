@@ -26,6 +26,7 @@ interface Project {
   id: string;
   title: string;
   description: string;
+  organization_id: string;
   organization_name: string;
   location: string;
   start_date: string;
@@ -111,7 +112,7 @@ const VolunteerProjectDetails: React.FC = () => {
         const { data: projectData, error: projectError } = await supabase
           .from("projects")
           .select(
-            "id, title, description, organization_name, location, start_date, end_date, volunteers_registered, status, category, required_skills, created_at"
+            "id, title, description, organization_name, organization_id,location, start_date, end_date, volunteers_registered, status, category, required_skills, created_at"
           )
           .eq("id", id)
           .eq("status", "active")
@@ -173,7 +174,7 @@ const VolunteerProjectDetails: React.FC = () => {
     try {
       const { error } = await supabase
         .from("volunteer_requests")
-        .insert({ project_id: id, volunteer_id: profile.id, status: "pending" });
+        .insert({ project_id: id, volunteer_id: profile.id, status: "pending", organization_id: project?.organization_id });
 
       if (error) throw new Error("Error submitting volunteer request: " + error.message);
 

@@ -1,85 +1,53 @@
-"use client";
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { User, Check, X } from "lucide-react";
 
 interface RequestSlateProps {
+  requestId: string;
   applicantName: string;
   projectTitle: string;
+  createdAt: string;
+  status: "pending" | "accepted" | "declined";
   onAccept: () => void;
   onDecline: () => void;
 }
 
 const RequestSlate: React.FC<RequestSlateProps> = ({
-  applicantName = "Sarah Johnson",
-  projectTitle = "Town Clean Up",
+  requestId,
+  applicantName,
+  projectTitle,
+  createdAt,
+  status,
   onAccept,
   onDecline,
 }) => {
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        transition={{ duration: 0.3 }}
-        className="p-4 sm:p-6 border border-gray-200 dark:border-gray-700 rounded-lg mb-4 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-shadow"
-      >
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
-          <div className="flex items-center gap-3">
-            <User
-              className="h-8 w-8 text-[#0284C7] dark:text-blue-400"
-              aria-hidden="true"
-            />
-            <div>
-              <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                {applicantName}
-              </h3>
-              <p
-                className="text-gray-600 dark:text-gray-400 text-sm"
-                id={`request-description-${applicantName.replace(/\s+/g, "-")}`}
-              >
-                Applied for {projectTitle}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button
-              className="flex-1 sm:flex-none bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
-              onClick={onAccept}
-              aria-label={`Accept application for ${applicantName}`}
-            >
-              <motion.span
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-2 font-medium"
-              >
-                <Check className="h-5 w-5" aria-hidden="true" />
-                Accept
-              </motion.span>
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1 sm:flex-none border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
-              onClick={onDecline}
-              aria-label={`Decline application for ${applicantName}`}
-            >
-              <motion.span
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-2 text-medium"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-                Decline
-              </motion.span>
-            </Button>
-          </div>
+    <div className="border border-gray-200 rounded-lg p-4 flex justify-between items-center hover:shadow-sm transition-shadow">
+      <div className="space-y-1">
+        <p className="font-medium text-gray-800">
+          {applicantName} applied to{" "}
+          <span className="text-blue-600">{projectTitle}</span>
+        </p>
+        <p className="text-sm text-gray-500">Applied on: {createdAt}</p>
+        <p className="text-sm text-gray-500">Status: {status}</p>
+      </div>
+      {status === "pending" && (
+        <div className="flex space-x-2">
+          <button
+            onClick={onAccept}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+            disabled={status !== "pending"}
+          >
+            Accept
+          </button>
+          <button
+            onClick={onDecline}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            disabled={status !== "pending"}
+          >
+            Decline
+          </button>
         </div>
-      </motion.div>
-    </AnimatePresence>
+      )}
+    </div>
   );
 };
 

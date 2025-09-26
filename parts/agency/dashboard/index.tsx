@@ -1,4 +1,5 @@
 "use client";
+
 import Notifications from "@/components/NotificationPanel";
 import { supabase } from "@/lib/supabase/client";
 import { Project } from "@/lib/types";
@@ -12,19 +13,13 @@ import AgencyRequestFromVolunteer from "./requests";
 
 const AgencyDashboard = () => {
   const [isActive, setIsActive] = useState<boolean | null>(null);
-  const [ongoingProjects, setOngoingProjects] = useState<Project[] | null>(
-    null
-  );
-  const [completedProjects, setCompletedProjects] = useState<Project[] | null>(
-    null
-  );
-  const [pendingProjects, setPendingProjects] = useState<Project[] | null>(
-    null
-  );
+  const [ongoingProjects, setOngoingProjects] = useState<Project[] | null>(null);
+  const [completedProjects, setCompletedProjects] = useState<Project[] | null>(null);
+  const [pendingProjects, setPendingProjects] = useState<Project[] | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [projectIsLoading, setProjectIsLoading] = useState<boolean>(false);
   const router = useRouter();
-  const [userId, setUserId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null);
 
   async function fetchUserStatus() {
     try {
@@ -40,15 +35,13 @@ const AgencyDashboard = () => {
         .single();
 
       if (fetchedDataError) {
-        throw new Error(
-          fetchedDataError.message || "Failed to fetch user status"
-        );
+        throw new Error(fetchedDataError.message || "Failed to fetch user status");
       }
-      setUserId(userData)
+
+      setUserId(userData);
       return fetchedData.is_active;
     } catch (error) {
-      //@ts-ignore
-      toast.error(error.message || "An unexpected error occurred");
+      toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
       return null;
     }
   }
@@ -59,6 +52,7 @@ const AgencyDashboard = () => {
         .from("projects")
         .select("*")
         .eq("organization_id", userId)
+        .eq("status", status); 
 
       if (error) {
         throw new Error(`Failed to fetch ${status} projects: ${error.message}`);
@@ -66,13 +60,13 @@ const AgencyDashboard = () => {
 
       return data as Project[];
     } catch (error) {
-      throw error; // Let caller handle the error
+      throw error;
     }
   }
 
   async function fetchAllProjects() {
     setProjectIsLoading(true);
-    setProjectError(null); // Clear previous errors
+    setProjectError(null);
 
     try {
       const { data: userId, error: userIdError } = await getUserId();
@@ -80,7 +74,6 @@ const AgencyDashboard = () => {
         throw new Error(userIdError?.message || "Failed to fetch user ID");
       }
 
-      // Fetch all project types concurrently
       const [ongoing, completed, pending] = await Promise.all([
         fetchProjects(userId, "active"),
         fetchProjects(userId, "completed"),
@@ -91,8 +84,7 @@ const AgencyDashboard = () => {
       setCompletedProjects(completed);
       setPendingProjects(pending);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
       setProjectError(errorMessage);
       toast.error(errorMessage);
       setOngoingProjects(null);
@@ -116,7 +108,6 @@ const AgencyDashboard = () => {
             router.push("/approval-pending");
             return;
           }
-          // Fetch projects only if agency is active
           await fetchAllProjects();
         }
       } catch (error) {
@@ -134,7 +125,7 @@ const AgencyDashboard = () => {
   }, []);
 
   return (
-    <div className="p-4  rounded-lg">
+    <div className="p-4 rounded-lg">
       <h1 className="text-2xl font-bold mb-6">Dashboard Overview</h1>
       <p className="text-gray-500">
         Welcome back! Here's what's happening with your projects.
@@ -142,30 +133,28 @@ const AgencyDashboard = () => {
       <div className="space-y-6 mt-4">
         <div className="flex gap-6">
           <SmallCard
-            count={ongoingProjects?.length}
+            count={ongoingProjects?.length ?? 0} 
             title="Ongoing Projects"
             image="/svg/active-project.svg"
           />
           <SmallCard
-            count={ongoingProjects?.length}
+            count={ongoingProjects?.length ?? 0} 
             title="Total Volunteers"
             image="/svg/total-volunteers.svg"
           />
-
           <SmallCard
-            count={pendingProjects?.length}
+            count={pendingProjects?.length ?? 0}
             title="Pending Projects"
             image="/svg/pending-projects.svg"
           />
           <SmallCard
-            count={completedProjects?.length}
-            title="completed Projects"
+            count={completedProjects?.length ?? 0}
+            title="Completed Projects"
             image="/svg/dashboard-completed-project.svg"
           />
         </div>
-        <RecentProjects userId={"05c9a218-693e-4e68-9964-260bca03c0aa"}/>
-
-        <AgencyRequestFromVolunteer/>
+        <RecentProjects userId={userId|| ""} />
+        <AgencyRequestFromVolunteer />
       </div>
       {/* <Notifications /> */}
     </div>

@@ -241,18 +241,19 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
       if (requestError) throw new Error("Error sending request: " + requestError.message);
 
-      // Insert notification for volunteer
-      const { error: notificationError } = await supabase.from("notifications").insert([
-        {
-          user_id: volunteer.volunteer_id,
-          message: `You have been invited to join project "${projectData.title}" by ${requesterData.full_name || requesterData.role}.`,
-          type: "volunteer_request",
-          is_read: false,
-          related_id: projectId,
-        },
-      ]);
+    //   const { error: notificationError } = await supabase.from("notifications").insert([
+    //   {
+    //     user_id: volunteer.volunteer_id,
+    //     message: `You have been invited to join project "${projectData.title}" by ${requesterData.full_name || requesterData.role}.`,
+    //     // type: "volunteer_request_send",
+    //     is_read: false,
+    //     related_id: projectId,
+    //     project_id: projectId,
+    //     organization_id: projectData.organization_id,
+    //   },
+    // ]);
 
-      if (notificationError) throw new Error("Error creating notification: " + notificationError.message);
+    //   if (notificationError) throw new Error("Error creating notification: " + notificationError.message);
 
       // Update local state
       setVolunteers(
