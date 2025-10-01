@@ -11,6 +11,248 @@ export const africanLocations = [
     country: "Nigeria",
     states: [
       {
+        state: "Abia",
+        lgas: [
+          "Aba North",
+          "Aba South",
+          "Arochukwu",
+          "Bende",
+          "Ikwuano",
+          "Isiala Ngwa North",
+          "Isiala Ngwa South",
+          "Isuikwuato",
+          "Obi Ngwa",
+          "Ohafia",
+          "Osisioma",
+          "Ugwunagbo",
+          "Ukwa East",
+          "Ukwa West",
+          "Umu Nneochi",
+          "Umuahia North",
+          "Umuahia South",
+        ],
+      },
+      {
+        state: "Abuja (FCT)",
+        lgas: [
+          "Abaji",
+          "Bwari",
+          "Gwagwalada",
+          "Kuje",
+          "Kwali",
+          "Municipal Area Council",
+        ],
+      },
+      {
+        state: "Adamawa",
+        lgas: [
+          "Demsa",
+          "Fufore",
+          "Ganye",
+          "Girei",
+          "Gombi",
+          "Guyuk",
+          "Hong",
+          "Jada",
+          "Lamurde",
+          "Madagali",
+          "Maiha",
+          "Mayo-Belwa",
+          "Michika",
+          "Mubi North",
+          "Mubi South",
+          "Numan",
+          "Shelleng",
+          "Song",
+          "Toungo",
+          "Yola North",
+          "Yola South",
+        ],
+      },
+      {
+        state: "Akwa Ibom",
+        lgas: [
+          "Abak",
+          "Eastern Obolo",
+          "Eket",
+          "Esit Eket",
+          "Essien Udim",
+          "Etim Ekpo",
+          "Etinan",
+          "Ibeno",
+          "Ibesikpo Asutan",
+          "Ibiono Ibom",
+          "Ika",
+          "Ikono",
+          "Ikot Abasi",
+          "Ikot Ekpene",
+          "Ini",
+          "Itu",
+          "Mbo",
+          "Mkpat Enin",
+          "Nsit Atai",
+          "Nsit Ibom",
+          "Nsit Ubium",
+          "Obot Akara",
+          "Okobo",
+          "Onna",
+          "Oron",
+          "Oruk Anam",
+          "Udung Uko",
+          "Ukanafun",
+          "Uruan",
+          "Urue-Offong/Oruko",
+          "Uyo",
+        ],
+      },
+      {
+        state: "Anambra",
+        lgas: [
+          "Aguata",
+          "Anambra East",
+          "Anambra West",
+          "Anaocha",
+          "Awka North",
+          "Awka South",
+          "Ayamelum",
+          "Dunukofia",
+          "Ekwusigo",
+          "Idemili North",
+          "Idemili South",
+          "Ihiala",
+          "Njikoka",
+          "Nnewi North",
+          "Nnewi South",
+          "Ogbaru",
+          "Onitsha North",
+          "Onitsha South",
+          "Orumba North",
+          "Orumba South",
+          "Oyi",
+        ],
+      },
+      {
+        state: "Bauchi",
+        lgas: [
+          "Alkaleri",
+          "Bauchi",
+          "Bogoro",
+          "Damban",
+          "Darazo",
+          "Dass",
+          "Gamawa",
+          "Ganjuwa",
+          "Giade",
+          "Itas/Gadau",
+          "Jama'are",
+          "Katagum",
+          "Kirfi",
+          "Misau",
+          "Ningi",
+          "Shira",
+          "Tafawa Balewa",
+          "Toro",
+          "Warji",
+          "Zaki",
+        ],
+      },
+      {
+        state: "Bayelsa",
+        lgas: [
+          "Brass",
+          "Ekeremor",
+          "Kolokuma/Opokuma",
+          "Nembe",
+          "Ogbia",
+          "Sagbama",
+          "Southern Ijaw",
+          "Yenagoa",
+        ],
+      },
+      {
+        state: "Benue",
+        lgas: [
+          "Ado",
+          "Agatu",
+          "Apa",
+          "Buruku",
+          "Gboko",
+          "Guma",
+          "Gwer East",
+          "Gwer West",
+          "Katsina-Ala",
+          "Konshisha",
+          "Kwande",
+          "Logo",
+          "Makurdi",
+          "Obi",
+          "Ogbadibo",
+          "Ohimini",
+          "Oju",
+          "Okpokwu",
+          "Otukpo",
+          "Tarka",
+          "Ukum",
+          "Ushongo",
+          "Vandeikya",
+        ],
+      },
+      {
+        state: "Borno",
+        lgas: [
+          "Abadam",
+          "Askira/Uba",
+          "Bama",
+          "Bayo",
+          "Biu",
+          "Chibok",
+          "Damboa",
+          "Dikwa",
+          "Gubio",
+          "Guzamala",
+          "Gwoza",
+          "Hawul",
+          "Jere",
+          "Kaga",
+          "Kala/Balge",
+          "Konduga",
+          "Kukawa",
+          "Kwaya Kusar",
+          "Mafa",
+          "Magumeri",
+          "Maiduguri",
+          "Marte",
+          "Mobbar",
+          "Monguno",
+          "Ngala",
+          "Nganzai",
+          "Shani",
+        ],
+      },
+      {
+        state: "Cross River",
+        lgas: [
+          "Abi",
+          "Akamkpa",
+          "Akpabuyo",
+          "Bakassi",
+          "Bekwarra",
+          "Biase",
+          "Boki",
+          "Calabar Municipal",
+          "Calabar South",
+          "Etung",
+          "Ikom",
+          "Obanliku",
+          "Obubra",
+          "Obudu",
+          "Odukpani",
+          "Ogoja",
+          "Yakuur",
+          "Yala",
+        ],
+      },
+      {
         state: "Lagos",
         lgas: [
           "Agege",
@@ -34,10 +276,6 @@ export const africanLocations = [
           "Shomolu",
           "Surulere",
         ],
-      },
-      {
-        state: "Abuja (FCT)",
-        lgas: ["Abaji", "Bwari", "Gwagwalada", "Kuje", "Kwali", "Municipal Area Council"],
       },
       {
         state: "Rivers",
@@ -72,7 +310,6 @@ export const africanLocations = [
   {
     country: "Kenya",
     states: [
-      // In Kenya, these are counties, but we'll use 'states' for consistency with the model
       {
         state: "Nairobi",
         lgas: [
@@ -104,45 +341,72 @@ export const africanLocations = [
   {
     country: "South Africa",
     states: [
-      // These are provinces in South Africa
       {
         state: "Gauteng",
-        lgas: ["City of Johannesburg", "City of Tshwane", "Ekurhuleni", "Sedibeng", "West Rand"],
+        lgas: [
+          "City of Johannesburg",
+          "City of Tshwane",
+          "Ekurhuleni",
+          "Sedibeng",
+          "West Rand",
+        ],
       },
       {
         state: "Western Cape",
-        lgas: ["City of Cape Town", "Cape Winelands", "Central Karoo", "Garden Route", "Overberg", "West Coast"],
+        lgas: [
+          "City of Cape Town",
+          "Cape Winelands",
+          "Central Karoo",
+          "Garden Route",
+          "Overberg",
+          "West Coast",
+        ],
       },
     ],
   },
   {
     country: "Ghana",
     states: [
-      // These are regions in Ghana
       {
         state: "Greater Accra",
-        lgas: ["Accra Metropolitan", "Tema Metropolitan", "Ga East", "Ga West", "Adenta", "Ledzokuku-Krowor"],
+        lgas: [
+          "Accra Metropolitan",
+          "Tema Metropolitan",
+          "Ga East",
+          "Ga West",
+          "Adenta",
+          "Ledzokuku-Krowor",
+        ],
       },
       {
         state: "Ashanti",
-        lgas: ["Kumasi Metropolitan", "Obuasi Municipal", "Ejisu-Juaben Municipal"],
+        lgas: [
+          "Kumasi Metropolitan",
+          "Obuasi Municipal",
+          "Ejisu-Juaben Municipal",
+        ],
       },
     ],
   },
-]
+];
 
-export const ALL_AFRICAN_STATES_FLATTENED = africanLocations.flatMap((country) =>
-  country.states.map((state) => ({
-    label: `${state.state}, ${country.country}`,
-    value: `${state.state}, ${country.country}`.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-  })),
-)
+export const ALL_AFRICAN_STATES_FLATTENED = africanLocations.flatMap(
+  (country) =>
+    country.states.map((state) => ({
+      label: `${state.state}, ${country.country}`,
+      value: `${state.state}, ${country.country}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-"),
+    }))
+);
 
 export const ALL_AFRICAN_LGAS_FLATTENED = africanLocations.flatMap((country) =>
   country.states.flatMap((state) =>
     state.lgas.map((lga) => ({
       label: `${lga}, ${state.state}, ${country.country}`,
-      value: `${lga}, ${state.state}, ${country.country}`.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-    })),
-  ),
-)
+      value: `${lga}, ${state.state}, ${country.country}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-"),
+    }))
+  )
+);

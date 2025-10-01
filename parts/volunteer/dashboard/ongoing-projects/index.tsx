@@ -30,11 +30,15 @@ const OngoingProjects = () => {
         </p>
       )}
       {ongoingProjectdata?.slice(0, 3).map((project: Project) => (
+        console.log(" from map",project),
         <OngoingProjectItem
           key={project.id}
-          icon={<BlueCircleSmaall />}
-          organization_name={project.organizationName || "Unknown Organization"}
+          projectId={project.id}
+          icon={<BlueCircleSmaall />}//@ts-ignore
+          organization_name={project.organization_name || "Unknown Organization"}
           title={project.title || "Untitled Project"}
+          location={project.location || ""}//@ts-ignore
+          startDate={project.start_date || ""}
         />
       ))}
     </div>

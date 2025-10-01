@@ -135,7 +135,7 @@ export interface Skillset {
 
 export interface VolunteerRequest {
   id: string;
-  createdAt: string;
+  created_at: string;
   projectId: string;
   volunteerId: string;
   status: AgencyRequestStatus;

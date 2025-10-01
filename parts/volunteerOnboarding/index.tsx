@@ -31,7 +31,7 @@ interface SelectedLocation {
   lgas: string[];
 }
 
-// Zod schema for onboarding form
+// Zod schema for onboarding form (unchanged)
 const onboardingSchema = z
   .object({
     skills: z.array(z.string()).min(1, "Please select at least one skill"),
@@ -98,9 +98,11 @@ export function VolunteerOnboardingForm() {
       return;
     }
 
-    const volunteerCountries = selectedLocations.map((loc) => loc.country);
-    const volunteerStates = selectedLocations.flatMap((loc) => loc.states);
-    const volunteerLgas = selectedLocations.flatMap((loc) => loc.lgas);
+    // Defensive: Ensure selectedLocations is always treated as an array
+    const safeLocations = Array.isArray(selectedLocations) ? selectedLocations : [];
+    const volunteerCountries = safeLocations.map((loc) => loc.country);
+    const volunteerStates = safeLocations.flatMap((loc) => loc.states);
+    const volunteerLgas = safeLocations.flatMap((loc) => loc.lgas);
 
     const availabilityToStore =
       data.availabilityType === "full-time"
@@ -157,7 +159,8 @@ export function VolunteerOnboardingForm() {
       console.error("Please select both start and end dates");
       return;
     }
-    if (step === 3 && selectedLocations.length === 0) {
+    // Defensive: Use optional chaining and default to empty array
+    if (step === 3 && (!selectedLocations || selectedLocations.length === 0)) {
       console.error("Please select at least one volunteer location");
       return;
     }
@@ -170,6 +173,12 @@ export function VolunteerOnboardingForm() {
 
   const handleBack = () => {
     if (step > 1) setStep(step - 1);
+  };
+
+  // Also make setSelectedLocations defensive to always receive an array
+  const handleLocationsChange = (newValue: SelectedLocation | SelectedLocation[] | undefined) => {
+    const asArray = Array.isArray(newValue) ? newValue : newValue ? [newValue] : [];
+    setSelectedLocations(asArray);
   };
 
   return (
@@ -299,8 +308,9 @@ export function VolunteerOnboardingForm() {
             <h2 className="text-lg font-semibold mb-2">
               Select Volunteer Location
             </h2>
+            {/* Pass the defensive handler instead of setSelectedLocations directly */}
             <LocationSelector //@ts-ignore
-            onSelectionChange={setSelectedLocations} />
+              onSelectionChange={handleLocationsChange} />
           </div>
         )}
         <div className="flex justify-between mt-6">
@@ -319,7 +329,8 @@ export function VolunteerOnboardingForm() {
               (step === 2 &&
                 watch("availabilityType") === "specific-period" &&
                 (!watch("availabilityStartDate") || !watch("availabilityEndDate"))) ||
-              (step === 3 && selectedLocations.length === 0)
+              // Defensive: Use optional chaining here too for the button state
+              (step === 3 && (!selectedLocations || selectedLocations.length === 0))
             }
           >
             {step === totalSteps ? "Complete Onboarding" : "Next"}
