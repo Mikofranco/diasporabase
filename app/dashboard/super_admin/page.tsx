@@ -1,8 +1,9 @@
+import AdminDashBoard from '@/parts/superAdmin/dashboard'
 import React from 'react'
 
 const SuperAdminPage = () => {
   return (
-    <div>SuperAdminPage</div>
+    <div><AdminDashBoard/></div>
   )
 }
 

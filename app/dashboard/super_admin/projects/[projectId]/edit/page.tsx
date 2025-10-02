@@ -1,10 +1,10 @@
-import EditProject from '@/parts/agency/projects/edit-projects.tsx'
+import AdminEditProject from '@/parts/superAdmin/projects/edit-project'
 import React from 'react'
 
-const AgencyEditProjetPage = () => {
+const SuperAdminEditProjectPage = () => {
   return (
-    <div><EditProject/></div>
+    <div><AdminEditProject/></div>
   )
 }
 
-export default AgencyEditProjetPage
+export default SuperAdminEditProjectPage

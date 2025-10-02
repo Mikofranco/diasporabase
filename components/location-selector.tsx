@@ -215,7 +215,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onSelectionChange }
         </style>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-900">Select Locations</h2>
-          <div className="flex gap-2">
+          {/* <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -234,7 +234,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onSelectionChange }
             >
               Clear
             </Button>
-          </div>
+          </div> */}
         </div>
         <div className="max-h-[500px] overflow-y-auto pr-2 space-y-3">
           {africanLocations.map((countryData: Location) => {

@@ -1,12 +1,10 @@
-import ProjectDetails from '@/parts/agency/projects/view-projects.tsx'
+import ViewProject from '@/parts/superAdmin/projects/view-project'
 import React from 'react'
 
-const AgencyViewProjectPage = () => {
+const ProjectDetails = () => {
   return (
-    <div>
-        <ProjectDetails/>
-    </div>
+    <div><ViewProject/></div>
   )
 }
 
-export default AgencyViewProjectPage
+export default ProjectDetails

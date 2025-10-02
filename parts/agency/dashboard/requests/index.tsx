@@ -92,6 +92,12 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
       toast.success("Request accepted successfully!", { position: "top-right" });
 
       const request = requests.find((req) => req.id === requestId);
+      if(request){
+        await supabase.from("project_volunteers").insert({
+          project_id: request.project_id,
+          volunteer_id: request.volunteer_id,
+        });
+      }
       if (request) {
         await supabase.from("notifications").insert({
           user_id: request.volunteer_id,
