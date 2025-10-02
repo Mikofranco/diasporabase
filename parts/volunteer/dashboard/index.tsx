@@ -3,7 +3,6 @@
 
 import React, { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
 import SmallCard, { SmallCardProps } from "./small-card";
 import RecentActivity from "./recent-activity";
 import OngoingProjects from "./ongoing-projects";
@@ -28,7 +27,7 @@ const smallCardItems: SmallCardProps[] = [
     image: "/svg/time.svg",
   },
   {
-    title: "Events Attended",
+    title: "Project Attched",
     count: 8,
     image: "/svg/completed.svg", // Updated to a different image for variety
   },
@@ -52,7 +51,6 @@ const VolunteerDashBoard = () => {
       phone: "",
       id: "",
     });
-  const { toast } = useToast();
 
   useEffect(() => {
     const storedFullName = localStorage.getItem("disporabase_fullName");
@@ -60,16 +58,20 @@ const VolunteerDashBoard = () => {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-6">
-        Welcome Back{" "}
-        <span className="font-semibold text-gray-600 ml-2">
-          {userInformation.name || "User"}
-        </span>
-      </h1>
-      <p>Ready to make a difference today?</p>
+    <div className="container mx-auto">
+      <div className="text-center mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold mb-2">
+          Welcome Back{" "}
+          <span className="font-semibold text-gray-600">
+            {userInformation.name || "User"}
+          </span>
+        </h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
+          Ready to make a difference today?
+        </p>
+      </div>
       <div className="space-y-6">
-        <div className="flex items-center gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {smallCardItems.map((item, index) => (
             <SmallCard
               key={index}

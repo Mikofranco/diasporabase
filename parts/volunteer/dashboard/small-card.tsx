@@ -1,8 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { motion, animate } from "framer-motion";
-import { useEffect, useRef } from "react";
 
 export interface SmallCardProps {
   image?: string;
@@ -32,12 +31,12 @@ const SmallCard = ({ image, count = 0, title = "Untitled" }: SmallCardProps) => 
   return (
     <motion.div
       whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
-      className="h-fit max-w-xs"
+      className="w-full h-fit"
     >
       <Card className="p-4 shadow-sm rounded-lg bg-white border border-gray-200">
         <CardContent className="p-0">
-          <div className="flex items-center gap-4" aria-label={title}>
-            <div className="relative w-10 h-10 flex-shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4" aria-label={title}>
+            <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
               {image ? (
                 <Image
                   src={image}
@@ -48,19 +47,19 @@ const SmallCard = ({ image, count = 0, title = "Untitled" }: SmallCardProps) => 
                   onError={(e) => (e.currentTarget.src = "/fallback-icon.png")}
                 />
               ) : (
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                  <span className="text-gray-500 text-sm">N/A</span>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                  <span className="text-gray-500 text-xs sm:text-sm">N/A</span>
                 </div>
               )}
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <p
                 ref={countRef}
-                className="text-xl font-semibold text-gray-900"
+                className="text-lg sm:text-xl font-semibold text-gray-900"
               >
                 {count}
               </p>
-              <h1 className="text-sm text-gray-500">{title}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">{title}</p>
             </div>
           </div>
         </CardContent>

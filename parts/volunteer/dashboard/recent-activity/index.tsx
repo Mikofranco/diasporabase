@@ -125,26 +125,46 @@ const RecentActivity = () => {
     fetchActivities();
   }, []);
 
-  if (loading) return <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4 bg-white">Loading recent activity...</div>;
-  if (error) return <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4 bg-white text-red-500">{error}</div>;
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-3 sm:p-4 bg-white">
+          <div className="h-4 bg-gray-200 rounded animate-pulse mb-2" />
+          <div className="text-sm text-gray-500">Loading recent activity...</div>
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-3 sm:p-4 bg-white">
+        <div className="h-4 bg-gray-200 rounded animate-pulse mb-2" />
+        <div className="text-sm text-red-500">{error}</div>
+      </div>
+      );
+    }
 
-  return (
-    <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4 bg-white">
-      <h2 className="text-gray-600 font-bold">Recent Activity</h2>
-      {activities.length === 0 ? (
-        <p className="text-gray-500">No recent activity</p>
-      ) : (
-        activities.map((item, index) => (
-          <RecentActivityItems
-            key={index}
-            icon={item.icon}
-            period={item.period}
-            title={item.title}
-          />
-        ))
-      )}
-    </div>
-  );
+    return (
+      <div className="flex flex-col gap-1.5 sm:gap-2 shadow-sm border rounded-lg p-3 sm:p-4 bg-white max-w-full overflow-hidden">
+        <h2 className="text-sm sm:text-base font-bold text-gray-600">Recent Activity</h2>
+        {activities.length === 0 ? (
+          <p className="text-xs sm:text-sm text-gray-500">No recent activity</p>
+        ) : (
+          <div className="space-y-1.5 sm:space-y-2">
+            {activities.map((item, index) => (
+              <RecentActivityItems
+                key={index}
+                icon={item.icon}
+                period={item.period}
+                title={item.title}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return renderContent();
 };
 
 export default RecentActivity;
