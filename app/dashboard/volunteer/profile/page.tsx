@@ -98,7 +98,6 @@ export default function VolunteerProfilePage() {
   useEffect(() => {
     const fetchSkillsets = async () => {
       const skillsets = await getSkillsets();
-      console.log("Fetched skillsets:", skillsets);
       setExpertiseData(skillsets);
     };
     fetchSkillsets();
@@ -200,10 +199,6 @@ export default function VolunteerProfilePage() {
               residence_state:
                 location.region || prev.residence_state || "Unknown",
             };
-          });
-          console.log("Profile updated with residence location:", {
-            residence_country: location.country,
-            residence_state: location.region,
           });
         } else {
           console.warn("No location data returned from getUserLocation");

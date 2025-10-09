@@ -75,7 +75,6 @@ export default function VolunteerProjectsView() {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
-        console.log("Authenticated user id:", user.id);
         setUserId(user.id);
         await fetchProjects(user.id);
       } else {

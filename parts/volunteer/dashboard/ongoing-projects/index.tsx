@@ -30,7 +30,6 @@ const OngoingProjects = () => {
         </p>
       )}
       {ongoingProjectdata?.slice(0, 3).map((project: Project) => (
-        console.log(" from map",project),
         <OngoingProjectItem
           key={project.id}
           projectId={project.id}

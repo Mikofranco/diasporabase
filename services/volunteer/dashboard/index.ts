@@ -181,7 +181,7 @@ export const useFetchOngoingProjects = () => {
         //   setOngoingProjectdata(null);
         } else {
           setOngoingProjectdata(ongoingProjectdata);
-          console.log("ongoing project data", ongoingProjectdata)
+          // console.log("ongoing project data", ongoingProjectdata)
 
         //   setOngoingProjectError(null);
         }

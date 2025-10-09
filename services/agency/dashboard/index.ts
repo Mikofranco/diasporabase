@@ -34,7 +34,7 @@ export const useFetchActiveProjects = () => {
           //   setOngoingProjectdata(null);
         } else {
           setActiveProjectdata(ongoingProjectdata);
-          console.log("ongoing project data", ongoingProjectdata);
+          // console.log("ongoing project data", ongoingProjectdata);
           setAtiveProjectIsLoading(false);
           //   setOngoingProjectError(null);
         }
