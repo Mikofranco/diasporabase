@@ -69,7 +69,7 @@ export function VolunteerOnboardingForm() {
   const totalSteps = 3;
   const router = useRouter();
   const supabase = createClient();
-  const [isLoading, setIsLoading] = useState(false); // New loading state
+  const [isLoading, setIsLoading] = useState(false); 
 
   const {
     register,
@@ -90,7 +90,7 @@ export function VolunteerOnboardingForm() {
   const availabilityType = watch("availabilityType");
 
   const onSubmit = async (data: OnboardingFormData) => {
-    setIsLoading(true); // Set loading to true when submission starts
+    setIsLoading(true); 
     const {
       data: { user },
     } = await supabase.auth.getUser();

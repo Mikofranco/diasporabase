@@ -145,7 +145,7 @@ const RecentActivity = () => {
 
     return (
       <div className="flex flex-col gap-1.5 sm:gap-2 shadow-sm border rounded-lg p-3 sm:p-4 bg-white max-w-full overflow-hidden">
-        <h2 className="text-sm sm:text-base font-bold text-gray-600">Recent Activity</h2>
+        <h2 className="text-sm sm:text-base font-bold text-gray-600 mb-6">Recent Activity</h2>
         {activities.length === 0 ? (
           <p className="text-xs sm:text-sm text-gray-500">No recent activity</p>
         ) : (

@@ -35,7 +35,7 @@ const SmallCard = ({ image, count = 0, title = "Untitled" }: SmallCardProps) => 
     >
       <Card className="p-4 shadow-sm rounded-lg bg-white border border-gray-200">
         <CardContent className="p-0">
-          <div className="flex items-center gap-3 sm:gap-4" aria-label={title}>
+          <div className="flex items-center gap-3 sm:gap-4 py-6" aria-label={title}>
             <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
               {image ? (
                 <Image

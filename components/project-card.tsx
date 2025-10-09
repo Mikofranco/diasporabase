@@ -9,7 +9,7 @@ import { Button } from './ui/button';
 interface Project {
   id: string;
   title: string;
-  organization_name: string;
+  organization_name?: string;
   description: string;
   start_date: string;
   end_date: string;

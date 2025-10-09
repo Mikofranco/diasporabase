@@ -1,14 +1,15 @@
 import ProjectCard from "@/components/project-card";
 import { Project } from "@/lib/types";
 import { useFetchSkillMatchedProjects } from "@/services/volunteer/dashboard";
+import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 
 const MatchingProjects = () => {
   const { skillMatchedProjectError, skillMatchedProjectIsLoading, skillMatchedProjectdata } = useFetchSkillMatchedProjects();
+  const router = useRouter()
 
   const handleProjectSelect = (projectId: string) => {
-    // TODO: Implement navigation or action (e.g., router.push(`/projects/${projectId}`))
-    console.log(`Selected project: ${projectId}`);
+    router.push(`/dashboard/volunteer/projects/${projectId}`);
   };
 
   useEffect(()=>{
@@ -17,7 +18,7 @@ const MatchingProjects = () => {
 
   return (
     <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4 bg-white">
-      <h2 className="text-gray-600 font-bold">Matching Projects</h2>
+      <h2 className="text-gray-600 font-bold mb-6">Matching Projects</h2>
       {skillMatchedProjectIsLoading && (
         <div className="flex justify-center items-center py-4" aria-live="polite">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500" role="status">
@@ -42,7 +43,7 @@ const MatchingProjects = () => {
         {skillMatchedProjectdata?.map((project: Project) => (
           <ProjectCard
             key={project.id}
-            handleProjectSelect={() => handleProjectSelect(project.id)}
+            handleProjectSelect={() => handleProjectSelect(project.id)}//@ts-ignore
             project={project}
             className="transition-transform duration-200 hover:scale-105"
           />
