@@ -85,7 +85,15 @@ const contactSchema = z.object({
     .email("Invalid email address.")
     .min(1, "Email is required."),
   contact_person_phone: z.string().min(1, "Phone number is required.").trim(),
-  website: z.string().url("Invalid URL.").nullable(),
+  website: z
+  .string()
+  .refine(
+    (value) => {
+      return /^(?:(https?:\/\/)(www\.)?)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(value);
+    },
+    { message: "Invalid URL. Must be a valid URL with http://, https://, or start with www." }
+  )
+  .nullable(),
 });
 
 const operationalSchema = z.object({
@@ -151,7 +159,7 @@ const AgencyOnboarding: React.FC = () => {
       contact_person_email: "",
       contact_person_phone: "",
       website: null,
-      organization_type: organizationTypes[0], // Default to first option
+      organization_type: organizationTypes[0], 
       tax_id: "",
       focus_areas: [],
       environment_cities: [],

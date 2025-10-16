@@ -79,15 +79,13 @@ export async function handleEmailConfirmationRedirect() {
 
   if (error) {
     console.error("Error getting session:", error.message);
-    // Handle error, maybe redirect to an error page
     return;
   }
 
   if (session) {
     const userId = session.user.id;
-    // Fetch user's role from your database (e.g., from a 'profiles' table)
     const { data: profile, error: profileError } = await supabase
-      .from("profiles") // Assuming you have a profiles table with user roles
+      .from("profiles") 
       .select("role")
       .eq("id", userId)
       .single();
@@ -107,7 +105,7 @@ export async function handleEmailConfirmationRedirect() {
           window.location.href = "/dashboard/super_admin";
           break;
         case "volunteer":
-          window.location.href = "/onboarding/volunteer";
+          window.location.href = "/dashboard/volunteer";
           break;
         case "agency":
           window.location.href = "/onboarding/agency";

@@ -71,19 +71,17 @@ export default function LandingPage() {
               variants={heroVariants}
             >
               <motion.div
-                className="space-y-4 bg-white/10 backdrop-blur-md rounded-xl p-8 shadow-lg border border-white/20 max-w-[800px] mx-auto"//@ts-ignore
+                className="space-y-4 bg-white/10 backdrop-blur-md rounded-xl p-8 shadow-lg border border-white/20 max-w-[1000px] mx-auto"//@ts-ignore
                 variants={heroVariants}
               >
                 <h1
                   id="hero-heading"
                   className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl text-white drop-shadow-lg"
                 >
-                  Connect Volunteers with Opportunities
+                  Welcome to DiasporaBase
                 </h1>
                 <p className="mx-auto max-w-[700px] text-gray-200 md:text-xl drop-shadow-md">
-                  Empowering communities by uniting passionate volunteers with
-                  impactful organizations. Discover, participate, and make a
-                  difference.
+                  Lead change in your home country - from anywhere <br />in the world.
                 </p>
                 <div className="flex flex-col gap-3 sm:flex-row justify-center">
                   <motion.div

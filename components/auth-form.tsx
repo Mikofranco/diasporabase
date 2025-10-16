@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import SigninWithGoogleBtn from "./signinwithGoogleBtn";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -151,6 +152,7 @@ export default function LoginForm() {
             </Link>
           </div>
         </form>
+          <SigninWithGoogleBtn/>
       </CardContent>
     </Card>
   );

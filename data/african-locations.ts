@@ -307,87 +307,87 @@ export const africanLocations = [
       },
     ],
   },
-  {
-    country: "Kenya",
-    states: [
-      {
-        state: "Nairobi",
-        lgas: [
-          "Dagoretti North",
-          "Dagoretti South",
-          "Embakasi Central",
-          "Embakasi East",
-          "Embakasi North",
-          "Embakasi South",
-          "Embakasi West",
-          "Kamukunji",
-          "Kasarani",
-          "Kibra",
-          "Langata",
-          "Makadara",
-          "Mathare",
-          "Roysambu",
-          "Ruaraka",
-          "Starehe",
-          "Westlands",
-        ],
-      },
-      {
-        state: "Mombasa",
-        lgas: ["Changamwe", "Jomvu", "Kisauni", "Likoni", "Mvita", "Nyali"],
-      },
-    ],
-  },
-  {
-    country: "South Africa",
-    states: [
-      {
-        state: "Gauteng",
-        lgas: [
-          "City of Johannesburg",
-          "City of Tshwane",
-          "Ekurhuleni",
-          "Sedibeng",
-          "West Rand",
-        ],
-      },
-      {
-        state: "Western Cape",
-        lgas: [
-          "City of Cape Town",
-          "Cape Winelands",
-          "Central Karoo",
-          "Garden Route",
-          "Overberg",
-          "West Coast",
-        ],
-      },
-    ],
-  },
-  {
-    country: "Ghana",
-    states: [
-      {
-        state: "Greater Accra",
-        lgas: [
-          "Accra Metropolitan",
-          "Tema Metropolitan",
-          "Ga East",
-          "Ga West",
-          "Adenta",
-          "Ledzokuku-Krowor",
-        ],
-      },
-      {
-        state: "Ashanti",
-        lgas: [
-          "Kumasi Metropolitan",
-          "Obuasi Municipal",
-          "Ejisu-Juaben Municipal",
-        ],
-      },
-    ],
-  },
+  // {
+  //   country: "Kenya",
+  //   states: [
+  //     {
+  //       state: "Nairobi",
+  //       lgas: [
+  //         "Dagoretti North",
+  //         "Dagoretti South",
+  //         "Embakasi Central",
+  //         "Embakasi East",
+  //         "Embakasi North",
+  //         "Embakasi South",
+  //         "Embakasi West",
+  //         "Kamukunji",
+  //         "Kasarani",
+  //         "Kibra",
+  //         "Langata",
+  //         "Makadara",
+  //         "Mathare",
+  //         "Roysambu",
+  //         "Ruaraka",
+  //         "Starehe",
+  //         "Westlands",
+  //       ],
+  //     },
+  //     {
+  //       state: "Mombasa",
+  //       lgas: ["Changamwe", "Jomvu", "Kisauni", "Likoni", "Mvita", "Nyali"],
+  //     },
+  //   ],
+  // },
+  // {
+  //   country: "South Africa",
+  //   states: [
+  //     {
+  //       state: "Gauteng",
+  //       lgas: [
+  //         "City of Johannesburg",
+  //         "City of Tshwane",
+  //         "Ekurhuleni",
+  //         "Sedibeng",
+  //         "West Rand",
+  //       ],
+  //     },
+  //     {
+  //       state: "Western Cape",
+  //       lgas: [
+  //         "City of Cape Town",
+  //         "Cape Winelands",
+  //         "Central Karoo",
+  //         "Garden Route",
+  //         "Overberg",
+  //         "West Coast",
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   country: "Ghana",
+  //   states: [
+  //     {
+  //       state: "Greater Accra",
+  //       lgas: [
+  //         "Accra Metropolitan",
+  //         "Tema Metropolitan",
+  //         "Ga East",
+  //         "Ga West",
+  //         "Adenta",
+  //         "Ledzokuku-Krowor",
+  //       ],
+  //     },
+  //     {
+  //       state: "Ashanti",
+  //       lgas: [
+  //         "Kumasi Metropolitan",
+  //         "Obuasi Municipal",
+  //         "Ejisu-Juaben Municipal",
+  //       ],
+  //     },
+  //   ],
+  // },
 ];
 
 export const ALL_AFRICAN_STATES_FLATTENED = africanLocations.flatMap(

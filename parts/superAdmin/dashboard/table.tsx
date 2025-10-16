@@ -216,9 +216,6 @@ export function RecentApplicationsTable({ data, onEdit, onView, onRefresh }: Tab
               <SelectItem value="pending">Pending</SelectItem>
             </SelectContent>
           </Select>
-          <Button className="action-btn font-semibold" onClick={handleCreateProjectClick}>
-            <Plus className="h-4 w-4 mr-2" /> Add New Project
-          </Button>
         </div>
       </div>
       <div className="overflow-hidden rounded-md border">

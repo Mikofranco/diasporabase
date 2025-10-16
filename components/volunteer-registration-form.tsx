@@ -7,13 +7,39 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod"; // Import Zod
+import SigninWithGoogleBtn from "./signinwithGoogleBtn";
+
+// Define the Zod schema for form validation
+const formSchema = z
+  .object({
+    firstName: z.string().min(1, { message: "First name is required." }),
+    lastName: z.string().min(1, { message: "Last name is required." }),
+    email: z.string().email({ message: "Please enter a valid email address." }),
+    password: z
+      .string()
+      .min(8, { message: "Password must be at least 8 characters long." })
+      .regex(/[a-zA-Z]/, { message: "Password must contain at least one letter." })
+      .regex(/[0-9]/, { message: "Password must contain at least one number." }),
+    confirmPassword: z
+      .string()
+      .min(8, { message: "Confirm password must be at least 8 characters long." })
+      .regex(/[a-zA-Z]/, { message: "Confirm password must contain at least one letter." })
+      .regex(/[0-9]/, { message: "Confirm password must contain at least one number." }),
+    phone: z.string().optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
+type FormData = z.infer<typeof formSchema>;
 
 export default function VolunteerRegistrationForm() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
     confirmPassword: "",
@@ -22,41 +48,20 @@ export default function VolunteerRegistrationForm() {
     phone: "",
   });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  const [errors, setErrors] = useState<z.ZodIssue[]>([]); // Store Zod validation errors
   const router = useRouter();
   const supabase = createClient();
-
-  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const isValidPassword = (password: string) => password.length >= 8;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
-    setMessage(null);
+    setErrors([]);
 
-    // Client-side validation
-    if (!formData.firstName) {
-      setMessage({ text: "Please enter your first name.", isError: true });
-      setLoading(false);
-      return;
-    }
-    if (!formData.lastName) {
-      setMessage({ text: "Please enter your last name.", isError: true });
-      setLoading(false);
-      return;
-    }
-    if (!isValidEmail(formData.email)) {
-      setMessage({ text: "Please enter a valid email address.", isError: true });
-      setLoading(false);
-      return;
-    }
-    if (!isValidPassword(formData.password)) {
-      setMessage({ text: "Password must be at least 8 characters long.", isError: true });
-      setLoading(false);
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setMessage({ text: "Passwords do not match.", isError: true });
+    // Validate form data with Zod
+    const result = formSchema.safeParse(formData);
+
+    if (!result.success) {
+      setErrors(result.error.issues);
       setLoading(false);
       return;
     }
@@ -73,25 +78,20 @@ export default function VolunteerRegistrationForm() {
           full_name: fullName,
           role: "volunteer",
           phone: formData.phone,
-          email: formData.email
+          email: formData.email,
         },
       },
     });
 
     if (signUpError) {
-      setMessage({ text: signUpError.message, isError: true });
+      // setErrors([{ message: signUpError.message, path: ["server"] }]);
+      toast.error(signUpError)
       setLoading(false);
       return;
     }
 
     if (data?.user) {
-      // Store email in local storage with key 'diaporabse-email'
       localStorage.setItem("diaporabse-email", formData.email);
-
-      setMessage({
-        text: "Registration successful! Please check your email to confirm your account.",
-        isError: false,
-      });
       toast.success("Registration successful! Please check your email to confirm your account.");
       setTimeout(() => {
         router.push("/volunteer-checkmail");
@@ -101,8 +101,13 @@ export default function VolunteerRegistrationForm() {
     setLoading(false);
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Helper to get error message for a specific field
+  const getErrorMessage = (field: string) => {
+    return errors.find((error) => error.path[0] === field)?.message;
   };
 
   return (
@@ -124,7 +129,13 @@ export default function VolunteerRegistrationForm() {
                 onChange={(e) => handleInputChange("firstName", e.target.value)}
                 required
                 aria-required="true"
+                aria-invalid={!!getErrorMessage("firstName")}
               />
+              {getErrorMessage("firstName") && (
+                <p className="text-red-500 text-sm" aria-live="assertive">
+                  {getErrorMessage("firstName")}
+                </p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="last-name">Last Name *</Label>
@@ -136,7 +147,13 @@ export default function VolunteerRegistrationForm() {
                 onChange={(e) => handleInputChange("lastName", e.target.value)}
                 required
                 aria-required="true"
+                aria-invalid={!!getErrorMessage("lastName")}
               />
+              {getErrorMessage("lastName") && (
+                <p className="text-red-500 text-sm" aria-live="assertive">
+                  {getErrorMessage("lastName")}
+                </p>
+              )}
             </div>
           </div>
 
@@ -151,7 +168,13 @@ export default function VolunteerRegistrationForm() {
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 required
                 aria-required="true"
+                aria-invalid={!!getErrorMessage("email")}
               />
+              {getErrorMessage("email") && (
+                <p className="text-red-500 text-sm" aria-live="assertive">
+                  {getErrorMessage("email")}
+                </p>
+              )}
             </div>
           </div>
 
@@ -165,7 +188,13 @@ export default function VolunteerRegistrationForm() {
                 onChange={(e) => handleInputChange("password", e.target.value)}
                 required
                 aria-required="true"
+                aria-invalid={!!getErrorMessage("password")}
               />
+              {getErrorMessage("password") && (
+                <p className="text-red-500 text-sm" aria-live="assertive">
+                  {getErrorMessage("password")}
+                </p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirm-password">Confirm Password *</Label>
@@ -176,7 +205,13 @@ export default function VolunteerRegistrationForm() {
                 onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                 required
                 aria-required="true"
+                aria-invalid={!!getErrorMessage("confirmPassword")}
               />
+              {getErrorMessage("confirmPassword") && (
+                <p className="text-red-500 text-sm" aria-live="assertive">
+                  {getErrorMessage("confirmPassword")}
+                </p>
+              )}
             </div>
           </div>
 
@@ -189,7 +224,13 @@ export default function VolunteerRegistrationForm() {
                 placeholder="+1 (555) 123-4567"
                 value={formData.phone}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
+                aria-invalid={!!getErrorMessage("phone")}
               />
+              {getErrorMessage("phone") && (
+                <p className="text-red-500 text-sm" aria-live="assertive">
+                  {getErrorMessage("phone")}
+                </p>
+              )}
             </div>
           </div>
 
@@ -208,12 +249,9 @@ export default function VolunteerRegistrationForm() {
             )}
           </Button>
 
-          {message && (
-            <p
-              className={`text-center text-sm ${message.isError ? "text-red-500" : "text-green-500"}`}
-              aria-live="assertive"
-            >
-              {message.text}
+          {errors.some((error) => error.path[0] === "server") && (
+            <p className="text-center text-sm text-red-500" aria-live="assertive">
+              {errors.find((error) => error.path[0] === "server")?.message}
             </p>
           )}
 
@@ -224,6 +262,7 @@ export default function VolunteerRegistrationForm() {
             </Link>
           </div>
         </form>
+        <SigninWithGoogleBtn />
       </CardContent>
     </Card>
   );

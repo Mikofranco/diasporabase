@@ -10,9 +10,40 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { z } from "zod"; // Import Zod
+import { toast } from "sonner";
+
+// Define the Zod schema for form validation
+const formSchema = z
+  .object({
+    email: z.string().email({ message: "Please enter a valid email address." }),
+    phone: z
+      .string()
+      .regex(/^\+?[\d\s-]{10,}$/, { message: "Please enter a valid phone number (at least 10 digits)." }),
+    companyName: z
+      .string()
+      .min(2, { message: "Company name must be at least 2 characters long." })
+      .trim(),
+    password: z
+      .string()
+      .min(8, { message: "Password must be at least 8 characters long." })
+      .regex(/[a-zA-Z]/, { message: "Password must contain at least one letter." })
+      .regex(/[0-9]/, { message: "Password must contain at least one number." }),
+    confirmPassword: z
+      .string()
+      .min(8, { message: "Confirm password must be at least 8 characters long." })
+      .regex(/[a-zA-Z]/, { message: "Confirm password must contain at least one letter." })
+      .regex(/[0-9]/, { message: "Confirm password must contain at least one number." }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"], // Error associated with confirmPassword field
+  });
+
+type FormData = z.infer<typeof formSchema>;
 
 export default function AgencyRegistrationForm() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     email: "",
     phone: "",
     companyName: "",
@@ -20,60 +51,20 @@ export default function AgencyRegistrationForm() {
     confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{
-    text: string;
-    isError: boolean;
-  } | null>(null);
+  const [errors, setErrors] = useState<z.ZodIssue[]>([]); // Store Zod validation errors
   const router = useRouter();
   const supabase = createClient();
-
-  const isValidEmail = (email: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const isValidPhone = (phone: string) =>
-    /^\+?[\d\s-]{10,}$/.test(phone); // Basic phone validation (adjust as needed)
-  const isValidPassword = (password: string) => password.length >= 8;
-  const isValidCompanyName = (companyName: string) => companyName.trim().length >= 2;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
-    setMessage(null);
+    setErrors([]);
 
-    // Client-side validation
-    if (!isValidEmail(formData.email)) {
-      setMessage({
-        text: "Please enter a valid email address.",
-        isError: true,
-      });
-      setLoading(false);
-      return;
-    }
-    if (!isValidPhone(formData.phone)) {
-      setMessage({
-        text: "Please enter a valid phone number (at least 10 digits).",
-        isError: true,
-      });
-      setLoading(false);
-      return;
-    }
-    if (!isValidCompanyName(formData.companyName)) {
-      setMessage({
-        text: "Company name must be at least 2 characters long.",
-        isError: true,
-      });
-      setLoading(false);
-      return;
-    }
-    if (!isValidPassword(formData.password)) {
-      setMessage({
-        text: "Password must be at least 8 characters long.",
-        isError: true,
-      });
-      setLoading(false);
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setMessage({ text: "Passwords do not match.", isError: true });
+    // Validate form data with Zod
+    const result = formSchema.safeParse(formData);
+
+    if (!result.success) {
+      setErrors(result.error.issues);
       setLoading(false);
       return;
     }
@@ -87,34 +78,42 @@ export default function AgencyRegistrationForm() {
           phone: formData.phone,
           full_name: formData.companyName, // Stored as metadata
           role: "agency",
-          email: formData.email
+          email: formData.email,
         },
       },
     });
 
     if (signUpError) {
-      setMessage({ text: signUpError.message, isError: true });
+      // setErrors([{ message: signUpError, path: ["server"] }]);
+      toast.error(signUpError)
       setLoading(false);
       return;
     }
 
     if (data?.user) {
-      setMessage({
-        text: "Registration successful! Please check your email to confirm your account.",
-        isError: false,
+      setFormData({
+        email: "",
+        phone: "",
+        companyName: "",
+        password: "",
+        confirmPassword: "",
       });
-      // No immediate redirect; user must confirm email first
+      setErrors([]);
+      setTimeout(() => {
+        router.push("/agency-checkmail");
+      }, 2000);
     }
-    formData.companyName = "";
-    formData.email = "";
-    formData.phone = "";
-    formData.password = "";
-    formData.confirmPassword = "";
+
     setLoading(false);
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Helper to get error message for a specific field
+  const getErrorMessage = (field: string) => {
+    return errors.find((error) => error.path[0] === field)?.message;
   };
 
   return (
@@ -137,7 +136,14 @@ export default function AgencyRegistrationForm() {
               onChange={(e) => handleInputChange("companyName", e.target.value)}
               required
               aria-required="true"
+              aria-invalid={!!getErrorMessage("companyName")}
+              className={getErrorMessage("companyName") ? "border-red-500" : ""}
             />
+            {getErrorMessage("companyName") && (
+              <p className="text-red-500 text-sm" aria-live="assertive">
+                {getErrorMessage("companyName")}
+              </p>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="email">Email *</Label>
@@ -149,7 +155,14 @@ export default function AgencyRegistrationForm() {
               onChange={(e) => handleInputChange("email", e.target.value)}
               required
               aria-required="true"
+              aria-invalid={!!getErrorMessage("email")}
+              className={getErrorMessage("email") ? "border-red-500" : ""}
             />
+            {getErrorMessage("email") && (
+              <p className="text-red-500 text-sm" aria-live="assertive">
+                {getErrorMessage("email")}
+              </p>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="phone">Phone Number *</Label>
@@ -161,7 +174,14 @@ export default function AgencyRegistrationForm() {
               onChange={(e) => handleInputChange("phone", e.target.value)}
               required
               aria-required="true"
+              aria-invalid={!!getErrorMessage("phone")}
+              className={getErrorMessage("phone") ? "border-red-500" : ""}
             />
+            {getErrorMessage("phone") && (
+              <p className="text-red-500 text-sm" aria-live="assertive">
+                {getErrorMessage("phone")}
+              </p>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="password">Password *</Label>
@@ -172,7 +192,14 @@ export default function AgencyRegistrationForm() {
               onChange={(e) => handleInputChange("password", e.target.value)}
               required
               aria-required="true"
+              aria-invalid={!!getErrorMessage("password")}
+              className={getErrorMessage("password") ? "border-red-500" : ""}
             />
+            {getErrorMessage("password") && (
+              <p className="text-red-500 text-sm" aria-live="assertive">
+                {getErrorMessage("password")}
+              </p>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="confirm-password">Confirm Password *</Label>
@@ -183,7 +210,14 @@ export default function AgencyRegistrationForm() {
               onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
               required
               aria-required="true"
+              aria-invalid={!!getErrorMessage("confirmPassword")}
+              className={getErrorMessage("confirmPassword") ? "border-red-500" : ""}
             />
+            {getErrorMessage("confirmPassword") && (
+              <p className="text-red-500 text-sm" aria-live="assertive">
+                {getErrorMessage("confirmPassword")}
+              </p>
+            )}
           </div>
           <Button
             type="submit"
@@ -200,14 +234,9 @@ export default function AgencyRegistrationForm() {
             )}
           </Button>
 
-          {message && (
-            <p
-              className={`text-center text-sm ${
-                message.isError ? "text-red-500" : "text-green-500"
-              }`}
-              aria-live="assertive"
-            >
-              {message.text}
+          {errors.some((error) => error.path[0] === "server") && (
+            <p className="text-center text-sm text-red-500" aria-live="assertive">
+              {errors.find((error) => error.path[0] === "server")?.message}
             </p>
           )}
 
