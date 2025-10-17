@@ -82,12 +82,28 @@ const RecentProjects = ({ userId }: { userId: string }) => {
           </div>
         )}
         {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-5 w-5" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              {error}
-              <Button
+          // <Alert variant="destructive" className="mb-4">
+          //   <AlertCircle className="h-5 w-5" />
+          //   <AlertTitle>Error</AlertTitle>
+          //   <AlertDescription>
+          //     {error}
+          //     <Button
+          //       variant="link"
+          //       onClick={fetchProjects}
+          //       className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+          //       aria-label="Retry loading projects"
+          //     >
+          //       Try Again
+          //     </Button>
+          //   </AlertDescription>
+          // </Alert>
+
+           <div className="text-center py-8">
+              <PlusCircle className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+              <p className="mt-2 text-gray-600 dark:text-gray-400">
+                No projects found.
+              </p>
+             <Button
                 variant="link"
                 onClick={fetchProjects}
                 className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
@@ -95,8 +111,8 @@ const RecentProjects = ({ userId }: { userId: string }) => {
               >
                 Try Again
               </Button>
-            </AlertDescription>
-          </Alert>
+            </div>
+          
         )}
         {!isLoading && projects && projects.length > 0 ? (
           <div className="overflow-x-auto">

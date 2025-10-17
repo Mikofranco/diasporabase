@@ -561,7 +561,7 @@ const ProjectDetails: React.FC = () => {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
+                {/* <Button
                   variant={project.status === "active" ? "destructive" : "default"}
                   onClick={() => setIsDeactivateDialogOpen(true)}
                   className={
@@ -571,7 +571,7 @@ const ProjectDetails: React.FC = () => {
                   }
                 >
                   {project.status === "active" ? "Deactivate" : "Activate"} Project
-                </Button>
+                </Button> */}
               </TooltipTrigger>
               <TooltipContent>
                 {project.status === "active" ? "Deactivate this project" : "Activate this project"}
