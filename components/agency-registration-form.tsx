@@ -1,19 +1,36 @@
 "use client";
 
-import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
-import { z } from "zod"; // Import Zod
+import { Loader2, Eye, EyeOff, Mail, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useSendMail } from "@/services/mail";
+import { welcomeHtml } from "@/lib/email-templates/welcome";
+import { encryptUserToJWT } from "@/lib/jwt";
 
-// Define the Zod schema for form validation
+// ─────────────────────────────────────────────────────────────────────────────
+// Zod Schema
+// ─────────────────────────────────────────────────────────────────────────────
 const formSchema = z
   .object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -29,15 +46,11 @@ const formSchema = z
       .min(8, { message: "Password must be at least 8 characters long." })
       .regex(/[a-zA-Z]/, { message: "Password must contain at least one letter." })
       .regex(/[0-9]/, { message: "Password must contain at least one number." }),
-    confirmPassword: z
-      .string()
-      .min(8, { message: "Confirm password must be at least 8 characters long." })
-      .regex(/[a-zA-Z]/, { message: "Confirm password must contain at least one letter." })
-      .regex(/[0-9]/, { message: "Confirm password must contain at least one number." }),
+    confirmPassword: z.string(),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((d) => d.password === d.confirmPassword, {
     message: "Passwords do not match.",
-    path: ["confirmPassword"], // Error associated with confirmPassword field
+    path: ["confirmPassword"],
   });
 
 type FormData = z.infer<typeof formSchema>;
@@ -50,204 +63,310 @@ export default function AgencyRegistrationForm() {
     password: "",
     confirmPassword: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<z.ZodIssue[]>([]); // Store Zod validation errors
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [emailForResend, setEmailForResend] = useState("");
+
   const router = useRouter();
   const supabase = createClient();
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setLoading(true);
-    setErrors([]);
-
-    // Validate form data with Zod
+  // ───── Real-time validation ─────
+  useEffect(() => {
     const result = formSchema.safeParse(formData);
-
     if (!result.success) {
-      setErrors(result.error.issues);
-      setLoading(false);
-      return;
-    }
-
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/onboarding`,
-        data: {
-          phone: formData.phone,
-          full_name: formData.companyName, // Stored as metadata
-          role: "agency",
-          email: formData.email,
-        },
-      },
-    });
-
-    if (signUpError) {
-      // setErrors([{ message: signUpError, path: ["server"] }]);
-      toast.error(signUpError)
-      setLoading(false);
-      return;
-    }
-
-    if (data?.user) {
-      setFormData({
-        email: "",
-        phone: "",
-        companyName: "",
-        password: "",
-        confirmPassword: "",
+      const fieldErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        const path = issue.path[0];
+        if (path) fieldErrors[path] = issue.message;
       });
-      setErrors([]);
-      setTimeout(() => {
-        router.push("/agency-checkmail");
-      }, 2000);
+      setErrors(fieldErrors);
+    } else {
+      setErrors({});
     }
-
-    setLoading(false);
-  };
+  }, [formData]);
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Helper to get error message for a specific field
-  const getErrorMessage = (field: string) => {
-    return errors.find((error) => error.path[0] === field)?.message;
+  const clearForm = () => {
+    setFormData({
+      email: "",
+      phone: "",
+      companyName: "",
+      password: "",
+      confirmPassword: "",
+    });
+  };
+
+  const handleResend = async () => {
+    if (!emailForResend) return;
+    setResendLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: emailForResend,
+        options: { emailRedirectTo: `${window.location.origin}/confirm` },
+      });
+      if (error) throw error;
+      toast.success("Confirmation email resent!");
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to resend email");
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+
+    setLoading(true);
+
+    try {
+      const result = formSchema.parse(formData);
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+      // 1. Sign up
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: result.email,
+        password: result.password,
+        options: {
+          emailRedirectTo: `${origin}/confirm`,
+          data: {
+            full_name: result.companyName,
+            role: "agency",
+            phone: result.phone,
+          },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+      if (!signUpData.user) throw new Error("Sign-up failed.");
+
+      // 2. JWT + Confirmation URL
+      const payload = {
+        userId: signUpData.user.id,
+        email: signUpData.user.email!,
+        purpose: "email_confirmation",
+      };
+      const token = await encryptUserToJWT(payload, "15m");
+      const confirmationUrl = `${origin}/confirm?token=${token}`;
+
+      // 3. Save to DB
+      const { error: dbError } = await supabase
+        .from("confirmation_links")
+        .insert({
+          user_id: signUpData.user.id,
+          email: signUpData.user.email!,
+          confirmation_url: confirmationUrl,
+          token_hash: token,
+          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+          used: false,
+        });
+
+      if (dbError) throw dbError;
+
+      // 4. Send welcome email
+      await useSendMail({
+        to: result.email,
+        subject: "Welcome to DiasporaBase – Confirm Your Email",
+        html: welcomeHtml(result.companyName, confirmationUrl),
+        text: `Hi ${result.companyName},\n\nClick to confirm: ${confirmationUrl}\n\nThanks!`,
+        onSuccess: () => {
+          toast.success("Check your email to confirm your account!");
+        },
+        onError: (msg) => {
+          console.error("Email failed:", msg);
+          toast.error("Account created, but email failed. Contact support.");
+        },
+      });
+
+      // 5. Show modal + clear form
+      setEmailForResend(result.email);
+      setModalOpen(true);
+      clearForm();
+
+      localStorage.setItem("diasporabase-email", result.email);
+    } catch (err: any) {
+      console.error("Agency registration error:", err);
+      toast.error(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle className="text-2xl">Agency Registration</CardTitle>
-        <CardDescription>
-          Register your account to connect with volunteers.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="grid gap-4" aria-live="polite">
-          <div className="grid gap-2">
-            <Label htmlFor="companyName">Company Name *</Label>
-            <Input
-              id="companyName"
-              type="text"
-              placeholder="Enter name of Organisation"
-              value={formData.companyName}
-              onChange={(e) => handleInputChange("companyName", e.target.value)}
-              required
-              aria-required="true"
-              aria-invalid={!!getErrorMessage("companyName")}
-              className={getErrorMessage("companyName") ? "border-red-500" : ""}
-            />
-            {getErrorMessage("companyName") && (
-              <p className="text-red-500 text-sm" aria-live="assertive">
-                {getErrorMessage("companyName")}
-              </p>
-            )}
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter email"
-              value={formData.email}
-              onChange={(e) => handleInputChange("email", e.target.value)}
-              required
-              aria-required="true"
-              aria-invalid={!!getErrorMessage("email")}
-              className={getErrorMessage("email") ? "border-red-500" : ""}
-            />
-            {getErrorMessage("email") && (
-              <p className="text-red-500 text-sm" aria-live="assertive">
-                {getErrorMessage("email")}
-              </p>
-            )}
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="phone">Phone Number *</Label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="+1 (555) 123-4567"
-              value={formData.phone}
-              onChange={(e) => handleInputChange("phone", e.target.value)}
-              required
-              aria-required="true"
-              aria-invalid={!!getErrorMessage("phone")}
-              className={getErrorMessage("phone") ? "border-red-500" : ""}
-            />
-            {getErrorMessage("phone") && (
-              <p className="text-red-500 text-sm" aria-live="assertive">
-                {getErrorMessage("phone")}
-              </p>
-            )}
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password *</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => handleInputChange("password", e.target.value)}
-              required
-              aria-required="true"
-              aria-invalid={!!getErrorMessage("password")}
-              className={getErrorMessage("password") ? "border-red-500" : ""}
-            />
-            {getErrorMessage("password") && (
-              <p className="text-red-500 text-sm" aria-live="assertive">
-                {getErrorMessage("password")}
-              </p>
-            )}
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="confirm-password">Confirm Password *</Label>
-            <Input
-              id="confirm-password"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-              required
-              aria-required="true"
-              aria-invalid={!!getErrorMessage("confirmPassword")}
-              className={getErrorMessage("confirmPassword") ? "border-red-500" : ""}
-            />
-            {getErrorMessage("confirmPassword") && (
-              <p className="text-red-500 text-sm" aria-live="assertive">
-                {getErrorMessage("confirmPassword")}
-              </p>
-            )}
-          </div>
-          <Button
-            type="submit"
-            className="w-full bg-gradient-primary text-white"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Account...
-              </>
-            ) : (
-              "Register"
-            )}
-          </Button>
+    <>
+      {/* ───── FORM ───── */}
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">
+            Agency Registration
+          </CardTitle>
+          <CardDescription className="text-center">
+            Register your organization to connect with volunteers.
+          </CardDescription>
+        </CardHeader>
 
-          {errors.some((error) => error.path[0] === "server") && (
-            <p className="text-center text-sm text-red-500" aria-live="assertive">
-              {errors.find((error) => error.path[0] === "server")?.message}
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Company Name */}
+            <div className="space-y-1">
+              <Label htmlFor="companyName">Company Name *</Label>
+              <Input
+                id="companyName"
+                placeholder="DiasporaBase Inc."
+                value={formData.companyName}
+                onChange={(e) => handleInputChange("companyName", e.target.value)}
+                disabled={loading}
+              />
+              {errors.companyName && (
+                <p className="text-sm text-red-500">{errors.companyName}</p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="contact@company.com"
+                value={formData.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
+                disabled={loading}
+              />
+              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+            </div>
+
+            {/* Phone */}
+            <div className="space-y-1">
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+1 (555) 123-4567"
+                value={formData.phone}
+                onChange={(e) => handleInputChange("phone", e.target.value)}
+                disabled={loading}
+              />
+              {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
+            </div>
+
+            {/* Passwords */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="password">Password *</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-red-500">{errors.password}</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="confirm-password">Confirm Password *</Label>
+                <Input
+                  id="confirm-password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                  disabled={loading}
+                />
+                {errors.confirmPassword && (
+                  <p className="text-sm text-red-500">{errors.confirmPassword}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Submit */}
+            <Button
+              type="submit"
+              disabled={loading || Object.keys(errors).length > 0}
+              className="w-full h-11 text-base font-medium bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0c94d1] hover:to-[#0369a1]"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                "Register Agency"
+              )}
+            </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Sign in
+              </Link>
             </p>
-          )}
+          </form>
+        </CardContent>
+      </Card>
 
-          <div className="mt-4 text-center text-sm">
-            Already have an account?{" "}
-            <Link href="/login" className="underline">
-              Sign in
-            </Link>
+      {/* ───── SUCCESS MODAL ───── */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="text-center">
+            <Mail className="mx-auto h-12 w-12 text-primary mb-3" />
+            <DialogTitle>Check Your Inbox</DialogTitle>
+            <DialogDescription className="mt-2">
+              We sent a confirmation link to <strong>{emailForResend}</strong>. Click it to verify your agency.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={handleResend}
+              disabled={resendLoading}
+              className="w-full"
+            >
+              {resendLoading ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Resending...
+                </>
+              ) : (
+                "Resend Confirmation Email"
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => setModalOpen(false)}
+              className="w-full"
+            >
+              Close
+            </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

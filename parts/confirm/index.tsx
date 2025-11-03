@@ -70,7 +70,7 @@ export default function ConfirmEmailPage() {
         return;
       }
 
-      // 3. Mark as used + confirm user
+      // 3. Mark as used
       const { error: updateError } = await supabase
         .from("confirmation_links")
         .update({ used: true })
@@ -78,21 +78,34 @@ export default function ConfirmEmailPage() {
 
       if (updateError) throw updateError;
 
-      // Optional: Update user profile
-      await supabase
+      // 4. Update profile: email confirmed
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .update({ email_confirmed: true })
-        .eq("id", userId);
+        .eq("id", userId)
+        .select("role")
+        .single();
 
-      // 4. Success
+      if (profileError) throw profileError;
+
+      // 5. Success + Role-Based Redirect
       setStatus("success");
       setMessage("Email confirmed successfully!");
-
       toast.success("Welcome! Your email is verified.");
+
+      // Determine redirect based on role
+      const role = profile?.role?.toLowerCase();
+      let redirectPath = "/dashboard"; // fallback
+
+      if (role === "agency") {
+        redirectPath = "/onboarding";
+      } else if (role === "volunteer") {
+        redirectPath = "/volunteer/dashboard";
+      }
 
       // Redirect after 2 seconds
       setTimeout(() => {
-        router.push("/volunteer/dashboard");
+        router.push(redirectPath);
       }, 2000);
     } catch (err: any) {
       console.error("Verification failed:", err);
@@ -118,7 +131,7 @@ export default function ConfirmEmailPage() {
             <CheckCircle className="h-16 w-16" />
             <p className="text-xl font-semibold">{message}</p>
             <p className="text-sm text-muted-foreground">
-              Redirecting to dashboard...
+              Redirecting to your dashboard...
             </p>
           </div>
         );
