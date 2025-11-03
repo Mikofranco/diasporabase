@@ -85,7 +85,7 @@ export default function VolunteerRegistrationForm() {
 
     if (signUpError) {
       // setErrors([{ message: signUpError.message, path: ["server"] }]);
-      // toast.error(signUpError)
+      toast.error(signUpError)
       console.log(signUpError)
       setLoading(false);
       return;
@@ -263,7 +263,7 @@ export default function VolunteerRegistrationForm() {
             </Link>
           </div>
         </form>
-        <SigninWithGoogleBtn />
+        {/* <SigninWithGoogleBtn /> */}
       </CardContent>
     </Card>
   );

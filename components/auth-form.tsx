@@ -152,7 +152,7 @@ export default function LoginForm() {
             </Link>
           </div>
         </form>
-          <SigninWithGoogleBtn/>
+          {/* <SigninWithGoogleBtn/> */}
       </CardContent>
     </Card>
   );

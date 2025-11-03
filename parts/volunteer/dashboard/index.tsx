@@ -108,7 +108,7 @@ const VolunteerDashBoard = () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        to: "ogbechiemicheal@gmail.com",
+        to: "ogbechiemicheal6@gmail.com",
         subject: "Welcome!",
         html: "<p>Thanks for signing up!</p>",
       }),
