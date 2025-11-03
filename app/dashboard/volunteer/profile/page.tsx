@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -56,10 +56,15 @@ export interface Item {
   subChildren?: Item[];
 }
 
-interface SelectedData {
+export interface SelectedData {
   selectedCountries: string[];
   selectedStates: string[];
   selectedLgas: string[];
+}
+
+// Ref interface for LocationSelector
+interface LocationSelectorHandle {
+  setSelected: (data: SelectedData) => void;
 }
 
 export default function VolunteerProfilePage() {
@@ -93,6 +98,12 @@ export default function VolunteerProfilePage() {
 
   const supabase = createClient();
   const router = useRouter();
+  const locationSelectorRef = useRef<LocationSelectorHandle>(null);
+
+  // Memoized callback to prevent re-creation on every render
+  const handleLocationChange = useCallback((data: SelectedData) => {
+    setSelectedLocations(data);
+  }, []);
 
   // Fetch skillsets
   useEffect(() => {
@@ -108,7 +119,6 @@ export default function VolunteerProfilePage() {
     const fetchProfileAndLocation = async () => {
       setLoading(true);
 
-      // Fetch user
       const {
         data: { user },
         error: userError,
@@ -126,7 +136,6 @@ export default function VolunteerProfilePage() {
       setUserEmail(user.email);
       setUserPhone(user.phone || null);
 
-      // Fetch profile
       const { data, error } = await supabase
         .from("profiles")
         .select(
@@ -142,7 +151,6 @@ export default function VolunteerProfilePage() {
         return;
       }
 
-      // Set profile data
       const profileData = {
         ...data,
         skills: data.skills || [],
@@ -151,6 +159,7 @@ export default function VolunteerProfilePage() {
         volunteer_lgas: data.volunteer_lgas || [],
         profile_picture: data.profile_picture || null,
       };
+
       setProfile(profileData);
       setSelectedSkill(data.skills || []);
       setSelectedLocations({
@@ -160,33 +169,35 @@ export default function VolunteerProfilePage() {
       });
       setImagePreview(data.profile_picture || null);
 
+      // Pre-select saved locations in LocationSelector
+      if (locationSelectorRef.current) {
+        locationSelectorRef.current.setSelected({
+          selectedCountries: data.volunteer_countries || [],
+          selectedStates: data.volunteer_states || [],
+          selectedLgas: data.volunteer_lgas || [],
+        });
+      }
+
+      // Handle availability
       if (data.availability === "full-time") {
         setAvailabilityType("full-time");
-        setAvailabilityStartDate(undefined);
-        setAvailabilityEndDate(undefined);
       } else if (data.availability) {
         try {
-          const parsedAvailability = JSON.parse(data.availability);
+          const parsed = JSON.parse(data.availability);
           setAvailabilityType("specific-period");
           setAvailabilityStartDate(
-            parsedAvailability.startDate
-              ? new Date(parsedAvailability.startDate)
-              : undefined
+            parsed.startDate ? new Date(parsed.startDate) : undefined
           );
           setAvailabilityEndDate(
-            parsedAvailability.endDate
-              ? new Date(parsedAvailability.endDate)
-              : undefined
+            parsed.endDate ? new Date(parsed.endDate) : undefined
           );
         } catch (e) {
-          console.error("Error parsing availability dates:", e);
+          console.error("Error parsing availability:", e);
           setAvailabilityType("full-time");
-          setAvailabilityStartDate(undefined);
-          setAvailabilityEndDate(undefined);
         }
       }
 
-      // Fetch and apply location
+      // Apply geolocation
       try {
         const location = await getUserLocation();
         if (location) {
@@ -200,8 +211,6 @@ export default function VolunteerProfilePage() {
                 location.region || prev.residence_state || "Unknown",
             };
           });
-        } else {
-          console.warn("No location data returned from getUserLocation");
         }
       } catch (error) {
         console.error("Error fetching user location:", error);
@@ -264,12 +273,6 @@ export default function VolunteerProfilePage() {
     handleInputChange("skills", skills);
   };
 
-  // Handle location selection changes
-  const handleLocationChange = (data: SelectedData) => {
-    setSelectedLocations(data);
-  };
-
-  // Handle form submission
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
@@ -281,15 +284,15 @@ export default function VolunteerProfilePage() {
       return;
     }
 
-    // Validate availability
     if (
       availabilityType === "specific-period" &&
       (!availabilityStartDate || !availabilityEndDate)
     ) {
-      toast.error("Please select both a start and end date for your availability period.");
+      toast.error("Please select both start and end dates.");
       setSubmitting(false);
       return;
     }
+
     if (
       availabilityType === "specific-period" &&
       availabilityStartDate &&
@@ -301,9 +304,8 @@ export default function VolunteerProfilePage() {
       return;
     }
 
-    // Validate volunteer locations
     if (selectedLocations.selectedCountries.length === 0) {
-      toast.error("Please select at least one volunteer location preference.");
+      toast.error("Please select at least one volunteer location.");
       setSubmitting(false);
       return;
     }
@@ -388,9 +390,23 @@ export default function VolunteerProfilePage() {
     setSubmitting(false);
   };
 
-  // Display selected locations
+  // Conditional display: >10 states → show only countries
   const selectedLocationsDisplay = useMemo(() => {
     const { selectedCountries, selectedStates, selectedLgas } = selectedLocations;
+
+    if (selectedStates.length > 10) {
+      return (
+        <div className="text-sm text-gray-600 mt-2">
+          <p>
+            <strong>Countries:</strong> {selectedCountries.join(", ")}
+          </p>
+          <p className="text-xs italic text-gray-500">
+            ({selectedStates.length} states selected — showing countries only)
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="text-sm text-gray-600 mt-2">
         {selectedCountries.length > 0 ? (
@@ -421,8 +437,12 @@ export default function VolunteerProfilePage() {
       <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm p-6">
         <div className="flex flex-col items-center gap-2 text-center">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <h3 className="text-2xl font-bold text-gray-900">Loading Profile...</h3>
-          <p className="text-sm text-gray-500">Please wait while we fetch your data.</p>
+          <h3 className="text-2xl font-bold text-gray-900">
+            Loading Profile...
+          </h3>
+          <p className="text-sm text-gray-500">
+            Please wait while we fetch your data.
+          </p>
         </div>
       </div>
     );
@@ -432,14 +452,17 @@ export default function VolunteerProfilePage() {
     return (
       <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm p-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <h3 className="text-2xl font-bold text-gray-900">Profile Not Found</h3>
-          <p className="text-sm text-gray-500">Could not load your profile data. Please try again later.</p>
+          <h3 className="text-2xl font-bold text-gray-900">
+            Profile Not Found
+          </h3>
+          <p className="text-sm text-gray-500">
+            Could not load your profile data. Please try again later.
+          </p>
         </div>
       </div>
     );
   }
 
-  // Combine residence_country and residence_state for display
   const locationDisplay =
     [profile.residence_country, profile.residence_state]
       .filter(Boolean)
@@ -451,16 +474,21 @@ export default function VolunteerProfilePage() {
         {`@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap'); * { font-family: 'Roboto', sans-serif; }`}
       </style>
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-gray-900">Volunteer Profile</CardTitle>
+        <CardTitle className="text-2xl font-semibold text-gray-900">
+          Volunteer Profile
+        </CardTitle>
         <CardDescription className="text-gray-600">
           Manage your personal information, skills, and volunteer preferences.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-6" aria-live="polite">
-          {/* Profile Picture Section */}
+          {/* Profile Picture */}
           <div className="grid gap-2">
-            <Label htmlFor="profile-picture" className="text-base font-medium text-gray-800">
+            <Label
+              htmlFor="profile-picture"
+              className="text-base font-medium text-gray-800"
+            >
               Profile Picture
             </Label>
             <div className="flex items-center gap-4">
@@ -486,14 +514,20 @@ export default function VolunteerProfilePage() {
                   className="text-gray-600"
                   aria-label="Upload profile picture"
                 />
-                <p className="text-sm text-gray-500">Upload a profile picture (JPEG, PNG, max 5MB)</p>
+                <p className="text-sm text-gray-500">
+                  Upload a profile picture (JPEG, PNG, max 5MB)
+                </p>
               </div>
             </div>
           </div>
 
+          {/* Name & Email */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="full-name" className="text-base font-medium text-gray-800">
+              <Label
+                htmlFor="full-name"
+                className="text-base font-medium text-gray-800"
+              >
                 Full Name
               </Label>
               <Input
@@ -508,7 +542,10 @@ export default function VolunteerProfilePage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email" className="text-base font-medium text-gray-800">
+              <Label
+                htmlFor="email"
+                className="text-base font-medium text-gray-800"
+              >
                 Email
               </Label>
               <Input
@@ -523,9 +560,13 @@ export default function VolunteerProfilePage() {
             </div>
           </div>
 
+          {/* Phone & DOB */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="phone" className="text-base font-medium text-gray-800">
+              <Label
+                htmlFor="phone"
+                className="text-base font-medium text-gray-800"
+              >
                 Phone Number
               </Label>
               <Input
@@ -539,22 +580,31 @@ export default function VolunteerProfilePage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="date-of-birth" className="text-base font-medium text-gray-800">
+              <Label
+                htmlFor="date-of-birth"
+                className="text-base font-medium text-gray-800"
+              >
                 Date of Birth
               </Label>
               <Input
                 id="date-of-birth"
                 type="date"
                 value={profile.date_of_birth || ""}
-                onChange={(e) => handleInputChange("date_of_birth", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("date_of_birth", e.target.value)
+                }
                 className="border-gray-300 focus:ring-blue-500"
                 aria-label="Date of birth"
               />
             </div>
           </div>
 
+          {/* Address */}
           <div className="grid gap-2">
-            <Label htmlFor="address" className="text-base font-medium text-gray-800">
+            <Label
+              htmlFor="address"
+              className="text-base font-medium text-gray-800"
+            >
               Address
             </Label>
             <Input
@@ -568,8 +618,12 @@ export default function VolunteerProfilePage() {
             />
           </div>
 
+          {/* Current Location */}
           <div className="grid gap-2">
-            <Label htmlFor="location" className="text-base font-medium text-gray-800">
+            <Label
+              htmlFor="location"
+              className="text-base font-medium text-gray-800"
+            >
               Location
             </Label>
             <Input
@@ -582,8 +636,11 @@ export default function VolunteerProfilePage() {
             />
           </div>
 
+          {/* Skills */}
           <div className="grid gap-2">
-            <Label className="text-base font-medium text-gray-800">Skills & Interests</Label>
+            <Label className="text-base font-medium text-gray-800">
+              Skills & Interests
+            </Label>
             <CheckboxReactHookFormMultiple
               items={expertiseData}
               onChange={handleSkillsChange}
@@ -592,8 +649,11 @@ export default function VolunteerProfilePage() {
             />
           </div>
 
+          {/* Availability */}
           <div className="grid gap-2">
-            <Label className="text-base font-medium text-gray-800">Availability</Label>
+            <Label className="text-base font-medium text-gray-800">
+              Availability
+            </Label>
             <RadioGroup
               value={availabilityType}
               onValueChange={(value: "full-time" | "specific-period") => {
@@ -612,7 +672,10 @@ export default function VolunteerProfilePage() {
                   id="availability-full-time-profile"
                   className="text-blue-600"
                 />
-                <Label htmlFor="availability-full-time-profile" className="text-gray-700">
+                <Label
+                  htmlFor="availability-full-time-profile"
+                  className="text-gray-700"
+                >
                   Full-time
                 </Label>
               </div>
@@ -622,7 +685,10 @@ export default function VolunteerProfilePage() {
                   id="availability-specific-period-profile"
                   className="text-blue-600"
                 />
-                <Label htmlFor="availability-specific-period-profile" className="text-gray-700">
+                <Label
+                  htmlFor="availability-specific-period-profile"
+                  className="text-gray-700"
+                >
                   Specific Period
                 </Label>
               </div>
@@ -630,7 +696,10 @@ export default function VolunteerProfilePage() {
             {availabilityType === "specific-period" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="start-date-profile" className="text-base font-medium text-gray-800">
+                  <Label
+                    htmlFor="start-date-profile"
+                    className="text-base font-medium text-gray-800"
+                  >
                     Start Date
                   </Label>
                   <Popover>
@@ -662,7 +731,10 @@ export default function VolunteerProfilePage() {
                   </Popover>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="end-date-profile" className="text-base font-medium text-gray-800">
+                  <Label
+                    htmlFor="end-date-profile"
+                    className="text-base font-medium text-gray-800"
+                  >
                     End Date
                   </Label>
                   <Popover>
@@ -697,8 +769,12 @@ export default function VolunteerProfilePage() {
             )}
           </div>
 
+          {/* Experience */}
           <div className="grid gap-2">
-            <Label htmlFor="experience" className="text-base font-medium text-gray-800">
+            <Label
+              htmlFor="experience"
+              className="text-base font-medium text-gray-800"
+            >
               Previous Volunteer Experience
             </Label>
             <Textarea
@@ -712,6 +788,7 @@ export default function VolunteerProfilePage() {
             />
           </div>
 
+          {/* Origin */}
           <LocationSelects
             label="Country of Origin"
             country={profile.origin_country || ""}
@@ -731,11 +808,15 @@ export default function VolunteerProfilePage() {
             aria-label="Select country of origin"
           />
 
+          {/* Volunteer Preferences */}
           <div className="grid gap-2">
             <Label className="text-base font-medium text-gray-800">
               Volunteer Location Preferences
             </Label>
-            <LocationSelector onSelectionChange={handleLocationChange} />
+            <LocationSelector
+              ref={locationSelectorRef}
+              onSelectionChange={handleLocationChange}
+            />
             {selectedLocationsDisplay}
             <p className="text-sm text-gray-500">
               Select your preferred countries, states, and LGAs for volunteering.
@@ -769,7 +850,7 @@ export default function VolunteerProfilePage() {
             </p>
           )}
         </form>
-      </CardContent>
+        </CardContent>
     </Card>
   );
 }

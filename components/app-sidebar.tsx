@@ -16,6 +16,7 @@ import {
   ChevronUp,
   LayoutDashboard,
   Mountain,
+  Send,
 } from "lucide-react";
 import {
   Sidebar,
@@ -119,7 +120,7 @@ const MENU_ITEMS = {
     },
     { path: ROUTES.volunteer.projects, label: "My Projects", icon: Briefcase },
     { path: ROUTES.volunteer.profile, label: "Profile", icon: User },
-    { path: ROUTES.volunteer.requests, label: "Requests", icon: User },
+    { path: ROUTES.volunteer.requests, label: "Requests", icon: Send },
     {
       path: ROUTES.volunteer.findOpportunity,
       label: "Find Opportunity",
@@ -294,17 +295,17 @@ export function AppSidebar() {
                   <span className="hidden md:inline text-sm font-bold text-gray-900 dark:text-gray-100">
                     DiasporaBase
                   </span>
-                  <ChevronDown className="h-4 w-4 ml-auto text-gray-500 dark:text-gray-400" />
+                  {/* <ChevronDown className="h-4 w-4 ml-auto text-gray-500 dark:text-gray-400" /> */}
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-[--radix-popper-anchor-width] text-xs">
+              {/* <DropdownMenuContent className="w-[--radix-popper-anchor-width] text-xs">
                 <DropdownMenuItem>
                   <span>About Us</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <span>Contact</span>
                 </DropdownMenuItem>
-              </DropdownMenuContent>
+              </DropdownMenuContent> */}
             </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>

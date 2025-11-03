@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Project Invitation</title>
+  <style>
+    /* Reuse styles */
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7fa; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .header { background: #8B5CF6; color: white; padding: 30px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+    .content { padding: 30px; color: #333; }
+    .content h2 { color: #8B5CF6; font-size: 22px; margin-top: 0; }
+    .project-box { background: #f8f5ff; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #8B5CF6; }
+    .btn { display: inline-block; background: #8B5CF6; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 10px 0; }
+    .footer { background: #f0f5fa; padding: 20px; text-align: center; font-size: 14px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>New Project Invitation</h1>
+    </div>
+    <div class="content">
+      <h2>Hi {{userName}},</h2>
+      <p>You've been invited to join a project on DiasporaBase!</p>
+
+      <div class="project-box">
+        <strong>Project:</strong> {{projectName}}<br/>
+        <strong>Agency:</strong> {{agencyName}}<br/>
+        <strong>Location:</strong> {{projectLocation}}<br/>
+        <strong>Start Date:</strong> {{projectStartDate}}
+      </div>
+
+      <p><strong>Description:</strong><br/>{{projectDescription}}</p>
+
+      <a href="{{projectLink}}" class="btn">View Project & Accept</a>
+      <a href="{{declineLink}}" style="color: #666; font-size: 14px;">Decline Invitation</a>
+    </div>
+    <div class="footer">
+      <p>&copy; {{year}} DiasporaBase.</p>
+    </div>
+  </div>
+</body>
+</html>

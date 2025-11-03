@@ -9,7 +9,6 @@ import StatsSection from "@/parts/landingPage/stats";
 import TestimonialsSection from "@/parts/landingPage/testimonials";
 import AboutUsSection from "@/parts/landingPage/about-us";
 
-// Animation variants for the hero section's glass container
 const heroVariants = {
   hidden: { opacity: 0, y: 50 },
   visible: {
@@ -19,9 +18,8 @@ const heroVariants = {
   },
 };
 
-// Animation variants for buttons (staggered entrance)
 const buttonVariants = {
-  hidden: { opacity: 0, x: -20 },//@ts-ignore
+  hidden: { opacity: 0, x: -20 }, //@ts-ignore
   visible: (i) => ({
     opacity: 1,
     x: 0,
@@ -29,9 +27,8 @@ const buttonVariants = {
   }),
 };
 
-// Animation variants for feature cards
 const featureVariants = {
-  hidden: { opacity: 0, y: 30 },//@ts-ignore
+  hidden: { opacity: 0, y: 30 }, //@ts-ignore
   visible: (i) => ({
     opacity: 1,
     y: 0,
@@ -39,7 +36,6 @@ const featureVariants = {
   }),
 };
 
-// Animation variants for CTA section
 const ctaVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -67,11 +63,11 @@ export default function LandingPage() {
             <motion.div
               className="flex flex-col items-center space-y-6 text-center"
               initial="hidden"
-              animate="visible"//@ts-ignore
+              animate="visible" //@ts-ignore
               variants={heroVariants}
             >
               <motion.div
-                className="space-y-4 bg-white/10 backdrop-blur-md rounded-xl p-8 shadow-lg border border-white/20 max-w-[1000px] mx-auto"//@ts-ignore
+                className="space-y-4 bg-white/10 backdrop-blur-md rounded-xl p-8 shadow-lg border border-white/20 max-w-[1000px] mx-auto" //@ts-ignore
                 variants={heroVariants}
               >
                 <h1
@@ -81,17 +77,21 @@ export default function LandingPage() {
                   Welcome to DiasporaBase
                 </h1>
                 <p className="mx-auto max-w-[700px] text-gray-200 md:text-xl drop-shadow-md">
-                  Lead change in your home country - from anywhere <br />in the world.
+                  Lead change in your home country - from anywhere <br />
+                  in the world.
                 </p>
                 <div className="flex flex-col gap-3 sm:flex-row justify-center">
                   <motion.div
                     custom={0}
                     initial="hidden"
-                    animate="visible"//@ts-ignore
+                    animate="visible" //@ts-ignore
                     variants={buttonVariants}
                     whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
                   >
-                    <Link href="/projects" aria-label="Browse volunteer projects">
+                    <Link
+                      href="/projects"
+                      aria-label="Browse volunteer projects"
+                    >
                       <Button
                         size="lg"
                         className="min-w-[200px] bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 text-white font-semibold shadow-lg"
@@ -103,7 +103,7 @@ export default function LandingPage() {
                   <motion.div
                     custom={1}
                     initial="hidden"
-                    animate="visible"//@ts-ignore
+                    animate="visible" //@ts-ignore
                     variants={buttonVariants}
                     whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
                   >
@@ -143,25 +143,45 @@ export default function LandingPage() {
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 {
-                  icon: <Users className="h-12 w-12 text-primary" aria-hidden="true" />,
+                  icon: (
+                    <Users
+                      className="h-12 w-12 text-primary"
+                      aria-hidden="true"
+                    />
+                  ),
                   title: "For Volunteers",
                   description:
                     "Discover opportunities that align with your skills and passions. Track your impact and connect with like-minded individuals.",
                 },
                 {
-                  icon: <Building className="h-12 w-12 text-primary" aria-hidden="true" />,
+                  icon: (
+                    <Building
+                      className="h-12 w-12 text-primary"
+                      aria-hidden="true"
+                    />
+                  ),
                   title: "For Organizations",
                   description:
                     "Post projects, manage volunteers, and track progress. Build strong community relationships.",
                 },
                 {
-                  icon: <Star className="h-12 w-12 text-primary" aria-hidden="true" />,
+                  icon: (
+                    <Star
+                      className="h-12 w-12 text-primary"
+                      aria-hidden="true"
+                    />
+                  ),
                   title: "Community Ratings",
                   description:
                     "Share experiences and help others find great volunteer opportunities through reviews.",
                 },
                 {
-                  icon: <MessageCircle className="h-12 w-12 text-primary" aria-hidden="true" />,
+                  icon: (
+                    <MessageCircle
+                      className="h-12 w-12 text-primary"
+                      aria-hidden="true"
+                    />
+                  ),
                   title: "Public Engagement",
                   description:
                     "Browse projects, provide feedback, and stay informed about community initiatives.",
@@ -172,7 +192,7 @@ export default function LandingPage() {
                   custom={index}
                   initial="hidden"
                   whileInView="visible"
-                  viewport={{ once: true, amount: 0.3 }}//@ts-ignore
+                  viewport={{ once: true, amount: 0.3 }} //@ts-ignore
                   variants={featureVariants}
                   whileHover={{
                     scale: 1.03,
@@ -200,7 +220,7 @@ export default function LandingPage() {
           aria-labelledby="cta-heading"
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}//@ts-ignore
+          viewport={{ once: true, amount: 0.3 }} //@ts-ignore
           variants={ctaVariants}
         >
           <div className="container px-4 md:px-6 mx-auto">

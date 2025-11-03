@@ -25,9 +25,9 @@ interface Request {
   end_date: string;
   status: string;
   request_type: "volunteer" | "agency";
-  volunteer_name?: string; // Optional for admins
-  profile_picture?: string; // Optional for admins (volunteer)
-  organization_profile_picture?: string; // For agency
+  volunteer_name?: string; 
+  profile_picture?: string; 
+  organization_profile_picture?: string; 
 }
 
 const VolunteerRequests: React.FC = () => {
@@ -48,7 +48,6 @@ const VolunteerRequests: React.FC = () => {
         if (userIdError) throw new Error(userIdError);
         if (!userId) throw new Error("Please log in to view requests.");
 
-        // Fetch user role
         const { data: userProfile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
@@ -62,7 +61,6 @@ const VolunteerRequests: React.FC = () => {
         let agencyData: any[] = [];
 
         if (userProfile.role === "admin" || userProfile.role === "super_admin") {
-          // Admins and super_admins see all requests
           const { data: vData, error: vError } = await supabase
             .from("volunteer_requests")
             .select(`

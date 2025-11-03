@@ -302,7 +302,6 @@ export async function getProjectsByUserSkills(): Promise<{
     if (error) {
       return { data: null, error: error.message };
     }
-    console.log("Projects matching user skills:", projects);
 
     return { data: projects as Project[], error: null };
   } catch (err) {

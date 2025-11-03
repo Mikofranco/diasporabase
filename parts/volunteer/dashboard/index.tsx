@@ -20,13 +20,15 @@ interface VolunteerDashBoardProps {
 }
 
 const VolunteerDashBoard = () => {
-  const [userInformation, setUserInformation] = useState<VolunteerDashBoardProps>({
-    name: "",
-    email: "",
-    phone: "",
-    id: "",
-  });
-  const [completedProjectsCount, setCompletedProjectsCount] = useState<number>(0);
+  const [userInformation, setUserInformation] =
+    useState<VolunteerDashBoardProps>({
+      name: "",
+      email: "",
+      phone: "",
+      id: "",
+    });
+  const [completedProjectsCount, setCompletedProjectsCount] =
+    useState<number>(0);
   const [attachedProjectsCount, setAttachedProjectsCount] = useState<number>(0); // New state for attached projects
   const [isLoading, setIsLoading] = useState<boolean>(true); // Loading state
   const [showModal, setShowModal] = useState<boolean>(false); // State for modal visibility
@@ -41,7 +43,10 @@ const VolunteerDashBoard = () => {
         .eq("projects.status", "completed");
 
       if (error) {
-        console.error("Error fetching completed projects count:", error.message);
+        console.error(
+          "Error fetching completed projects count:",
+          error.message
+        );
         return 0;
       }
 
@@ -83,33 +88,13 @@ const VolunteerDashBoard = () => {
           return;
         }
 
-        // Fetch user profile from Supabase, including skills
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("full_name, skills")
-          .eq("id", userId)
-          .single();
-
-        if (profileError) {
-          console.error("Error fetching user profile:", profileError.message);
-        }
-
-        // Check if skills are available; if not, show modal
-        if (profile && (!profile.skills || (Array.isArray(profile.skills) && profile.skills.length === 0))) {
-          setShowModal(true);
-        }
-
         // Fetch both counts concurrently for efficiency
-        const [completedCount, attachedCount] = await Promise.all([//@ts-ignore
-          getCompletedProjectsCount(userId),//@ts-ignore
+        const [completedCount, attachedCount] = await Promise.all([
+          //@ts-ignore
+          getCompletedProjectsCount(userId), //@ts-ignore
           getAttachedProjectsCount(userId),
         ]);
 
-        // Update state
-        setUserInformation({
-          name: profile?.full_name || localStorage.getItem("disporabase_fullName") || "",//@ts-ignore
-          id: userId,
-        });
         setCompletedProjectsCount(completedCount);
         setAttachedProjectsCount(attachedCount);
       } catch (err) {
@@ -118,6 +103,16 @@ const VolunteerDashBoard = () => {
         setIsLoading(false);
       }
     };
+
+     fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: "ogbechiemicheal@gmail.com",
+        subject: "Welcome!",
+        html: "<p>Thanks for signing up!</p>",
+      }),
+    });
 
     fetchUserData();
   }, []);
@@ -152,7 +147,8 @@ const VolunteerDashBoard = () => {
       <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
         <h2 className="text-xl font-bold mb-4">Complete Your Registration</h2>
         <p className="text-gray-600 mb-6">
-          To get started, please add your skills to match with relevant projects and opportunities.
+          To get started, please add your skills to match with relevant projects
+          and opportunities.
         </p>
         <div className="flex justify-end space-x-3">
           <button
@@ -205,12 +201,12 @@ const VolunteerDashBoard = () => {
 
   return (
     <>
-      <div className="container mx-auto">
+      <div className="container mx-auto p-2">
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-xl sm:text-2xl font-bold mb-2">
             Welcome Back{" "}
             <span className="font-semibold text-gray-600">
-              {userInformation.name || "User"}
+              {userInformation.name || ""}
             </span>
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
@@ -229,7 +225,7 @@ const VolunteerDashBoard = () => {
             ))}
           </div>
           <RecentActivity />
-          <OngoingProjects />
+          {/* <OngoingProjects /> */}
           <MatchingProjects />
         </div>
       </div>
