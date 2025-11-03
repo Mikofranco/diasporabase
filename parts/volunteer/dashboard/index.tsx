@@ -7,6 +7,9 @@ import RecentActivity from "./recent-activity";
 import OngoingProjects from "./ongoing-projects";
 import MatchingProjects from "./matching-projects";
 import { getUserId } from "@/lib/utils";
+import { useSendMail } from "@/services/mail";
+import { welcomeHTml } from "@/lib/email-templates/welcome";
+import { toast } from "sonner";
 
 // Initialize Supabase client
 const supabase = createClient();
@@ -88,7 +91,6 @@ const VolunteerDashBoard = () => {
           return;
         }
 
-        // Fetch both counts concurrently for efficiency
         const [completedCount, attachedCount] = await Promise.all([
           //@ts-ignore
           getCompletedProjectsCount(userId), //@ts-ignore
@@ -103,21 +105,9 @@ const VolunteerDashBoard = () => {
         setIsLoading(false);
       }
     };
-
-     fetch("/api/send-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: "ogbechiemicheal6@gmail.com",
-        subject: "Welcome!",
-        html: "<p>Thanks for signing up!</p>",
-      }),
-    });
-
     fetchUserData();
   }, []);
 
-  // SmallCard items with dynamic counts
   const smallCardItems: SmallCardProps[] = [
     {
       title: "Hours Volunteered",
