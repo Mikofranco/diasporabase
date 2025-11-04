@@ -100,7 +100,7 @@ export default function ConfirmEmailPage() {
       if (role === "agency") {
         redirectPath = "/onboarding";
       } else if (role === "volunteer") {
-        redirectPath = "/volunteer/dashboard";
+        redirectPath = "/dashboard/volunteer";
       }
 
       // Redirect after 2 seconds

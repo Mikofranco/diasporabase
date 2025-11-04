@@ -358,7 +358,7 @@ const VolunteerProjectDetails: React.FC = () => {
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-600">Category</Label>
-                <Badge className="bg-blue-600 text-white hover:bg-blue-700 mt-1">
+                <Badge className="action-btn text-white  mt-1">
                   {project.category.charAt(0).toUpperCase() + project.category.slice(1)}
                 </Badge>
               </div>
@@ -383,7 +383,7 @@ const VolunteerProjectDetails: React.FC = () => {
           <Button
             onClick={handleVolunteerRequest}
             disabled={hasRequested || project.volunteers_registered >= project.volunteers_needed}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg py-6 rounded-lg transition-colors duration-200"
+            className="w-full action-btn text-white text-lg py-6 rounded-lg transition-colors duration-200"
             aria-disabled={hasRequested || project.volunteers_registered >= project.volunteers_needed}
           >
             {hasRequested
@@ -473,7 +473,7 @@ const VolunteerProjectDetails: React.FC = () => {
                 />
                 <Button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg py-6 rounded-lg transition-colors duration-200"
+                  className="w-full action-btn text-white text-lg py-6 rounded-lg transition-colors duration-200"
                   disabled={form.watch("rating") === 0}
                 >
                   Submit Rating
