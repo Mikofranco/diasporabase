@@ -10,13 +10,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useForm, Controller } from 'react-hook-form'; // Add Controller
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from '@/components/ui/use-toast';
 import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { useSendMail } from '@/services/mail'; // ← Your function
 
 // Initialize Supabase client
 const supabase = createClient();
@@ -38,12 +39,13 @@ interface AgencyProfile {
   is_active: boolean;
 }
 
-// Zod schema for form validation
+// Zod schema
 const profileSchema = z.object({
   organization_name: z.string().min(1, 'Organization name is required'),
   contact_person_email: z.string().email('Invalid email address').optional().or(z.literal('')),
   contact_person_phone: z.string().optional().or(z.literal('')),
-  website: z.string().url('Invalid URL').optional().or(z.literal('')),
+  website: z.string(),
+  // .url('Invalid URL').optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
   organization_type: z.string().optional().or(z.literal('')),
   description: z.string().optional().or(z.literal('')),
@@ -68,7 +70,8 @@ const AgencyProfile: React.FC = () => {
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-    control, // Add control for Controller
+    control,
+    watch,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -85,6 +88,9 @@ const AgencyProfile: React.FC = () => {
       is_active: true,
     },
   });
+
+  // Watch current is_active value
+  const currentActiveStatus = watch('is_active');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -129,6 +135,9 @@ const AgencyProfile: React.FC = () => {
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
+      const oldActiveStatus = profile?.is_active ?? true;
+      const newActiveStatus = data.is_active;
+
       const updatedData = {
         organization_name: data.organization_name,
         contact_person_email: data.contact_person_email || null,
@@ -140,7 +149,7 @@ const AgencyProfile: React.FC = () => {
         focus_areas: data.focus_areas ? data.focus_areas.split(',').map((item) => item.trim()) : null,
         environment_cities: data.environment_cities ? data.environment_cities.split(',').map((item) => item.trim()) : null,
         environment_states: data.environment_states ? data.environment_states.split(',').map((item) => item.trim()) : null,
-        is_active: data.is_active,
+        is_active: newActiveStatus,
         updated_at: new Date().toISOString(),
       };
 
@@ -150,24 +159,61 @@ const AgencyProfile: React.FC = () => {
         .eq('id', id)
         .eq('role', 'agency');
 
-      if (error) {
-        throw new Error('Failed to update agency profile');
-      }
+      if (error) throw error;
 
       setProfile({ ...profile!, ...updatedData });
       setIsModalOpen(false);
+
       toast({
         title: 'Success',
         description: 'Agency profile updated successfully',
         className: 'bg-green-50 border-green-200 text-green-800',
       });
-    } catch (err) {
-      console.error(err);
+
+      // --- SEND EMAIL IF is_active CHANGED ---
+      if (oldActiveStatus !== newActiveStatus && data.contact_person_email) {
+        const statusText = newActiveStatus ? 'activated' : 'deactivated';
+        const subject = `Your Agency Account Has Been ${statusText === 'activated' ? 'Activated' : 'Deactivated'}`;
+        const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+            <h2 style="color: #1a73e8;">DiasporaBase</h2>
+            <p>Dear <strong>${data.organization_name}</strong>,</p>
+            <p>Your agency account has been <strong>${statusText}</strong>.</p>
+            ${newActiveStatus
+              ? `<p>You can now log in and add projects.</p>`
+              : `<p>Your account is currently inactive. Contact support for more info.</p>`
+            }
+            <p style="margin-top: 20px;">Thank you,<br/>DiasporaBase Team</p>
+          </div>
+        `;
+
+        await useSendMail({
+          to: data.contact_person_email,
+          subject,
+          html,
+          onSuccess: () => {
+            toast({
+              title: 'Email Sent',
+              description: `Status change email sent to ${data.contact_person_email}`,
+              className: 'bg-blue-50 border-blue-200 text-blue-800',
+            });
+          },
+          onError: (msg) => {
+            console.error("Failed to send status email:", msg);
+            toast({
+              title: 'Email Failed',
+              description: 'Profile updated, but status email failed.',
+              variant: 'destructive',
+            });
+          },
+        });
+      }
+    } catch (err: any) {
+      console.error("Update failed:", err);
       toast({
         title: 'Error',
-        description: 'Failed to update agency profile',
+        description: err.message || 'Failed to update profile',
         variant: 'destructive',
-        className: 'bg-red-50 border-red-200 text-red-800',
       });
     }
   };
@@ -196,7 +242,7 @@ const AgencyProfile: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
-          {/* Header Section */}
+          {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
               {profile.profile_picture ? (
@@ -223,75 +269,60 @@ const AgencyProfile: React.FC = () => {
             </div>
             <Button
               onClick={() => setIsModalOpen(true)}
-              className="action-btn text-white rounded-lg px-4 py-2 transition-colors"
-              aria-label="Edit agency information"
+              className="bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-2"
             >
               Edit Agency Info
             </Button>
           </div>
 
+          {/* Status Badge */}
+          <div className="mb-4">
+            <Badge variant={profile.is_active ? "default" : "secondary"}>
+              {profile.is_active ? "Active" : "Inactive"}
+            </Badge>
+          </div>
+
           {/* Profile Details */}
-          <Badge>
-            {profile.is_active ? <p>Active</p> : <p>in active</p>} 
-          </Badge>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white shadow-sm rounded-lg p-6">
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Details</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Contact Details</h2>
               <div className="space-y-2">
                 <p className="text-gray-600">
-                  <strong className="font-medium">Contact Email:</strong>{' '}
-                  {profile.contact_person_email || 'N/A'}
+                  <strong>Email:</strong> {profile.contact_person_email || 'N/A'}
                 </p>
                 <p className="text-gray-600">
-                  <strong className="font-medium">Contact Phone:</strong>{' '}
-                  {profile.contact_person_phone || 'N/A'}
+                  <strong>Phone:</strong> {profile.contact_person_phone || 'N/A'}
                 </p>
                 <p className="text-gray-600">
-                  <strong className="font-medium">Website:</strong>{' '}
+                  <strong>Website:</strong>{' '}
                   {profile.website ? (
-                    <a
-                      href={profile.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
+                    <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                       {profile.website}
                     </a>
-                  ) : (
-                    'N/A'
-                  )}
+                  ) : 'N/A'}
                 </p>
                 <p className="text-gray-600">
-                  <strong className="font-medium">Organization Type:</strong>{' '}
-                  {profile.organization_type || 'N/A'}
+                  <strong>Type:</strong> {profile.organization_type || 'N/A'}
                 </p>
                 <p className="text-gray-600">
-                  <strong className="font-medium">Address:</strong> {profile.address || 'N/A'}
-                </p>
-                <p className="text-gray-600">
-                  <strong className="font-medium">Active Status:</strong>{' '}
-                  {profile.is_active ? 'Active' : 'Inactive'}
+                  <strong>Address:</strong> {profile.address || 'N/A'}
                 </p>
               </div>
             </div>
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Additional Information</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Operations</h2>
               <div className="space-y-2">
                 <p className="text-gray-600">
-                  <strong className="font-medium">Focus Areas:</strong>{' '}
-                  {profile.focus_areas?.join(', ') || 'N/A'}
+                  <strong>Focus Areas:</strong> {profile.focus_areas?.join(', ') || 'N/A'}
                 </p>
                 <p className="text-gray-600">
-                  <strong className="font-medium">Operating Cities:</strong>{' '}
-                  {profile.environment_cities?.join(', ') || 'N/A'}
+                  <strong>Cities:</strong> {profile.environment_cities?.join(', ') || 'N/A'}
                 </p>
                 <p className="text-gray-600">
-                  <strong className="font-medium">Operating States:</strong>{' '}
-                  {profile.environment_states?.join(', ') || 'N/A'}
+                  <strong>States:</strong> {profile.environment_states?.join(', ') || 'N/A'}
                 </p>
                 <p className="text-gray-600">
-                  <strong className="font-medium">Description:</strong>{' '}
-                  {profile.description || 'N/A'}
+                  <strong>Description:</strong> {profile.description || 'N/A'}
                 </p>
               </div>
             </div>
@@ -302,8 +333,7 @@ const AgencyProfile: React.FC = () => {
             <Button
               variant="outline"
               onClick={() => router.back()}
-              className="border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg px-4 py-2 transition-colors"
-              aria-label="Go back to agency list"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
               Back to Agency List
             </Button>
@@ -321,122 +351,66 @@ const AgencyProfile: React.FC = () => {
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 gap-4">
+              {/* All form fields */}
               <div>
-                <Label htmlFor="organization_name" className="text-gray-700">
-                  Organization Name
-                </Label>
-                <Input
-                  id="organization_name"
-                  {...register('organization_name')}
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
-                />
+                <Label htmlFor="organization_name">Organization Name</Label>
+                <Input id="organization_name" {...register('organization_name')} />
                 {errors.organization_name && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.organization_name.message}
-                  </p>
+                  <p className="mt-1 text-sm text-red-600">{errors.organization_name.message}</p>
                 )}
               </div>
+
               <div>
-                <Label htmlFor="contact_person_email" className="text-gray-700">
-                  Contact Email
-                </Label>
-                <Input
-                  id="contact_person_email"
-                  type="email"
-                  {...register('contact_person_email')}
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
-                />
+                <Label htmlFor="contact_person_email">Contact Email</Label>
+                <Input id="contact_person_email" type="email" {...register('contact_person_email')} />
                 {errors.contact_person_email && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.contact_person_email.message}
-                  </p>
+                  <p className="mt-1 text-sm text-red-600">{errors.contact_person_email.message}</p>
                 )}
               </div>
+
               <div>
-                <Label htmlFor="contact_person_phone" className="text-gray-700">
-                  Contact Phone
-                </Label>
-                <Input
-                  id="contact_person_phone"
-                  {...register('contact_person_phone')}
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
-                />
+                <Label htmlFor="contact_person_phone">Contact Phone</Label>
+                <Input id="contact_person_phone" {...register('contact_person_phone')} />
               </div>
+
               <div>
-                <Label htmlFor="website" className="text-gray-700">
-                  Website
-                </Label>
-                <Input
-                  id="website"
-                  {...register('website')}
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
-                />
-                {errors.website && (
-                  <p className="mt-1 text-sm text-red-600">{errors.website.message}</p>
-                )}
+                <Label htmlFor="website">Website</Label>
+                <Input id="website" {...register('website')} />
+                {errors.website && <p className="mt-1 text-sm text-red-600">{errors.website.message}</p>}
               </div>
+
               <div>
-                <Label htmlFor="address" className="text-gray-700">
-                  Address
-                </Label>
-                <Input
-                  id="address"
-                  {...register('address')}
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
-                />
+                <Label htmlFor="address">Address</Label>
+                <Input id="address" {...register('address')} />
               </div>
+
               <div>
-                <Label htmlFor="organization_type" className="text-gray-700">
-                  Organization Type
-                </Label>
-                <Input
-                  id="organization_type"
-                  {...register('organization_type')}
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
-                />
+                <Label htmlFor="organization_type">Organization Type</Label>
+                <Input id="organization_type" {...register('organization_type')} />
               </div>
+
               <div>
-                <Label htmlFor="description" className="text-gray-700">
-                  Description
-                </Label>
-                <Textarea
-                  id="description"
-                  {...register('description')}
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
-                />
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" {...register('description')} />
               </div>
+
               <div>
-                <Label htmlFor="focus_areas" className="text-gray-700">
-                  Focus Areas (comma-separated)
-                </Label>
-                <Input
-                  id="focus_areas"
-                  {...register('focus_areas')}
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
-                />
+                <Label htmlFor="focus_areas">Focus Areas (comma-separated)</Label>
+                <Input id="focus_areas" {...register('focus_areas')} />
               </div>
+
               <div>
-                <Label htmlFor="environment_cities" className="text-gray-700">
-                  Operating Cities (comma-separated)
-                </Label>
-                <Input
-                  id="environment_cities"
-                  {...register('environment_cities')}
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
-                />
+                <Label htmlFor="environment_cities">Operating Cities</Label>
+                <Input id="environment_cities" {...register('environment_cities')} />
               </div>
+
               <div>
-                <Label htmlFor="environment_states" className="text-gray-700">
-                  Operating States (comma-separated)
-                </Label>
-                <Input
-                  id="environment_states"
-                  {...register('environment_states')}
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-primary"
-                />
+                <Label htmlFor="environment_states">Operating States</Label>
+                <Input id="environment_states" {...register('environment_states')} />
               </div>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="is_active" className="text-gray-700">
+
+              <div className="flex items-center space-x-3">
+                <Label htmlFor="is_active" className="cursor-pointer">
                   Active Status
                 </Label>
                 <Controller
@@ -448,7 +422,7 @@ const AgencyProfile: React.FC = () => {
                       checked={field.value}
                       onCheckedChange={field.onChange}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                        ${field.value ? 'bg-blue-600' : 'bg-red-600'}`}
+                        ${field.value ? 'bg-green-600' : 'bg-red-600'}`}
                     >
                       <span
                         className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
@@ -457,14 +431,17 @@ const AgencyProfile: React.FC = () => {
                     </Switch>
                   )}
                 />
+                <span className="text-sm font-medium">
+                  {currentActiveStatus ? 'Active' : 'Inactive'}
+                </span>
               </div>
             </div>
+
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsModalOpen(false)}
-                className="border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg"
                 disabled={isSubmitting}
               >
                 Cancel
@@ -472,13 +449,9 @@ const AgencyProfile: React.FC = () => {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-primary hover:bg-primary/90 text-white rounded-lg"
+                className="bg-primary hover:bg-primary/90 text-white"
               >
-                {isSubmitting ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  'Save Changes'
-                )}
+                {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>

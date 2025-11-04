@@ -16,11 +16,11 @@ const MatchingProjects = () => {
     router.push(`/dashboard/volunteer/projects/${projectId}`);
   };
 
-  useEffect(() => {
-    if (skillMatchedProjectError) {
-      router.push(`/onboarding/volunteer`);
-    }
-  }, [skillMatchedProjectError]);
+  // useEffect(() => {
+  //   if (skillMatchedProjectError) {
+  //     router.push(`/onboarding/volunteer`);
+  //   }
+  // }, [skillMatchedProjectError]);
 
   return (
     <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4 bg-white">

@@ -4,14 +4,13 @@ import React, { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SmallCard, { SmallCardProps } from "./small-card";
 import RecentActivity from "./recent-activity";
-import OngoingProjects from "./ongoing-projects";
 import MatchingProjects from "./matching-projects";
 import { getUserId } from "@/lib/utils";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-// Initialize Supabase client
 const supabase = createClient();
 
-// Define props for VolunteerDashBoard
 interface VolunteerDashBoardProps {
   name?: string;
   email?: string;
@@ -20,20 +19,19 @@ interface VolunteerDashBoardProps {
 }
 
 const VolunteerDashBoard = () => {
-  const [userInformation, setUserInformation] =
-    useState<VolunteerDashBoardProps>({
-      name: "",
-      email: "",
-      phone: "",
-      id: "",
-    });
-  const [completedProjectsCount, setCompletedProjectsCount] =
-    useState<number>(0);
-  const [attachedProjectsCount, setAttachedProjectsCount] = useState<number>(0); // New state for attached projects
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Loading state
-  const [showModal, setShowModal] = useState<boolean>(false); // State for modal visibility
+  const [userInformation, setUserInformation] = useState<VolunteerDashBoardProps>({
+    name: "",
+    email: "",
+    phone: "",
+    id: "",
+  });
+  const [completedProjectsCount, setCompletedProjectsCount] = useState<number>(0);
+  const [attachedProjectsCount, setAttachedProjectsCount] = useState<number>(0);
+  const [isChecking, setIsChecking] = useState<boolean>(true);
+  const [onboardingRequired, setOnboardingRequired] = useState<boolean>(false);
+  const router = useRouter();
 
-  // Fetch completed projects count
+  /* --------------------------------------------------------------- */
   async function getCompletedProjectsCount(userId: string): Promise<number> {
     try {
       const { data, error } = await supabase
@@ -41,159 +39,99 @@ const VolunteerDashBoard = () => {
         .select("project_id, projects!inner(status)")
         .eq("volunteer_id", userId)
         .eq("projects.status", "completed");
-
-      if (error) {
-        console.error(
-          "Error fetching completed projects count:",
-          error.message
-        );
-        return 0;
-      }
-
-      return data?.length || 0;
-    } catch (err) {
-      console.error("Unexpected error:", err);
+      if (error) throw error;
+      return data?.length ?? 0;
+    } catch (e) {
+      console.error(e);
       return 0;
     }
   }
 
-  // Fetch attached projects count
   async function getAttachedProjectsCount(userId: string): Promise<number> {
     try {
       const { count, error } = await supabase
         .from("project_volunteers")
         .select("project_id", { count: "exact" })
         .eq("volunteer_id", userId);
-
-      if (error) {
-        console.error("Error fetching attached projects count:", error.message);
-        return 0;
-      }
-
-      return count || 0;
-    } catch (err) {
-      console.error("Unexpected error:", err);
+      if (error) throw error;
+      return count ?? 0;
+    } catch (e) {
+      console.error(e);
       return 0;
     }
   }
 
+  /* --------------------------------------------------------------- */
   useEffect(() => {
-    const fetchUserData = async () => {
-      setIsLoading(true);
+    const checkAndLoad = async () => {
+      setIsChecking(true);
       try {
-        // Fetch user ID from Supabase auth
-        const userId = await getUserId();
-        if (!userId) {
-          console.error("No user ID found");
+        const { data: userId, error: uidErr } = await getUserId();
+        if (uidErr || !userId) {
+          toast.error("Please log in to continue.");
+          router.push("/login");
           return;
         }
 
-        // Fetch both counts concurrently for efficiency
-        const [completedCount, attachedCount] = await Promise.all([
-          //@ts-ignore
-          getCompletedProjectsCount(userId), //@ts-ignore
+        const { data: profile, error: profErr } = await supabase
+          .from("profiles")
+          .select("full_name, email, phone, skills")
+          .eq("id", userId)
+          .single();
+
+        if (profErr) {
+          toast.error("Failed to load profile.");
+          return;
+        }
+
+        const skills = profile.skills ?? [];
+        if (!skills.length) {
+          setOnboardingRequired(true);
+          setIsChecking(false);
+          return; // stop loading the dashboard
+        }
+
+        // ---- profile is complete → load dashboard ----
+        setUserInformation({
+          name: profile.full_name ?? "",
+          email: profile.email ?? "",
+          phone: profile.phone ?? "",
+          id: userId,
+        });
+
+        const [comp, att] = await Promise.all([
+          getCompletedProjectsCount(userId),
           getAttachedProjectsCount(userId),
         ]);
 
-        setCompletedProjectsCount(completedCount);
-        setAttachedProjectsCount(attachedCount);
-      } catch (err) {
-        console.error("Error in fetchUserData:", err);
+        setCompletedProjectsCount(comp);
+        setAttachedProjectsCount(att);
+      } catch (e) {
+        console.error(e);
+        toast.error("Something went wrong.");
       } finally {
-        setIsLoading(false);
+        setIsChecking(false);
       }
     };
 
-     fetch("/api/send-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: "ogbechiemicheal6@gmail.com",
-        subject: "Welcome!",
-        html: "<p>Thanks for signing up!</p>",
-      }),
-    });
+    checkAndLoad();
+  }, [router]);
 
-    fetchUserData();
-  }, []);
-
-  // SmallCard items with dynamic counts
+  /* --------------------------------------------------------------- */
   const smallCardItems: SmallCardProps[] = [
-    {
-      title: "Hours Volunteered",
-      count: 120, // Consider fetching dynamically if API exists
-      image: "/svg/time.svg",
-    },
-    {
-      title: "Projects Attached", // Corrected typo
-      count: attachedProjectsCount, // Dynamic count
-      image: "/svg/completed.svg",
-    },
-    {
-      title: "Upcoming Events",
-      count: 2, // Consider fetching dynamically if API exists
-      image: "/svg/star.svg",
-    },
-    {
-      title: "Completed Projects", // Updated title for consistency
-      count: completedProjectsCount, // Dynamic count
-      image: "/svg/completed-project.svg",
-    },
+    { title: "Hours Volunteered", count: 120, image: "/svg/time.svg" },
+    { title: "Projects Attached", count: attachedProjectsCount, image: "/svg/completed.svg" },
+    { title: "Upcoming Events", count: 2, image: "/svg/star.svg" },
+    { title: "Completed Projects", count: completedProjectsCount, image: "/svg/completed-project.svg" },
   ];
 
-  // Modal component
-  const CompleteRegistrationModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
-        <h2 className="text-xl font-bold mb-4">Complete Your Registration</h2>
-        <p className="text-gray-600 mb-6">
-          To get started, please add your skills to match with relevant projects
-          and opportunities.
-        </p>
-        <div className="flex justify-end space-x-3">
-          <button
-            onClick={() => setShowModal(false)}
-            className="px-4 py-2 text-gray-500 hover:text-gray-700"
-          >
-            Remind Later
-          </button>
-          <button
-            onClick={() => {
-              // Navigate to skills update page or handle completion
-              // For example: window.location.href = '/profile/skills';
-              setShowModal(false);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Add Skills
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  if (isLoading) {
+  /* --------------------------------------------------------------- */
+  if (isChecking) {
     return (
-      <div className="container mx-auto flex justify-center items-center h-64">
-        <svg
-          className="animate-spin h-8 w-8 text-blue-600"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
+      <div className="container mx-auto flex items-center justify-center h-64">
+        <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
       </div>
     );
@@ -201,35 +139,57 @@ const VolunteerDashBoard = () => {
 
   return (
     <>
-      <div className="container mx-auto p-2">
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-xl sm:text-2xl font-bold mb-2">
+      {/* ---------- NON-DISMISSIBLE ONBOARDING MODAL ---------- */}
+      {onboardingRequired && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl animate-in fade-in duration-300">
+            <div className="mb-5 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                <svg className="h-9 w-9 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900">Complete Your Profile</h2>
+              <p className="mt-2 text-gray-600">
+                Please add your skills to unlock personalized project matches.
+              </p>
+            </div>
+
+            <button
+              onClick={() => router.push("/onboarding/volunteer")}
+              className="w-full rounded-lg action-btn py-3 font-medium text-white shadow-sm transition-colors "
+            >
+              Complete Onboarding
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- DASHBOARD (blurred while modal is open) ---------- */}
+      <div className={`container mx-auto p-2 ${onboardingRequired ? "pointer-events-none blur-sm" : ""}`}>
+        <div className="mb-6 text-center sm:mb-8">
+          <h1 className="mb-2 text-xl font-bold sm:text-2xl">
             Welcome Back{" "}
             <span className="font-semibold text-gray-600">
-              {userInformation.name || ""}
+              {userInformation.name || "Volunteer"}
             </span>
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
+          <p className="text-sm text-muted-foreground sm:text-base">
             Ready to make a difference today?
           </p>
         </div>
+
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {smallCardItems.map((item, index) => (
-              <SmallCard
-                key={index}
-                image={item.image}
-                title={item.title}
-                count={item.count}
-              />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {smallCardItems.map((item, i) => (
+              <SmallCard key={i} image={item.image} title={item.title} count={item.count} />
             ))}
           </div>
+
           <RecentActivity />
-          {/* <OngoingProjects /> */}
           <MatchingProjects />
         </div>
       </div>
-      {showModal && <CompleteRegistrationModal />}
     </>
   );
 };

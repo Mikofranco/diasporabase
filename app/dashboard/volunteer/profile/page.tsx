@@ -825,7 +825,7 @@ export default function VolunteerProfilePage() {
 
           <Button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white hover:from-blue-700 hover:to-blue-500 transition-all"
+            className="w-full bg-gradient-to-r action-btn transition-all"
             disabled={submitting}
             aria-label="Save profile changes"
           >

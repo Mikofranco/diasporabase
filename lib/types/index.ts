@@ -140,3 +140,15 @@ export interface VolunteerRequest {
   volunteerId: string;
   status: AgencyRequestStatus;
 }
+
+export type ConfirmationLink = {
+  id: string;
+  user_id: string;
+  email: string;
+  confirmation_url: string;
+  token_hash: string | null;
+  created_at: string;
+  clicked_at: string | null;
+  expires_at: string;
+  is_resent: boolean;
+};
