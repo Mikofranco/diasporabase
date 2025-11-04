@@ -1,9 +1,13 @@
 import ConfirmEmailPage from '@/parts/confirm'
-import React from 'react'
+import React, { Suspense } from 'react'
 
 const ConfirmScreen = () => {
   return (
-    <div><ConfirmEmailPage/></div>
+    <div>
+      <Suspense>
+        <ConfirmEmailPage/>
+      </Suspense>
+    </div>
   )
 }
 
