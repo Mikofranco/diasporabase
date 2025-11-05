@@ -49,20 +49,12 @@ interface ProfileData {
   profile_picture: string | null;
 }
 
-export interface Item {
-  id: string;
-  label: string;
-  children?: Item[];
-  subChildren?: Item[];
-}
-
 export interface SelectedData {
   selectedCountries: string[];
   selectedStates: string[];
   selectedLgas: string[];
 }
 
-// Ref interface for LocationSelector
 interface LocationSelectorHandle {
   setSelected: (data: SelectedData) => void;
 }
@@ -89,7 +81,7 @@ export default function VolunteerProfilePage() {
   const [userPhone, setUserPhone] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [expertiseData, setExpertiseData] = useState<Item[]>([]);
+  const [expertiseData, setExpertiseData] = useState<any[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<SelectedData>({
     selectedCountries: [],
     selectedStates: [],
@@ -100,7 +92,6 @@ export default function VolunteerProfilePage() {
   const router = useRouter();
   const locationSelectorRef = useRef<LocationSelectorHandle>(null);
 
-  // Memoized callback to prevent re-creation on every render
   const handleLocationChange = useCallback((data: SelectedData) => {
     setSelectedLocations(data);
   }, []);
@@ -169,15 +160,6 @@ export default function VolunteerProfilePage() {
       });
       setImagePreview(data.profile_picture || null);
 
-      // Pre-select saved locations in LocationSelector
-      if (locationSelectorRef.current) {
-        locationSelectorRef.current.setSelected({
-          selectedCountries: data.volunteer_countries || [],
-          selectedStates: data.volunteer_states || [],
-          selectedLgas: data.volunteer_lgas || [],
-        });
-      }
-
       // Handle availability
       if (data.availability === "full-time") {
         setAvailabilityType("full-time");
@@ -221,6 +203,17 @@ export default function VolunteerProfilePage() {
 
     fetchProfileAndLocation();
   }, [supabase]);
+
+  // Sync saved volunteer locations into LocationSelector AFTER ref is ready
+  useEffect(() => {
+    if (locationSelectorRef.current && profile) {
+      locationSelectorRef.current.setSelected({
+        selectedCountries: profile.volunteer_countries || [],
+        selectedStates: profile.volunteer_states || [],
+        selectedLgas: profile.volunteer_lgas || [],
+      });
+    }
+  }, [profile]);
 
   // Handle image upload
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -390,7 +383,6 @@ export default function VolunteerProfilePage() {
     setSubmitting(false);
   };
 
-  // Conditional display: >10 states → show only countries
   const selectedLocationsDisplay = useMemo(() => {
     const { selectedCountries, selectedStates, selectedLgas } = selectedLocations;
 
@@ -850,7 +842,7 @@ export default function VolunteerProfilePage() {
             </p>
           )}
         </form>
-        </CardContent>
+      </CardContent>
     </Card>
   );
 }

@@ -15,9 +15,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-/* -------------------------------------------------
-   Types
-------------------------------------------------- */
 interface SelectedState {
   [country: string]: {
     checked: boolean;
@@ -40,9 +37,6 @@ export interface SelectedData {
   selectedLgas: string[];
 }
 
-/* -------------------------------------------------
-   Context (for internal use)
-------------------------------------------------- */
 interface LocationContextType {
   selected: SelectedState;
   getSelectedData: () => SelectedData;
@@ -53,23 +47,15 @@ const LocationContext = createContext<LocationContextType | undefined>(undefined
 export const useSelectedLocations = () => {
   const context = useContext(LocationContext);
   if (!context) {
-    throw new Error(
-      "useSelectedLocations must be used within a LocationSelectorProvider"
-    );
+    throw new Error("useSelectedLocations must be used within a LocationSelectorProvider");
   }
   return context;
 };
 
-/* -------------------------------------------------
-   Ref handle
-------------------------------------------------- */
 export interface LocationSelectorHandle {
   setSelected: (data: SelectedData) => void;
 }
 
-/* -------------------------------------------------
-   Component
-------------------------------------------------- */
 interface LocationSelectorProps {
   onSelectionChange?: (data: SelectedData) => void;
 }
@@ -79,9 +65,6 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
     const [expanded, setExpanded] = useState<ExpandedState>({});
     const [selected, setSelected] = useState<SelectedState>({});
 
-    /* -------------------------------------------------
-       Build internal state from flat SelectedData
-    ------------------------------------------------- */
     const buildSelectedState = useCallback((data: SelectedData): SelectedState => {
       const newState: SelectedState = {};
 
@@ -111,36 +94,22 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
       return newState;
     }, []);
 
-    /* -------------------------------------------------
-       Expose setSelected via ref
-    ------------------------------------------------- */
     useImperativeHandle(ref, () => ({
       setSelected: (data: SelectedData) => {
         const newState = buildSelectedState(data);
         setSelected(newState);
-        // Notify parent immediately
-        onSelectionChange?.(data);
       },
-    }), [buildSelectedState, onSelectionChange]);
+    }), [buildSelectedState]);
 
-    /* -------------------------------------------------
-       Notify parent ONLY when selected changes
-       → Prevents infinite loop!
-    ------------------------------------------------- */
+    // Notify parent when internal selection changes
     useEffect(() => {
       onSelectionChange?.(getSelectedData());
-    }, [selected]); // ← Only `selected`, NOT onSelectionChange
+    }, [selected, onSelectionChange]);
 
-    /* -------------------------------------------------
-       Toggle expand
-    ------------------------------------------------- */
     const toggleExpand = (key: string) => {
       setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
     };
 
-    /* -------------------------------------------------
-       Checkbox handler
-    ------------------------------------------------- */
     const handleCheckboxChange = (
       level: "country" | "state" | "lga",
       country: string,
@@ -205,7 +174,7 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
           };
         }
 
-        // Cleanup: remove empty branches
+        // Cleanup empty branches
         if (newSelected[country]) {
           const hasSelectedStates = Object.values(newSelected[country].states).some(
             (s) => s.checked || Object.values(s.lgas).some((l) => l)
@@ -229,9 +198,6 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
       });
     };
 
-    /* -------------------------------------------------
-       Select / Clear all
-    ------------------------------------------------- */
     const selectAll = () => {
       const newSelected: SelectedState = {};
       africanLocations.forEach((c) => {
@@ -257,9 +223,6 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
       toast.success("Selection cleared");
     };
 
-    /* -------------------------------------------------
-       Flatten to arrays
-    ------------------------------------------------- */
     const getSelectedData = useCallback((): SelectedData => {
       const countries: string[] = [];
       const states: string[] = [];
@@ -278,9 +241,6 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
       return { selectedCountries: countries, selectedStates: states, selectedLgas: lgas };
     }, [selected]);
 
-    /* -------------------------------------------------
-       Render
-    ------------------------------------------------- */
     return (
       <LocationContext.Provider value={{ selected, getSelectedData }}>
         <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -292,22 +252,11 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
             <h2 className="text-xl font-semibold text-gray-900">
               Select Locations
             </h2>
-            {/* Uncomment to re-enable */}
             {/* <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={selectAll}
-                className="text-blue-600 border-blue-600 hover:bg-blue-50"
-              >
+              <Button variant="outline" size="sm" onClick={selectAll}>
                 Select All
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearSelection}
-                className="text-red-600 border-red-600 hover:bg-red-50"
-              >
+              <Button variant="outline" size="sm" onClick={clearSelection}>
                 Clear
               </Button>
             </div> */}
