@@ -1,12 +1,45 @@
-import { motion } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
-import { useState, useEffect } from 'react';
+import { motion } from "framer-motion";
+import { useInView } from "react-intersection-observer";
+import { useState, useEffect } from "react";
+import { getPlatformStat } from "@/lib/utils";
+import { stat } from "fs";
 
 const StatsSection = () => {
+  const [activeVolunteers, setActiveVolunteers] = useState<number>(0);
+  const [activeProjects, setActiveProjects] = useState<number>(0);
+  const [registeredAgencies, setRegisteredAgencies] = useState<number>(0);
+
+  async function setPlatformStat() {
+    const stats = await getPlatformStat();
+    if (stats[0]) {
+      setRegisteredAgencies(stats[0].active_agencies);
+      setActiveProjects(stats[0].active_projects);
+      setActiveVolunteers(stats[0].active_volunteers);
+    }
+  }
+  useEffect(() => {
+    setPlatformStat();
+  }, []);
+
   const stats = [
-    { value: 2547, label: 'Active Volunteers', icon: '👥', color: 'bg-blue-300' },
-    { value: 148, label: 'Active Projects', icon: '🚀', color: 'bg-purple-300' },
-    { value: 73, label: 'Registered Agencies', icon: '🏢', color: 'bg-green-300' },
+    {
+      value: activeVolunteers,
+      label: "Active Volunteers",
+      icon: "👥",
+      color: "bg-blue-300",
+    },
+    {
+      value: activeProjects,
+      label: "Active Projects",
+      icon: "🚀",
+      color: "bg-purple-300",
+    },
+    {
+      value: registeredAgencies,
+      label: "Registered Agencies",
+      icon: "🏢",
+      color: "bg-green-300",
+    },
   ];
 
   const [ref, inView] = useInView({
@@ -33,7 +66,7 @@ const StatsSection = () => {
       y: 0,
       transition: {
         duration: 0.5,
-        ease: 'easeOut',
+        ease: "easeOut",
       },
     },
   };
@@ -45,7 +78,7 @@ const StatsSection = () => {
       y: 0,
       transition: {
         duration: 0.5,
-        ease: 'easeOut',
+        ease: "easeOut",
       },
     },
   };
@@ -67,7 +100,12 @@ const StatsSection = () => {
         const progress = timestamp - startTime;
 
         if (progress < duration) {
-          setCount(Math.min(Math.floor(start + increment * (progress / 16)), targetValue));
+          setCount(
+            Math.min(
+              Math.floor(start + increment * (progress / 16)),
+              targetValue
+            )
+          );
           requestAnimationFrame(animate);
         } else {
           setCount(targetValue);
@@ -98,7 +136,8 @@ const StatsSection = () => {
             Our Impact in Numbers
           </h2>
           <p className="text-xl text-gray-500 dark:text-gray-200 max-w-3xl mx-auto leading-relaxed">
-            Discover the scale of our community and the difference we're making together.
+            Discover the scale of our community and the difference we're making
+            together.
           </p>
         </motion.div>
 
@@ -106,7 +145,7 @@ const StatsSection = () => {
           ref={ref}
           variants={containerVariants}
           initial="hidden"
-          animate={inView ? 'visible' : 'hidden'}
+          animate={inView ? "visible" : "hidden"}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8"
         >
           {stats.map((stat, index) => {
@@ -114,7 +153,7 @@ const StatsSection = () => {
 
             return (
               <motion.div
-                key={index}//@ts-ignore
+                key={index} //@ts-ignore
                 variants={cardVariants}
                 className={`relative p-8 bg-${stat.color} dark:bg-gray-600 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 group overflow-hidden border border-gray-200 dark:border-gray-500 hover:-translate-y-1 ${stat.color} bg-opacity-20`}
                 role="region"
@@ -123,7 +162,7 @@ const StatsSection = () => {
                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                 <motion.div
-                  custom={{ targetValue: stat.value }}//@ts-ignore
+                  custom={{ targetValue: stat.value }} //@ts-ignore
                   variants={numberVariants}
                   className="text-5xl md:text-6xl font-extrabold text-gray-800 dark:text-gray-100 mb-4"
                 >
@@ -131,8 +170,12 @@ const StatsSection = () => {
                 </motion.div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl transform group-hover:scale-110 transition-transform duration-300">{stat.icon}</span>
-                  <span className="text-lg font-medium text-gray-500 dark:text-gray-200">{stat.label}</span>
+                  <span className="text-2xl transform group-hover:scale-110 transition-transform duration-300">
+                    {stat.icon}
+                  </span>
+                  <span className="text-lg font-medium text-gray-500 dark:text-gray-200">
+                    {stat.label}
+                  </span>
                 </div>
               </motion.div>
             );

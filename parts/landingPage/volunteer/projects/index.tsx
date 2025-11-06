@@ -70,7 +70,6 @@ export default function VolunteerProjectsView() {
     const fetchUserAndProjects = async () => {
       setLoading(true);
 
-      // Fetch authenticated user
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -78,7 +77,6 @@ export default function VolunteerProjectsView() {
         setUserId(user.id);
         await fetchProjects(user.id);
       } else {
-        // No user authenticated, set empty projects and volunteers
         setProjects([]);
         setVolunteers([]);
         setLoading(false);
@@ -88,55 +86,54 @@ export default function VolunteerProjectsView() {
     fetchUserAndProjects();
   }, []);
 
-  const fetchProjects = async (userId: string) => {
-    // Fetch projects where the user is a volunteer
-    const { data, error } = await supabase
-      .from("project_volunteers")
-      .select(
-        `
-        project_id,
-        projects!inner(
-          id,
-          title,
-          description,
-          organization_name,
-          location,
-          start_date,
-          end_date,
-          volunteers_needed,
-          volunteers_registered,
-          status,
-          category
-        )
-      `
-      )
-      .eq("volunteer_id", userId)
-      .eq("projects.status", "active")
-      .order("created_at", { ascending: false });
+const fetchProjects = async (userId: string) => {
+  console.log("Fetching projects for user:", userId); 
 
-    if (error) {
-      console.error("Error fetching projects:", error);
-      setProjects([]);
-      setVolunteers([]);
-    } else {
-      // Map data to match Project interface
-      const mappedProjects = data.map((item: any) => ({
-        id: item.projects.id,
-        title: item.projects.title,
-        description: item.projects.description,
-        organization_name: item.projects.organization_name,
-        location: item.projects.location,
-        start_date: item.projects.start_date,
-        end_date: item.projects.end_date,
-        volunteers_needed: item.projects.volunteers_needed,
-        volunteers_registered: item.projects.volunteers_registered,
-        status: item.projects.status,
-        category: item.projects.category,
-      }));
-      setProjects(mappedProjects || []);
-    }
-    setLoading(false);
-  };
+  const { data, error } = await supabase
+    .from("project_volunteers")
+    .select(`
+      project_id,
+      projects!inner(
+        id,
+        title,
+        description,
+        organization_name,
+        location,
+        start_date,
+        end_date,
+        volunteers_needed,
+        volunteers_registered,
+        status,
+        category
+      )
+    `)
+    .eq("volunteer_id", userId)  
+    .eq("projects.status", "active")
+    .order("created_at", { ascending: false });
+
+  console.log("Raw project_volunteers data:", data); 
+
+  if (error) {
+    console.error("Error fetching projects:", error);
+    setProjects([]);
+  } else {
+    const mappedProjects = (data || []).map((item: any) => ({
+      id: item.projects.id,
+      title: item.projects.title,
+      description: item.projects.description,
+      organization_name: item.projects.organization_name,
+      location: item.projects.location,
+      start_date: item.projects.start_date,
+      end_date: item.projects.end_date,
+      volunteers_needed: item.projects.volunteers_needed,
+      volunteers_registered: item.projects.volunteers_registered,
+      status: item.projects.status,
+      category: item.projects.category,
+    }));
+    setProjects(mappedProjects);
+  }
+  setLoading(false);
+};
 
   const fetchVolunteers = async (projectId: string) => {
     if (!userId) {

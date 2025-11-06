@@ -6,8 +6,6 @@ import { getUserId } from "@/lib/utils";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +17,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Star, MapPin } from "lucide-react";
+import { MapPin, Star, Send, CheckCircle, XCircle, Clock, UserCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +27,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { startLoading, stopLoading } from "@/lib/loading";
-import { useSendMail } from "@/services/mail"; // <-- your async mail helper
+import { useSendMail } from "@/services/mail";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 const supabase = createClient();
 
@@ -55,7 +56,6 @@ interface ProjectRecommendationProps {
   volunteersRegistered: number;
 }
 
-/* --------------------------------------------------------------- */
 const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
   projectId,
   volunteersNeeded,
@@ -67,7 +67,6 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState<boolean>(false);
   const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
 
-  /* ------------------------------------------------------------------ */
   useEffect(() => {
     const fetchRecommendations = async () => {
       setLoading(true);
@@ -82,12 +81,10 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
         if (!uuidRegex.test(projectId)) throw new Error("Invalid project ID format.");
 
-        // admin check
         const { data: isAdminData, error: isAdminError } = await supabase.rpc("is_admin");
         if (isAdminError) throw new Error(isAdminError.message);
         const isAdmin = isAdminData || false;
 
-        // fetch project
         let query = supabase
           .from("projects")
           .select("required_skills, status, title, organization_id")
@@ -97,19 +94,17 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
         const { data: projectData, error: projectError } = await query;
         if (projectError) throw new Error(projectError.message);
-        if (!projectData?.length) throw new Error("Project not found or you don’t have access.");
+        if (!projectData?.length) throw new Error("Project not found or access denied.");
 
         const project = projectData[0];
         const requiredSkills = project.required_skills?.length ? project.required_skills : ["general"];
 
-        // fetch volunteers
         const { data: volunteerData, error: volunteerError } = await supabase.rpc(
           "select_volunteers_for_project",
           { p_project_id: projectId, p_required_skills: requiredSkills }
         );
         if (volunteerError) throw new Error(volunteerError.message);
 
-        // fetch request statuses
         let requestQuery = supabase
           .from("agency_requests")
           .select("volunteer_id, status")
@@ -149,7 +144,6 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
     fetchRecommendations();
   }, [projectId]);
 
-  /* ------------------------------------------------------------------ */
   const handleSendRequest = async (volunteer: Volunteer) => {
     try {
       startLoading();
@@ -162,7 +156,6 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
       if (isAdminError) throw new Error(isAdminError.message);
       const isAdmin = isAdminData || false;
 
-      // requester profile (agency name)
       const { data: requesterData, error: requesterError } = await supabase
         .from("profiles")
         .select("role, full_name")
@@ -170,7 +163,6 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
         .single();
       if (requesterError) throw new Error(requesterError.message);
 
-      // existing request?
       let query = supabase
         .from("agency_requests")
         .select("id, status")
@@ -186,7 +178,6 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
         return;
       }
 
-      // already assigned?
       const { data: existingAssignment, error: assignmentError } = await supabase
         .from("project_volunteers")
         .select("volunteer_id")
@@ -198,13 +189,11 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
         return;
       }
 
-      // volunteer limit?
       if (volunteersRegistered >= volunteersNeeded) {
         toast.error("Volunteer limit reached for this project.");
         return;
       }
 
-      // project title
       const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .select("title")
@@ -213,7 +202,6 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
       if (projectError) throw new Error(projectError.message);
       const projectTitle = projectData.title;
 
-      // INSERT request
       const { error: requestError } = await supabase
         .from("agency_requests")
         .insert({
@@ -224,27 +212,31 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
         });
       if (requestError) throw new Error(requestError.message);
 
-      // --------------------------------------------------------------
-      // SEND EMAIL TO VOLUNTEER
-      // --------------------------------------------------------------
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const volunteerDashboardUrl = `${origin}/dashboard/volunteer`;
 
       const html = `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #e2e8f0;border-radius:8px;">
-          <h2 style="color:#1a73e8;">DiasporaBase</h2>
-          <p>Hi <strong>${volunteer.full_name}</strong>,</p>
-          <p>
-            <strong>${requesterData.full_name || "An agency"}</strong> has invited you to join the project
-            <strong>"${projectTitle}"</strong>.
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f9fafb;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #1a73e8; font-size: 24px; margin: 0;">DiasporaBase</h1>
+          </div>
+          <h2 style="color: #111827; font-size: 18px;">Project Invitation</h2>
+          <p style="color: #374151; margin: 16px 0;">
+            Hi <strong>${volunteer.full_name}</strong>,
           </p>
-          <p>
-            <a href="${volunteerDashboardUrl}" style="color:#1a73e8;text-decoration:underline;">
-              View your dashboard
-            </a> to accept or decline the request.
+          <p style="color: #374151; margin: 16px 0;">
+            <strong>${requesterData.full_name || "An agency"}</strong> has invited you to join:
           </p>
-          <hr style="margin:20px 0;border:none;border-top:1px solid #e2e8f0;">
-          <p style="font-size:0.9em;color:#666;">
+          <div style="background: #eff6ff; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #1a73e8;">
+            <strong style="color: #1a73e8;">"${projectTitle}"</strong>
+          </div>
+          <p style="margin: 20px 0;">
+            <a href="${volunteerDashboardUrl}" style="background: #1a73e8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;">
+              View in Dashboard
+            </a>
+          </p>
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;" />
+          <p style="font-size: 12px; color: #6b7280;">
             If you did not expect this email, you can safely ignore it.
           </p>
         </div>
@@ -252,18 +244,17 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
       await useSendMail({
         to: volunteer.email,
-        subject: `Invitation to join project "${projectTitle}"`,
+        subject: `Invitation to join "${projectTitle}"`,
         html,
         onSuccess: () => {
-          toast.success(`Request sent to ${volunteer.full_name} (email delivered)`);
+          toast.success(`Request sent to ${volunteer.full_name}`);
         },
         onError: (msg) => {
           console.error("Mail error:", msg);
-          toast.error(`Request saved, but email failed: ${msg}`);
+          toast.warning(`Request saved, but email failed: ${msg}`);
         },
       });
 
-      // update UI
       setVolunteers((prev) =>
         prev.map((v) =>
           v.volunteer_id === volunteer.volunteer_id ? { ...v, request_status: "pending" } : v
@@ -279,13 +270,47 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "pending": return <Clock className="h-3.5 w-3.5" />;
+      case "accepted": return <CheckCircle className="h-3.5 w-3.5" />;
+      case "rejected": return <XCircle className="h-3.5 w-3.5" />;
+      default: return null;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending": return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "accepted": return "bg-green-100 text-green-800 border-green-200";
+      case "rejected": return "bg-red-100 text-red-800 border-red-200";
+      default: return "";
+    }
+  };
+
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-1/3" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-5 w-24" />
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-48 w-full" />
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-3 w-full mb-2" />
+                <Skeleton className="h-3 w-4/5 mb-4" />
+                <Skeleton className="h-9 w-full" />
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -294,8 +319,10 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
   if (error) {
     return (
-      <Card className="border-red-200 bg-red-50">
-        <CardContent className="pt-6 text-red-600">{error}</CardContent>
+      <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
+        <CardContent className="pt-6 text-red-600 dark:text-red-400 text-center">
+          <p className="font-medium">{error}</p>
+        </CardContent>
       </Card>
     );
   }
@@ -303,120 +330,196 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        <h3 className="text-lg font-semibold text-gray-900">Recommended Volunteers</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            Recommended Volunteers
+          </h3>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <UserCheck className="h-4 w-4" />
+            <span>
+              {volunteersRegistered} / {volunteersNeeded} slots filled
+            </span>
+          </div>
+        </div>
 
         {volunteers.length === 0 ? (
-          <p className="text-gray-500">No volunteers found with matching skills or location.</p>
+          <Card className="border-dashed border-2">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mb-4" />
+              <p className="text-lg font-medium text-gray-900 dark:text-gray-100">No matches found</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Try adjusting project skills or location filters.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {volunteers.map((volunteer) => (
-              <Card
-                key={volunteer.volunteer_id}
-                className="hover:shadow-md transition-shadow duration-200 border-0 bg-gray-50"
-              >
-                <CardContent className="pt-4">
-                  <p className="font-semibold text-gray-900">{volunteer.full_name}</p>
-                  <p className="text-sm text-gray-600">{volunteer.email}</p>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {volunteers.map((volunteer) => {
+              const initials = volunteer.full_name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2);
 
-                  <p className="text-sm">
-                    <strong>Skills:</strong>{" "}
-                    {volunteer.skills.map((skill) => (
-                      <Tooltip key={skill}>
-                        <TooltipTrigger asChild>
-                          <Badge
-                            variant={volunteer.matched_skills.includes(skill) ? "default" : "outline"}
-                            className={volunteer.matched_skills.includes(skill) ? "bg-blue-600 text-white ml-1" : "ml-1"}
-                          >
-                            {skill}
+              return (
+                <Card
+                  key={volunteer.volunteer_id}
+                  className={cn(
+                    "group relative overflow-hidden transition-all duration-200 hover:shadow-lg",
+                    "border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
+                    volunteer.request_status && "opacity-90"
+                  )}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-gray-100 dark:ring-gray-700">
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
+                            {volunteer.full_name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{volunteer.email}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator className="my-3" />
+
+                    {/* Skills */}
+                    <div className="mb-3">
+                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Skills</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {volunteer.skills.slice(0, 4).map((skill) => {
+                          const isMatched = volunteer.matched_skills.includes(skill);
+                          return (
+                            <Tooltip key={skill}>
+                              <TooltipTrigger asChild>
+                                <Badge
+                                  variant={isMatched ? "default" : "secondary"}
+                                  className={cn(
+                                    "text-xs font-medium px-2 py-0.5 transition-colors",
+                                    isMatched
+                                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                      : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                                  )}
+                                >
+                                  {skill}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {isMatched ? "Matches project requirement" : "Additional skill"}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                        {volunteer.skills.length > 4 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{volunteer.skills.length - 4}
                           </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      <span className="line-clamp-1">
+                        {volunteer.residence_state || volunteer.volunteer_states[0] || "Anywhere"},{" "}
+                        {volunteer.residence_country || volunteer.volunteer_countries[0] || "Global"}
+                      </span>
+                    </div>
+
+                    {/* Rating */}
+                    <div className="flex items-center gap-1.5 mb-4">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {volunteer.average_rating.toFixed(1)}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">/ 5.0</span>
+                    </div>
+
+                    {/* Request Status or Button */}
+                    {volunteer.request_status ? (
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium",
+                          getStatusColor(volunteer.request_status)
+                        )}
+                      >
+                        {getStatusIcon(volunteer.request_status)}
+                        <span>
+                          {volunteer.request_status.charAt(0).toUpperCase() +
+                            volunteer.request_status.slice(1)}
+                        </span>
+                      </div>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            className={cn(
+                              "w-full transition-all",
+                              volunteersRegistered >= volunteersNeeded
+                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                : "action-btn text-white shadow-sm"
+                            )}
+                            onClick={() => {
+                              setSelectedVolunteer(volunteer);
+                              setIsRequestDialogOpen(true);
+                            }}
+                            disabled={volunteersRegistered >= volunteersNeeded}
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Send Request
+                          </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {volunteer.matched_skills.includes(skill)
-                            ? "Matches project requirement"
-                            : "Additional skill"}
+                          {volunteersRegistered >= volunteersNeeded
+                            ? "Volunteer limit reached"
+                            : "Invite this volunteer"}
                         </TooltipContent>
                       </Tooltip>
-                    ))}
-                  </p>
-
-                  <p className="text-sm flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <span>
-                      {volunteer.residence_state || volunteer.volunteer_states.join(", ") || "N/A"},{" "}
-                      {volunteer.residence_country || volunteer.volunteer_countries.join(", ") || "N/A"}
-                    </span>
-                  </p>
-
-                  <p className="text-sm flex items-center gap-2">
-                    <Star className="h-4 w-4 text-yellow-400" />
-                    <span>{volunteer.average_rating.toFixed(1)}</span>
-                  </p>
-
-                  {volunteer.request_status ? (
-                    <p className="text-sm mt-2">
-                      <strong>Request Status:</strong>{" "}
-                      <span
-                        className={`${
-                          volunteer.request_status === "pending"
-                            ? "text-yellow-600"
-                            : volunteer.request_status === "accepted"
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {volunteer.request_status.charAt(0).toUpperCase() +
-                          volunteer.request_status.slice(1)}
-                      </span>
-                    </p>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          className="mt-4 w-full bg-blue-600 hover:bg-blue-700"
-                          onClick={() => {
-                            setSelectedVolunteer(volunteer);
-                            setIsRequestDialogOpen(true);
-                          }}
-                          disabled={volunteersRegistered >= volunteersNeeded}
-                        >
-                          Send Request
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {volunteersRegistered >= volunteersNeeded
-                          ? "Volunteer limit reached"
-                          : "Send a request to this volunteer"}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
 
-        {/* Confirmation dialog */}
+        {/* Confirmation Dialog */}
         <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Confirm Volunteer Request</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to send a request to{" "}
-                <strong>{selectedVolunteer?.full_name}</strong> for this project?
+              <DialogTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5 text-[#0ea5e9]" />
+                Confirm Invitation
+              </DialogTitle>
+              <DialogDescription className="pt-2">
+                Send a project invitation to:
+                <br />
+                <strong className="text-gray-900 dark:text-gray-100">
+                  {selectedVolunteer?.full_name}
+                </strong>
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 variant="outline"
                 onClick={() => setIsRequestDialogOpen(false)}
-                className="hover:bg-gray-100"
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button
                 onClick={() => selectedVolunteer && handleSendRequest(selectedVolunteer)}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="w-full sm:w-auto action-btn"
               >
+                <Send className="h-4 w-4 mr-2" />
                 Send Request
               </Button>
             </DialogFooter>

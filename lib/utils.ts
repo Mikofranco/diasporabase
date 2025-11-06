@@ -350,3 +350,8 @@ export function checkIfAgencyIsActive() {//@ts-ignore
       return false;
     });
 }
+
+export async function getPlatformStat  (){
+  const { data } = await supabase.rpc('get_platform_stats');
+  return data;
+}
