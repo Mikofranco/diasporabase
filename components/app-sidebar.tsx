@@ -12,10 +12,8 @@ import {
   User,
   BarChart,
   LogOut,
-  ChevronDown,
   ChevronUp,
   LayoutDashboard,
-  Mountain,
   Send,
 } from "lucide-react";
 import {
@@ -37,10 +35,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { createClient } from "@/lib/supabase/client";
 import { motion } from "framer-motion";
-import debounce from "lodash.debounce";
 import Image from "next/image";
+import { useCallback, useState } from "react";
+import { toast } from "./ui/use-toast";
 
 type UserRole = "admin" | "volunteer" | "agency" | "super_admin" | null;
 
@@ -97,43 +106,23 @@ const MENU_ITEMS = {
     { path: ROUTES.admin.settings, label: "Settings", icon: Settings },
   ],
   super_admin: [
-    {
-      path: ROUTES.super_admin.dashboard,
-      label: "Dashboard",
-      icon: LayoutDashboard,
-    },
+    { path: ROUTES.super_admin.dashboard, label: "Dashboard", icon: LayoutDashboard },
     { path: ROUTES.super_admin.projects, label: "Projects", icon: Briefcase },
     { path: ROUTES.super_admin.volunteers, label: "Volunteers", icon: Users },
     { path: ROUTES.super_admin.agencies, label: "Agencies", icon: Home },
     { path: ROUTES.super_admin.settings, label: "Settings", icon: Settings },
-    {
-      path: ROUTES.super_admin.invite_admin,
-      label: "Invite Admin",
-      icon: Settings,
-    },
+    { path: ROUTES.super_admin.invite_admin, label: "Invite Admin", icon: Settings },
   ],
   volunteer: [
-    {
-      path: ROUTES.volunteer.dashboard,
-      label: "Dashboard",
-      icon: LayoutDashboard,
-    },
+    { path: ROUTES.volunteer.dashboard, label: "Dashboard", icon: LayoutDashboard },
     { path: ROUTES.volunteer.projects, label: "My Projects", icon: Briefcase },
     { path: ROUTES.volunteer.profile, label: "Profile", icon: User },
     { path: ROUTES.volunteer.requests, label: "Requests", icon: Send },
-    {
-      path: ROUTES.volunteer.findOpportunity,
-      label: "Find Opportunity",
-      icon: Search,
-    },
+    { path: ROUTES.volunteer.findOpportunity, label: "Find Opportunity", icon: Search },
     { path: ROUTES.volunteer.settings, label: "Settings", icon: Settings },
   ],
   agency: [
-    {
-      path: ROUTES.agency.dashboard,
-      label: "Dashboard",
-      icon: LayoutDashboard,
-    },
+    { path: ROUTES.agency.dashboard, label: "Dashboard", icon: LayoutDashboard },
     { path: ROUTES.agency.projects, label: "Projects", icon: Briefcase },
     { path: ROUTES.agency.profile, label: "Profile", icon: User },
     { path: ROUTES.agency.analytics, label: "Analytics", icon: BarChart },
@@ -153,19 +142,15 @@ export function AppSidebar() {
   const [userRole, setUserRole] = React.useState<UserRole>(null);
   const [userName, setUserName] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   React.useEffect(() => {
     const fetchUser = async () => {
       setLoading(true);
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (sessionError) {
-        console.error("Session error:", sessionError);
-      }
-
+      if (sessionError) console.error("Session error:", sessionError);
       if (!session) {
         setUserRole(null);
         setUserName(null);
@@ -191,46 +176,48 @@ export function AppSidebar() {
     };
 
     fetchUser();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(//@ts-ignore
-      (_event, session) => {
-        if (session) {
-          fetchUser();
-        } else {
-          setUserRole(null);
-          setUserName(null);
-          setLoading(false);
-        }
+    //@ts-ignore
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) fetchUser();
+      else {
+        setUserRole(null);
+        setUserName(null);
+        setLoading(false);
       }
-    );
+    });
 
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    return () => authListener.subscription.unsubscribe();
   }, [supabase]);
 
-  const handleLogout = debounce(async () => {
-    setLoading(true);
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      router.push(ROUTES.guest.home);
-    } else {
-      console.error("Logout error:", error);
-    }
-    setLoading(false);
-  }, 300);
+  const handleLogout = useCallback(async () => {
+    if (isSigningOut) return;
 
-  // Helper to determine if a menu item is active
+    setIsSigningOut(true);
+    setShowLogoutDialog(false);
+
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      setUserRole(null);
+      setUserName(null);
+      router.replace(ROUTES.guest.home);
+      toast({ title: "Signed out", description: "See you soon!" });
+    } catch (err: any) {
+      console.error("Logout error:", err);
+      toast({
+        title: "Logout failed",
+        description: err.message ?? "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSigningOut(false);
+    }
+  }, [supabase, router, isSigningOut]);
+
   const isActive = (itemPath: string, currentPath: string) => {
-    // Exact match for dashboard to avoid always-active issue
-    if (itemPath.includes("dashboard")) {
-      return currentPath === itemPath;
-    }
-    // Allow sub-routes for projects (e.g., /projects/[id])
-    if (itemPath.includes("projects")) {
-      return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`);
-    }
-    // Exact match for other routes
+    if (itemPath.includes("dashboard")) return currentPath === itemPath;
+    if (itemPath.includes("projects")) return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`);
     return currentPath === itemPath;
   };
 
@@ -239,9 +226,7 @@ export function AppSidebar() {
     return (
       <SidebarGroup>
         <SidebarGroupLabel className="text-sm text-white dark:text-gray-100 bg-[#0ea5e9] mb-6 mt-2 p-2 rounded">
-          {role
-            ? `${role.charAt(0).toUpperCase() + role.slice(1)} Dashboard`
-            : "Navigation"}
+          {role ? `${role.charAt(0).toUpperCase() + role.slice(1)} Dashboard` : "Navigation"}
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
@@ -259,9 +244,7 @@ export function AppSidebar() {
                         ? "bg-gray-100 dark:bg-gray-800 text-[#0284C7] dark:text-blue-400 font-semibold"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-[#0284C7] dark:hover:text-blue-400"
                     }`}
-                    aria-current={
-                      isActive(item.path, pathname) ? "page" : undefined
-                    }
+                    aria-current={isActive(item.path, pathname) ? "page" : undefined}
                   >
                     <Link href={item.path}>
                       <item.icon className="h-4 w-4 mr-2" />
@@ -278,113 +261,141 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="bg-white dark:bg-gray-900">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="text-sm">
-                  <Image
-                    src="/svg/logo.svg"
-                    alt="Diaspora Logo"
-                    width={24}
-                    height={24}
-                    className="rounded-full mr-2"
-                  />
-                  <span className="hidden md:inline text-sm font-bold text-gray-900 dark:text-gray-100">
-                    DiasporaBase
-                  </span>
-                  {/* <ChevronDown className="h-4 w-4 ml-auto text-gray-500 dark:text-gray-400" /> */}
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              {/* <DropdownMenuContent className="w-[--radix-popper-anchor-width] text-xs">
-                <DropdownMenuItem>
-                  <span>About Us</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Contact</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent> */}
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarSeparator className="bg-gray-200 dark:bg-gray-700" />
-      <SidebarContent className="px-2">
-        {loading ? (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-sm text-gray-900 dark:text-gray-100">
-              Loading...
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {Array.from({
-                  length: MENU_ITEMS[userRole || "guest"].length,
-                }).map((_, index) => (
-                  <SidebarMenuItem key={index}>
-                    <SidebarMenuButton>
-                      <div className="h-4 w-4 rounded-full bg-muted" />
-                      <div className="h-4 w-24 rounded bg-muted" />
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ) : (
-          getMenuItems(userRole)
-        )}
-      </SidebarContent>
-      <SidebarSeparator className="bg-gray-200 dark:bg-gray-700" />
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="text-sm">
-                  <User className="h-4 w-4 mr-2 text-[#0284C7] dark:text-blue-400" />
-                  <span className="text-sm text-gray-900 dark:text-gray-100">
-                    {userName || "Guest"}
-                  </span>
-                  <ChevronUp className="h-4 w-4 ml-auto text-gray-500 dark:text-gray-400" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                className="w-[--radix-popper-anchor-width] text-xs"
-              >
-                {userRole && (
-                  <>
+    <>
+      <Sidebar className="bg-white dark:bg-gray-900">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton className="text-sm">
+                    <Image
+                      src="/svg/logo.svg"
+                      alt="Diaspora Logo"
+                      width={24}
+                      height={24}
+                      className="rounded-full mr-2"
+                    />
+                    <span className="hidden md:inline text-sm font-bold text-gray-900 dark:text-gray-100">
+                      DiasporaBase
+                    </span>
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+
+        <SidebarSeparator className="bg-gray-200 dark:bg-gray-700" />
+
+        <SidebarContent className="px-2">
+          {loading ? (
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-sm text-gray-900 dark:text-gray-100">
+                Loading...
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {Array.from({ length: MENU_ITEMS[userRole || "guest"].length }).map((_, index) => (
+                    <SidebarMenuItem key={index}>
+                      <SidebarMenuButton>
+                        <div className="h-4 w-4 rounded-full bg-muted" />
+                        <div className="h-4 w-24 rounded bg-muted" />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ) : (
+            getMenuItems(userRole)
+          )}
+        </SidebarContent>
+
+        <SidebarSeparator className="bg-gray-200 dark:bg-gray-700" />
+
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton className="text-sm">
+                    <User className="h-4 w-4 mr-2 text-[#0284C7] dark:text-blue-400" />
+                    <span className="text-sm text-gray-900 dark:text-gray-100">
+                      {userName || "Guest"}
+                    </span>
+                    <ChevronUp className="h-4 w-4 ml-auto text-gray-500 dark:text-gray-400" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width] text-xs">
+                  {userRole && (
+                    <>
+                      <DropdownMenuItem>
+                        <Link href={ROUTES[userRole].profile} className="w-full">
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Link href={ROUTES[userRole].settings} className="w-full">
+                          <span>Settings</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => setShowLogoutDialog(true)}
+                        className="flex items-center gap-2 text-red-600 dark:text-red-400"
+                        role="menuitem"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign out</span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {!userRole && (
                     <DropdownMenuItem>
-                      <Link href={ROUTES[userRole].profile} className="w-full">
-                        <span>Profile</span>
+                      <Link href={ROUTES.guest.login} className="w-full">
+                        <span>Login</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Link href={ROUTES[userRole].settings} className="w-full">
-                        <span>Settings</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleLogout} disabled={loading}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Sign out</span>
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {!userRole && (
-                  <DropdownMenuItem>
-                    <Link href={ROUTES.guest.login} className="w-full">
-                      <span>Login</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-    </Sidebar>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out of DiasporaBase?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be logged out and redirected to the homepage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              disabled={isSigningOut}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isSigningOut ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.3" />
+                    <path fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Signing out...
+                </>
+              ) : (
+                "Sign out"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
