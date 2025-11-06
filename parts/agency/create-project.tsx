@@ -25,13 +25,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { LocationSelects } from "@/components/location-selects";
 
 const supabase = createClient();
 
-// Predefined categories
-const CATEGORIES = ["Agriculture", "Health", "Technology", "Construction", "Others"];
+const CATEGORIES = [
+  "Agriculture",
+  "Health",
+  "Technology",
+  "Construction",
+  "Others",
+] as const;
 
-// Define schemas for milestones and deliverables
+// === SCHEMAS ===
 const milestoneSchema = z.object({
   title: z
     .string()
@@ -67,7 +73,6 @@ const deliverableSchema = z.object({
   milestone_id: z.string().optional(),
 });
 
-// Define base project schema
 const baseProjectSchema = z.object({
   title: z
     .string()
@@ -77,21 +82,17 @@ const baseProjectSchema = z.object({
     .string()
     .min(10, "Description must be at least 10 characters")
     .max(1000, "Description must be 1000 characters or less"),
-  location: z
-    .string()
-    .min(2, "Location must be at least 2 characters")
-    .max(200, "Location must be 200 characters or less"),
+  country: z.string().min(1, "Country is required"),
+  state: z.string().optional(),  // ← single string, optional
+  lga: z.string().optional(),    // ← single string, optional
   start_date: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), "Invalid start date")
-    .refine(
-      (val) => new Date(val) >= new Date(),
-      "Start date must be today or later"
-    ),
+    .refine((val) => new Date(val) >= new Date(), "Start date must be today or later"),
   end_date: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), "Invalid end date"),
-  category: z.enum(CATEGORIES as [string, ...string[]], {
+  category: z.enum(CATEGORIES, {
     errorMap: () => ({ message: "Please select a valid category" }),
   }),
   milestones: z
@@ -102,7 +103,6 @@ const baseProjectSchema = z.object({
     .min(1, "At least one deliverable is required"),
 });
 
-// Apply refine to create final project schema
 const projectSchema = baseProjectSchema.refine(
   (data) => new Date(data.end_date) >= new Date(data.start_date),
   {
@@ -111,13 +111,16 @@ const projectSchema = baseProjectSchema.refine(
   }
 );
 
+// === INTERFACES ===
 interface Project {
   id: string;
   title: string;
   description: string;
   organization_id: string;
   organization_name: string;
-  location: string;
+  country: string;
+  state: string;      // ← single string
+  lga: string;        // ← single string
   start_date: string;
   end_date: string;
   volunteers_registered: number;
@@ -131,6 +134,7 @@ interface CreateProjectFormProps {
   onProjectCreated: (project: Project) => void;
 }
 
+// === COMPONENT ===
 const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
   onClose,
   onProjectCreated,
@@ -138,17 +142,21 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    location: "",
+    country: "",
+    state: "",    // ← single
+    lga: "",      // ← single
     start_date: "",
     end_date: "",
-    category: "" as typeof CATEGORIES[number],
+    category: "" as (typeof CATEGORIES)[number],
     milestones: [] as Array<{
+      id: string;
       title: string;
       description?: string;
       due_date: string;
       status: "Done" | "Pending" | "In Progress" | "Cancelled";
     }>,
     deliverables: [] as Array<{
+      id: string;
       title: string;
       description?: string;
       due_date: string;
@@ -156,9 +164,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
       milestone_id?: string;
     }>,
   });
+
   const [errors, setErrors] = useState<
     z.inferFlattenedErrors<typeof projectSchema>["fieldErrors"]
   >({});
+
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
@@ -199,43 +209,32 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     field?: string
   ) => {
     const { name, value } = e.target;
-    if (index !== undefined && field && (name.startsWith("milestones") || name.startsWith("deliverables"))) {
+    if (index !== undefined && field && (name.includes("milestones") || name.includes("deliverables"))) {
       setFormData((prev) => {
-        const newArray = name.startsWith("milestones")
-          ? [...prev.milestones]
-          : [...prev.deliverables];
-        newArray[index] = { ...newArray[index], [field]: value || undefined };
-        return {
-          ...prev,
-          [name.split(".")[0]]: newArray,
-        };
+        const array = name.startsWith("milestones") ? [...prev.milestones] : [...prev.deliverables];
+        array[index] = { ...array[index], [field]: value || undefined };
+        return { ...prev, [name.split(".")[0]]: array };
       });
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
     setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  const handleSelectChange = (name: string, value: string, index?: number, field?: string) => {
-    if (index !== undefined && field && (name.startsWith("milestones") || name.startsWith("deliverables"))) {
+  const handleSelectChange = (
+    name: string,
+    value: string,
+    index?: number,
+    field?: string
+  ) => {
+    if (index !== undefined && field && (name.includes("milestones") || name.includes("deliverables"))) {
       setFormData((prev) => {
-        const newArray = name.startsWith("milestones")
-          ? [...prev.milestones]
-          : [...prev.deliverables];
-        newArray[index] = { ...newArray[index], [field]: value || undefined };
-        return {
-          ...prev,
-          [name.split(".")[0]]: newArray,
-        };
+        const array = name.startsWith("milestones") ? [...prev.milestones] : [...prev.deliverables];
+        array[index] = { ...array[index], [field]: value || undefined };
+        return { ...prev, [name.split(".")[0]]: array };
       });
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
     setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
@@ -245,19 +244,24 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
       ...prev,
       milestones: [
         ...prev.milestones,
-        { title: "", description: "", due_date: "", status: "Pending" },
+        {
+          id: crypto.randomUUID(),
+          title: "",
+          description: "",
+          due_date: "",
+          status: "Pending",
+        },
       ],
     }));
   };
 
   const removeMilestone = (index: number) => {
+    const milestoneId = formData.milestones[index].id;
     setFormData((prev) => ({
       ...prev,
       milestones: prev.milestones.filter((_, i) => i !== index),
       deliverables: prev.deliverables.map((d) =>
-        d.milestone_id === String(index)
-          ? { ...d, milestone_id: undefined }
-          : d
+        d.milestone_id === milestoneId ? { ...d, milestone_id: undefined } : d
       ),
     }));
   };
@@ -267,7 +271,14 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
       ...prev,
       deliverables: [
         ...prev.deliverables,
-        { title: "", description: "", due_date: "", status: "Pending", milestone_id: undefined },
+        {
+          id: crypto.randomUUID(),
+          title: "",
+          description: "",
+          due_date: "",
+          status: "Pending",
+          milestone_id: undefined,
+        },
       ],
     }));
   };
@@ -279,20 +290,21 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     }));
   };
 
-  // Define step schemas for progressive validation
   const stepSchemas = {
     1: z.object({
       title: baseProjectSchema.shape.title,
       description: baseProjectSchema.shape.description,
     }),
-    2: z.object({
-      location: baseProjectSchema.shape.location,
-      start_date: baseProjectSchema.shape.start_date,
-      end_date: baseProjectSchema.shape.end_date,
-    }).refine((data) => new Date(data.end_date) >= new Date(data.start_date), {
-      message: "End date must be after start date",
-      path: ["end_date"],
-    }),
+    2: z
+      .object({
+        country: baseProjectSchema.shape.country,
+        start_date: baseProjectSchema.shape.start_date,
+        end_date: baseProjectSchema.shape.end_date,
+      })
+      .refine((data) => new Date(data.end_date) >= new Date(data.start_date), {
+        message: "End date must be after start date",
+        path: ["end_date"],
+      }),
     3: z.object({
       category: baseProjectSchema.shape.category,
     }),
@@ -319,8 +331,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setCurrentStep((prev) => Math.min(prev + 1, totalSteps));
-    } else {
-      toast.error("Please fill out all required fields correctly.");
     }
   };
 
@@ -341,7 +351,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     }
 
     if (!organizationId) {
-      setServerError("Organization ID is missing.");
       toast.error("Organization ID is missing.");
       return;
     }
@@ -350,75 +359,61 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     try {
       const { data: projectData, error: projectError } = await supabase
         .from("projects")
-        .insert([
-          {
-            title: formData.title || "Untitled Project",
-            description: formData.description,
-            organization_id: organizationId,
-            organization_name: organizationName,
-            location: formData.location,
-            start_date: formData.start_date,
-            end_date: formData.end_date,
-            volunteers_registered: 0,
-            status: "pending",
-            category: formData.category,
-          },
-        ])
+        .insert({
+          title: formData.title,
+          description: formData.description,
+          organization_id: organizationId,
+          organization_name: organizationName,
+          country: formData.country,
+          state: formData.state || null,   // ← single string
+          lga: formData.lga || null,       // ← single string
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          volunteers_registered: 0,
+          status: "pending",
+          category: formData.category,
+        })
         .select()
         .single();
 
-      if (projectError || !projectData) {
-        throw new Error(projectError ? `Error creating project: ${projectError.message}` : "No project data returned");
-      }
+      if (projectError || !projectData) throw new Error(projectError?.message || "Failed to create project");
 
-      let milestoneIds: string[] = [];
+      const milestoneMap = new Map<string, string>();
+
       if (formData.milestones.length > 0) {
         const { data: milestoneData, error: milestoneError } = await supabase
           .from("milestones")
           .insert(
-            formData.milestones.map((milestone) => ({
+            formData.milestones.map((m) => ({
               project_id: projectData.id,
-              title: milestone.title,
-              description: milestone.description,
-              due_date: milestone.due_date,
-              status: milestone.status,
+              title: m.title,
+              description: m.description,
+              due_date: m.due_date,
+              status: m.status,
             }))
           )
           .select();
-        if (milestoneError) throw new Error("Error creating milestones: " + milestoneError.message);
-        milestoneIds = milestoneData.map((m: any) => m.id);
+
+        if (milestoneError) throw new Error(milestoneError.message);
+        formData.milestones.forEach((m, i) => {
+          milestoneMap.set(m.id, milestoneData[i].id);
+        });
       }
 
       if (formData.deliverables.length > 0) {
-        const { data: deliverableData, error: deliverableError } = await supabase
-          .from("deliverables")
-          .insert(
-            formData.deliverables.map((deliverable) => ({
-              project_id: projectData.id,
-              milestone_id: deliverable.milestone_id !== undefined && deliverable.milestone_id !== "none"
-                ? milestoneIds[parseInt(deliverable.milestone_id)]
-                : null,
-              title: deliverable.title,
-              description: deliverable.description,
-              due_date: deliverable.due_date,
-              status: deliverable.status,
-            }))
-          )
-          .select();
-        if (deliverableError) throw new Error("Error creating deliverables: " + deliverableError.message);
+        await supabase.from("deliverables").insert(
+          formData.deliverables.map((d) => ({
+            project_id: projectData.id,
+            milestone_id: d.milestone_id ? milestoneMap.get(d.milestone_id) : null,
+            title: d.title,
+            description: d.description,
+            due_date: d.due_date,
+            status: d.status,
+          }))
+        );
       }
 
       onProjectCreated(projectData);
-      setFormData({
-        title: "",
-        description: "",
-        location: "",
-        start_date: "",
-        end_date: "",
-        category: "",
-        milestones: [],
-        deliverables: [],
-      });
       toast.success("Project created successfully!");
       onClose();
     } catch (err: any) {
@@ -429,29 +424,30 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     }
   };
 
-  const renderStepIndicator = useCallback(() => (
-    <div className="mb-6">
-      <div className="flex justify-between mb-2">
-        {["Basic Info", "Logistics", "Category", "Milestones & Deliverables"].map(
-          (label, index) => (
-            <div key={index} className="flex flex-col items-center">
+  const renderStepIndicator = useCallback(
+    () => (
+      <div className="mb-6">
+        <div className="flex justify-between mb-2">
+          {["Basic Info", "Location & Dates", "Category", "Milestones & Deliverables"].map((label, i) => (
+            <div key={i} className="flex flex-col items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  currentStep >= index + 1
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentStep >= i + 1
                     ? "bg-[#0284C7] text-white"
                     : "bg-gray-200 text-gray-600"
                 }`}
               >
-                {index + 1}
+                {i + 1}
               </div>
               <span className="text-xs mt-1">{label}</span>
             </div>
-          )
-        )}
+          ))}
+        </div>
+        <Progress value={(currentStep / totalSteps) * 100} className="h-2" />
       </div>
-      <Progress value={(currentStep / totalSteps) * 100} className="h-2 bg-gray-200" />
-    </div>
-  ), [currentStep]);
+    ),
+    [currentStep]
+  );
 
   const renderStepContent = useCallback(() => {
     switch (currentStep) {
@@ -459,78 +455,56 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         return (
           <div className="space-y-6">
             <div>
-              <Label htmlFor="title" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Project Title *
-              </Label>
+              <Label htmlFor="title">Project Title *</Label>
               <Input
                 id="title"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                placeholder="Enter a compelling project title"
+                placeholder="Enter project title"
                 disabled={loading}
-                className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
-                aria-invalid={!!errors.title}
-                aria-describedby={errors.title ? "title-error" : undefined}
+                className="mt-2"
               />
-              {errors.title && (
-                <p id="title-error" className="text-red-500 text-xs mt-1">
-                  {errors.title[0]}
-                </p>
+              {errors.title?.[0] && (
+                <p className="text-red-500 text-xs mt-1">{errors.title[0]}</p>
               )}
             </div>
             <div>
-              <Label htmlFor="description" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Description *
-              </Label>
+              <Label htmlFor="description">Description *</Label>
               <Textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Describe your project in detail"
+                placeholder="Describe your project"
                 disabled={loading}
-                className="mt-2 h-24 text-sm border-gray-300 dark:border-gray-700"
-                aria-invalid={!!errors.description}
-                aria-describedby={errors.description ? "description-error" : undefined}
+                className="mt-2 h-32"
               />
-              {errors.description && (
-                <p id="description-error" className="text-red-500 text-xs mt-1">
-                  {errors.description[0]}
-                </p>
+              {errors.description?.[0] && (
+                <p className="text-red-500 text-xs mt-1">{errors.description[0]}</p>
               )}
             </div>
           </div>
         );
+
       case 2:
         return (
           <div className="space-y-6">
-            <div>
-              <Label htmlFor="location" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Location *
-              </Label>
-              <Input
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                placeholder="Enter project location"
-                disabled={loading}
-                className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
-                aria-invalid={!!errors.location}
-                aria-describedby={errors.location ? "location-error" : undefined}
-              />
-              {errors.location && (
-                <p id="location-error" className="text-red-500 text-xs mt-1">
-                  {errors.location[0]}
-                </p>
-              )}
-            </div>
+            <LocationSelects
+              label="Project Location *"
+              country={formData.country}
+              state={formData.state}
+              lga={formData.lga}
+              onChangeCountry={(v) => handleSelectChange("country", v)}
+              onChangeState={(v) => handleSelectChange("state", v)}
+              onChangeLga={(v) => handleSelectChange("lga", v)}
+              required={false}
+            />
+            {errors.country?.[0] && <p className="text-red-500 text-xs -mt-4">{errors.country[0]}</p>}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="start_date" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Start Date *
-                </Label>
+                <Label htmlFor="start_date">Start Date *</Label>
                 <Input
                   id="start_date"
                   name="start_date"
@@ -538,20 +512,14 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                   value={formData.start_date}
                   onChange={handleChange}
                   disabled={loading}
-                  className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
-                  aria-invalid={!!errors.start_date}
-                  aria-describedby={errors.start_date ? "start_date-error" : undefined}
+                  className="mt-2"
                 />
-                {errors.start_date && (
-                  <p id="start_date-error" className="text-red-500 text-xs mt-1">
-                    {errors.start_date[0]}
-                  </p>
+                {errors.start_date?.[0] && (
+                  <p className="text-red-500 text-xs mt-1">{errors.start_date[0]}</p>
                 )}
               </div>
               <div>
-                <Label htmlFor="end_date" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  End Date *
-                </Label>
+                <Label htmlFor="end_date">End Date *</Label>
                 <Input
                   id="end_date"
                   name="end_date"
@@ -559,474 +527,250 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                   value={formData.end_date}
                   onChange={handleChange}
                   disabled={loading}
-                  className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
-                  aria-invalid={!!errors.end_date}
-                  aria-describedby={errors.end_date ? "end_date-error" : undefined}
+                  className="mt-2"
                 />
-                {errors.end_date && (
-                  <p id="end_date-error" className="text-red-500 text-xs mt-1">
-                    {errors.end_date[0]}
-                  </p>
+                {errors.end_date?.[0] && (
+                  <p className="text-red-500 text-xs mt-1">{errors.end_date[0]}</p>
                 )}
               </div>
             </div>
           </div>
         );
+
       case 3:
         return (
           <div className="space-y-6">
             <div>
-              <Label htmlFor="category" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Category *
-              </Label>
+              <Label htmlFor="category">Category *</Label>
               <Select
-                onValueChange={(value) => handleSelectChange("category", value)}
                 value={formData.category}
+                onValueChange={(v) => handleSelectChange("category", v)}
                 disabled={loading}
               >
-                <SelectTrigger className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700">
-                  <SelectValue placeholder="Select a category" />
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.category && (
-                <p id="category-error" className="text-red-500 text-xs mt-1">
-                  {errors.category[0]}
-                </p>
+              {errors.category?.[0] && (
+                <p className="text-red-500 text-xs mt-1">{errors.category[0]}</p>
               )}
             </div>
           </div>
         );
+
       case 4:
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            {/* Milestones */}
             <div>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Milestones *</h3>
-              {formData.milestones.length === 0 && (
-                <p className="text-red-500 text-xs mt-1">
-                  At least one milestone is required.
-                </p>
-              )}
-              {formData.milestones.map((milestone, index) => (
-                <div key={index} className="border p-4 rounded-md mb-4 bg-white dark:bg-gray-900">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Milestone {index + 1}
-                    </h4>
+              <h3 className="text-lg font-medium mb-3">Milestones *</h3>
+              {formData.milestones.map((m, i) => (
+                <div
+                  key={m.id}
+                  className="border rounded-lg p-4 mb-4 bg-gray-50 dark:bg-gray-800"
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-medium">Milestone {i + 1}</h4>
                     <Button
                       type="button"
                       variant="destructive"
                       size="sm"
-                      onClick={() => removeMilestone(index)}
+                      onClick={() => removeMilestone(i)}
                       disabled={loading}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div>
-                    <Label
-                      htmlFor={`milestones.${index}.title`}
-                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >
-                      Title *
-                    </Label>
+                  <div className="space-y-3">
                     <Input
-                      id={`milestones.${index}.title`}
-                      name={`milestones.${index}.title`}
-                      value={milestone.title}
-                      onChange={(e) => handleChange(e, index, "title")}
-                      placeholder="Enter milestone title"
+                      name={`milestones.${i}.title`}
+                      placeholder="Title *"
+                      value={m.title}
+                      onChange={(e) => handleChange(e, i, "title")}
                       disabled={loading}
-                      className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
-                      aria-invalid={!!errors.milestones?.[index]?.title}
-                      aria-describedby={
-                        errors.milestones?.[index]?.title
-                          ? `milestones.${index}.title-error`
-                          : undefined
-                      }
                     />
-                    {errors.milestones?.[index]?.title && (
-                      <p
-                        id={`milestones.${index}.title-error`}
-                        className="text-red-500 text-xs mt-1"
-                      >
-                        {errors.milestones[index].title}
-                      </p>
+                    {errors.milestones?.[i]?.title?.[0] && (
+                      <p className="text-red-500 text-xs">{errors.milestones[i].title[0]}</p>
                     )}
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor={`milestones.${index}.description`}
-                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >
-                      Description
-                    </Label>
                     <Textarea
-                      id={`milestones.${index}.description`}
-                      name={`milestones.${index}.description`}
-                      value={milestone.description || ""}
-                      onChange={(e) => handleChange(e, index, "description")}
-                      placeholder="Enter milestone description (optional)"
+                      name={`milestones.${i}.description`}
+                      placeholder="Description (optional)"
+                      value={m.description || ""}
+                      onChange={(e) => handleChange(e, i, "description")}
                       disabled={loading}
-                      className="mt-2 h-24 text-sm border-gray-300 dark:border-gray-700"
-                      aria-invalid={!!errors.milestones?.[index]?.description}
-                      aria-describedby={
-                        errors.milestones?.[index]?.description
-                          ? `milestones.${index}.description-error`
-                          : undefined
-                      }
                     />
-                    {errors.milestones?.[index]?.description && (
-                      <p
-                        id={`milestones.${index}.description-error`}
-                        className="text-red-500 text-xs mt-1"
-                      >
-                        {errors.milestones[index].description}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor={`milestones.${index}.due_date`}
-                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >
-                      Due Date *
-                    </Label>
                     <Input
-                      id={`milestones.${index}.due_date`}
-                      name={`milestones.${index}.due_date`}
                       type="date"
-                      value={milestone.due_date}
-                      onChange={(e) => handleChange(e, index, "due_date")}
+                      name={`milestones.${i}.due_date`}
+                      value={m.due_date}
+                      onChange={(e) => handleChange(e, i, "due_date")}
                       disabled={loading}
-                      className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
-                      aria-invalid={!!errors.milestones?.[index]?.due_date}
-                      aria-describedby={
-                        errors.milestones?.[index]?.due_date
-                          ? `milestones.${index}.due_date-error`
-                          : undefined
-                      }
                     />
-                    {errors.milestones?.[index]?.due_date && (
-                      <p
-                        id={`milestones.${index}.due_date-error`}
-                        className="text-red-500 text-xs mt-1"
-                      >
-                        {errors.milestones[index].due_date}
-                      </p>
+                    {errors.milestones?.[i]?.due_date?.[0] && (
+                      <p className="text-red-500 text-xs">{errors.milestones[i].due_date[0]}</p>
                     )}
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor={`milestones.${index}.status`}
-                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >
-                      Status *
-                    </Label>
                     <Select
-                      onValueChange={(value) =>
-                        handleSelectChange(`milestones.${index}.status`, value, index, "status")
-                      }
-                      value={milestone.status}
+                      value={m.status}
+                      onValueChange={(v) => handleSelectChange(`milestones.${i}.status`, v, i, "status")}
                       disabled={loading}
                     >
-                      <SelectTrigger className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700">
-                        <SelectValue placeholder="Select status" />
+                      <SelectTrigger>
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Done">Done</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="In Progress">In Progress</SelectItem>
-                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                        {["Pending", "In Progress", "Done", "Cancelled"].map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    {errors.milestones?.[index]?.status && (
-                      <p
-                        id={`milestones.${index}.status-error`}
-                        className="text-red-500 text-xs mt-1"
-                      >
-                        {errors.milestones[index].status}
-                      </p>
-                    )}
                   </div>
                 </div>
               ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addMilestone}
-                disabled={loading}
-                className="text-sm border-gray-300 dark:border-gray-700"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Milestone
+              <Button type="button" variant="outline" onClick={addMilestone} disabled={loading}>
+                <Plus className="mr-2 h-4 w-4" /> Add Milestone
               </Button>
             </div>
+
+            {/* Deliverables */}
             <div>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Deliverables *</h3>
-              {formData.deliverables.length === 0 && (
-                <p className="text-red-500 text-xs mt-1">
-                  At least one deliverable is required.
-                </p>
-              )}
-              {formData.deliverables.map((deliverable, index) => (
-                <div key={index} className="border p-4 rounded-md mb-4 bg-white dark:bg-gray-900">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Deliverable {index + 1}
-                    </h4>
+              <h3 className="text-lg font-medium mb-3">Deliverables *</h3>
+              {formData.deliverables.map((d, i) => (
+                <div
+                  key={d.id}
+                  className="border rounded-lg p-4 mb-4 bg-gray-50 dark:bg-gray-800"
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-medium">Deliverable {i + 1}</h4>
                     <Button
                       type="button"
                       variant="destructive"
                       size="sm"
-                      onClick={() => removeDeliverable(index)}
+                      onClick={() => removeDeliverable(i)}
                       disabled={loading}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div>
-                    <Label
-                      htmlFor={`deliverables.${index}.title`}
-                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >
-                      Title *
-                    </Label>
+                  <div className="space-y-3">
                     <Input
-                      id={`deliverables.${index}.title`}
-                      name={`deliverables.${index}.title`}
-                      value={deliverable.title}
-                      onChange={(e) => handleChange(e, index, "title")}
-                      placeholder="Enter deliverable title"
+                      name={`deliverables.${i}.title`}
+                      placeholder="Title *"
+                      value={d.title}
+                      onChange={(e) => handleChange(e, i, "title")}
                       disabled={loading}
-                      className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
-                      aria-invalid={!!errors.deliverables?.[index]?.title}
-                      aria-describedby={
-                        errors.deliverables?.[index]?.title
-                          ? `deliverables.${index}.title-error`
-                          : undefined
-                      }
                     />
-                    {errors.deliverables?.[index]?.title && (
-                      <p
-                        id={`deliverables.${index}.title-error`}
-                        className="text-red-500 text-xs mt-1"
-                      >
-                        {errors.deliverables[index].title}
-                      </p>
+                    {errors.deliverables?.[i]?.title?.[0] && (
+                      <p className="text-red-500 text-xs">{errors.deliverables[i].title[0]}</p>
                     )}
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor={`deliverables.${index}.description`}
-                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >
-                      Description
-                    </Label>
                     <Textarea
-                      id={`deliverables.${index}.description`}
-                      name={`deliverables.${index}.description`}
-                      value={deliverable.description || ""}
-                      onChange={(e) => handleChange(e, index, "description")}
-                      placeholder="Enter deliverable description (optional)"
+                      name={`deliverables.${i}.description`}
+                      placeholder="Description (optional)"
+                      value={d.description || ""}
+                      onChange={(e) => handleChange(e, i, "description")}
                       disabled={loading}
-                      className="mt-2 h-24 text-sm border-gray-300 dark:border-gray-700"
-                      aria-invalid={!!errors.deliverables?.[index]?.description}
-                      aria-describedby={
-                        errors.deliverables?.[index]?.description
-                          ? `deliverables.${index}.description-error`
-                          : undefined
-                      }
                     />
-                    {errors.deliverables?.[index]?.description && (
-                      <p
-                        id={`deliverables.${index}.description-error`}
-                        className="text-red-500 text-xs mt-1"
-                      >
-                        {errors.deliverables[index].description}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor={`deliverables.${index}.due_date`}
-                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >
-                      Due Date *
-                    </Label>
                     <Input
-                      id={`deliverables.${index}.due_date`}
-                      name={`deliverables.${index}.due_date`}
                       type="date"
-                      value={deliverable.due_date}
-                      onChange={(e) => handleChange(e, index, "due_date")}
+                      name={`deliverables.${i}.due_date`}
+                      value={d.due_date}
+                      onChange={(e) => handleChange(e, i, "due_date")}
                       disabled={loading}
-                      className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700"
-                      aria-invalid={!!errors.deliverables?.[index]?.due_date}
-                      aria-describedby={
-                        errors.deliverables?.[index]?.due_date
-                          ? `deliverables.${index}.due_date-error`
-                          : undefined
-                      }
                     />
-                    {errors.deliverables?.[index]?.due_date && (
-                      <p
-                        id={`deliverables.${index}.due_date-error`}
-                        className="text-red-500 text-xs mt-1"
-                      >
-                        {errors.deliverables[index].due_date}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor={`deliverables.${index}.status`}
-                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >
-                      Status *
-                    </Label>
                     <Select
-                      onValueChange={(value) =>
-                        handleSelectChange(`deliverables.${index}.status`, value, index, "status")
-                      }
-                      value={deliverable.status}
+                      value={d.status}
+                      onValueChange={(v) => handleSelectChange(`deliverables.${i}.status`, v, i, "status")}
                       disabled={loading}
                     >
-                      <SelectTrigger className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700">
-                        <SelectValue placeholder="Select status" />
+                      <SelectTrigger>
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Done">Done</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="In Progress">In Progress</SelectItem>
-                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                        {["Pending", "In Progress", "Done", "Cancelled"].map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    {errors.deliverables?.[index]?.status && (
-                      <p
-                        id={`deliverables.${index}.status-error`}
-                        className="text-red-500 text-xs mt-1"
-                      >
-                        {errors.deliverables[index].status}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor={`deliverables.${index}.milestone_id`}
-                      className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >
-                      Associated Milestone (Optional)
-                    </Label>
                     <Select
-                      onValueChange={(value) =>
-                        handleSelectChange(`deliverables.${index}.milestone_id`, value, index, "milestone_id")
+                      value={d.milestone_id || "none"}
+                      onValueChange={(v) =>
+                        handleSelectChange(`deliverables.${i}.milestone_id`, v === "none" ? "" : v, i, "milestone_id")
                       }
-                      value={deliverable.milestone_id || "none"}
                       disabled={loading || formData.milestones.length === 0}
                     >
-                      <SelectTrigger className="mt-2 h-10 text-sm border-gray-300 dark:border-gray-700">
-                        <SelectValue placeholder="Select a milestone" />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Link to milestone (optional)" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
-                        {formData.milestones.map((milestone, i) => (
-                          <SelectItem key={i} value={String(i)}>
-                            {milestone.title || `Milestone ${i + 1}`}
+                        {formData.milestones.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.title || `Milestone ${formData.milestones.indexOf(m) + 1}`}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    {errors.deliverables?.[index]?.milestone_id && (
-                      <p
-                        id={`deliverables.${index}.milestone_id-error`}
-                        className="text-red-500 text-xs mt-1"
-                      >
-                        {errors.deliverables[index].milestone_id}
-                      </p>
-                    )}
                   </div>
                 </div>
               ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addDeliverable}
-                disabled={loading}
-                className="text-sm border-gray-300 dark:border-gray-700"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Deliverable
+              <Button type="button" variant="outline" onClick={addDeliverable} disabled={loading}>
+                <Plus className="mr-2 h-4 w-4" /> Add Deliverable
               </Button>
             </div>
           </div>
         );
+
+      default:
+        return null;
     }
   }, [currentStep, formData, errors, loading]);
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-w-[90vw] p-6 max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900">
+      <DialogContent className="sm:max-w-[700px] max-w-[95vw] p-6 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            Create New Project
-          </DialogTitle>
+          <DialogTitle className="text-2xl font-bold">Create New Project</DialogTitle>
         </DialogHeader>
+
         {serverError && (
-          <p className="text-red-500 text-xs mb-4 bg-red-50 dark:bg-red-900/50 p-3 rounded-md">
+          <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
             {serverError}
-          </p>
+          </div>
         )}
+
         {renderStepIndicator()}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {renderStepContent()}
-          <DialogFooter className="flex justify-between mt-6">
-            <div>
+
+          <DialogFooter className="flex justify-between mt-8">
+            <div className="flex gap-2">
               {currentStep > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={loading}
-                  className="mr-2 text-sm border-gray-300 dark:border-gray-700"
-                >
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  Previous
+                <Button type="button" variant="outline" onClick={handlePrevious} disabled={loading}>
+                  <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                 </Button>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={loading}
-                className="text-sm border-gray-300 dark:border-gray-700"
-              >
+              <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                 Cancel
               </Button>
             </div>
+
             <div>
               {currentStep < totalSteps ? (
                 <Button
                   type="button"
                   onClick={handleNext}
                   disabled={loading}
-                  className="bg-[#0284C7] hover:bg-blue-700 text-white text-sm"
+                  className="bg-[#0284C7] hover:bg-blue-700"
                 >
-                  Next
-                  <ChevronRight className="ml-2 h-4 w-4" />
+                  Next <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-[#0284C7] hover:bg-blue-700 text-white text-sm"
-                >
+                <Button type="submit" disabled={loading} className="bg-[#0284C7] hover:bg-blue-700">
                   {loading ? "Creating..." : "Create Project"}
                 </Button>
               )}
