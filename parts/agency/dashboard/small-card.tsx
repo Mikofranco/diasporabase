@@ -11,14 +11,12 @@ export interface SmallCardProps {
 }
 
 const SmallCard = ({ image, count = 0, title = "Untitled" }: SmallCardProps) => {
-  // Ref to store and update the animated count
   const countRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     if (countRef.current) {
-      // Animate from 0 to count over 2 seconds
       animate(0, count, {
-        duration: 2, // 2-second animation
+        duration: 2, 
         ease: "easeOut",
         onUpdate: (latest) => {
           if (countRef.current) {

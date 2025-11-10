@@ -21,9 +21,9 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
-import { LocationSelects } from "@/components/location-selects";
 import { StepIndicator } from "./stepIndicator";
 import LocationSelector from "@/components/location-selector";
+// import { toast } from "@/components/ui/toast"; // Uncomment if using toast
 
 interface SelectedLocation {
   country: string;
@@ -31,7 +31,6 @@ interface SelectedLocation {
   lgas: string[];
 }
 
-// Zod schema for onboarding form (unchanged)
 const onboardingSchema = z
   .object({
     skills: z.array(z.string()).min(1, "Please select at least one skill"),
@@ -44,8 +43,7 @@ const onboardingSchema = z
       data.availabilityType !== "specific-period" ||
       (data.availabilityStartDate && data.availabilityEndDate),
     {
-      message:
-        "Please select both start and end dates for specific period availability",
+      message: "Please select both start and end dates for specific period availability",
       path: ["availabilityStartDate"],
     }
   )
@@ -69,7 +67,7 @@ export function VolunteerOnboardingForm() {
   const totalSteps = 3;
   const router = useRouter();
   const supabase = createClient();
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     register,
@@ -89,60 +87,66 @@ export function VolunteerOnboardingForm() {
 
   const availabilityType = watch("availabilityType");
 
+  // Updated onSubmit with proper loading & navigation handling
   const onSubmit = async (data: OnboardingFormData) => {
-    setIsLoading(true); 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      console.error("User not authenticated");
-      router.push("/login");
-      return;
+    setIsLoading(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        console.error("User not authenticated");
+        router.push("/login");
+        return;
+      }
+
+      const safeLocations = Array.isArray(selectedLocations) ? selectedLocations : [];
+      const volunteerCountries = safeLocations.map((loc) => loc.country);
+      const volunteerStates = safeLocations.flatMap((loc) => loc.states);
+      const volunteerLgas = safeLocations.flatMap((loc) => loc.lgas);
+
+      const availabilityToStore =
+        data.availabilityType === "full-time"
+          ? "full-time"
+          : JSON.stringify({
+              startDate: data.availabilityStartDate
+                ? format(data.availabilityStartDate, "yyyy-MM-dd")
+                : null,
+              endDate: data.availabilityEndDate
+                ? format(data.availabilityEndDate, "yyyy-MM-dd")
+                : null,
+            });
+
+      const updatePayload = {
+        skills: data.skills,
+        availability: availabilityToStore,
+        volunteer_countries: volunteerCountries.length > 0 ? volunteerCountries : null,
+        volunteer_states: volunteerStates.length > 0 ? volunteerStates : null,
+        volunteer_lgas: volunteerLgas.length > 0 ? volunteerLgas : null,
+      };
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .update(updatePayload)
+        .eq("id", user.id)
+        .select("role")
+        .single();
+
+      if (error) {
+        console.error(`Failed to save onboarding data: ${error.message}`);
+        // toast({ title: "Error", description: error.message, variant: "destructive" });
+        return;
+      }
+
+      // Navigate — spinner stays until page changes (component unmounts)
+      router.push(`/dashboard/${profile?.role || "volunteer"}`);
+    } catch (err) {
+      console.error("Unexpected error during onboarding:", err);
+      // toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      // Only reset loading if still on this page (i.e. error occurred)
+      setIsLoading(false);
     }
-
-    // Defensive: Ensure selectedLocations is always treated as an array
-    const safeLocations = Array.isArray(selectedLocations) ? selectedLocations : [];
-    const volunteerCountries = safeLocations.map((loc) => loc.country);
-    const volunteerStates = safeLocations.flatMap((loc) => loc.states);
-    const volunteerLgas = safeLocations.flatMap((loc) => loc.lgas);
-
-    const availabilityToStore =
-      data.availabilityType === "full-time"
-        ? "full-time"
-        : JSON.stringify({
-            startDate: data.availabilityStartDate
-              ? format(data.availabilityStartDate, "yyyy-MM-dd")
-              : null,
-            endDate: data.availabilityEndDate
-              ? format(data.availabilityEndDate, "yyyy-MM-dd")
-              : null,
-          });
-
-    const updatePayload = {
-      skills: data.skills,
-      availability: availabilityToStore,
-      volunteer_countries:
-        volunteerCountries.length > 0 ? volunteerCountries : null,
-      volunteer_states: volunteerStates.length > 0 ? volunteerStates : null,
-      volunteer_lgas: volunteerLgas.length > 0 ? volunteerLgas : null,
-    };
-
-    // Chain update and select for efficiency
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .update(updatePayload)
-      .eq("id", user.id)
-      .select("role")
-      .single();
-
-    if (error) {
-      console.error(`Failed to save onboarding data: ${error.message}`);
-      // TODO: Use toast.error for production
-      return;
-    }
-
-    router.push(`/dashboard/${profile?.role || "volunteer"}`);
-    setIsLoading(false);
   };
 
   const handleNext = () => {
@@ -162,11 +166,11 @@ export function VolunteerOnboardingForm() {
       console.error("Please select both start and end dates");
       return;
     }
-    // Defensive: Use optional chaining and default to empty array
     if (step === 3 && (!selectedLocations || selectedLocations.length === 0)) {
       console.error("Please select at least one volunteer location");
       return;
     }
+
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
@@ -178,8 +182,9 @@ export function VolunteerOnboardingForm() {
     if (step > 1) setStep(step - 1);
   };
 
-  // Also make setSelectedLocations defensive to always receive an array
-  const handleLocationsChange = (newValue: SelectedLocation | SelectedLocation[] | undefined) => {
+  const handleLocationsChange = (
+    newValue: SelectedLocation | SelectedLocation[] | undefined
+  ) => {
     const asArray = Array.isArray(newValue) ? newValue : newValue ? [newValue] : [];
     setSelectedLocations(asArray);
   };
@@ -200,6 +205,7 @@ export function VolunteerOnboardingForm() {
             )}
           </div>
         )}
+
         {step === 2 && (
           <div>
             <h2 className="text-lg font-semibold mb-2">
@@ -230,6 +236,7 @@ export function VolunteerOnboardingForm() {
                 </Label>
               </div>
             </RadioGroup>
+
             {availabilityType === "specific-period" && (
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="grid gap-2">
@@ -240,12 +247,11 @@ export function VolunteerOnboardingForm() {
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal",
-                          !(watch("availabilityStartDate") as Date | undefined) &&
-                            "text-muted-foreground"
+                          !watch("availabilityStartDate") && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {(watch("availabilityStartDate") as Date | undefined)
+                        {watch("availabilityStartDate")
                           ? format(watch("availabilityStartDate") as Date, "PPP")
                           : "Pick a start date"}
                       </Button>
@@ -254,9 +260,7 @@ export function VolunteerOnboardingForm() {
                       <Calendar
                         mode="single"
                         selected={watch("availabilityStartDate")}
-                        onSelect={(date) =>
-                          setValue("availabilityStartDate", date)
-                        }
+                        onSelect={(date) => setValue("availabilityStartDate", date)}
                         initialFocus
                       />
                     </PopoverContent>
@@ -267,6 +271,7 @@ export function VolunteerOnboardingForm() {
                     </p>
                   )}
                 </div>
+
                 <div className="grid gap-2">
                   <Label htmlFor="end-date">End Date</Label>
                   <Popover>
@@ -275,12 +280,11 @@ export function VolunteerOnboardingForm() {
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal",
-                          !(watch("availabilityEndDate") as Date | undefined) &&
-                            "text-muted-foreground"
+                          !watch("availabilityEndDate") && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {(watch("availabilityEndDate") as Date | undefined)
+                        {watch("availabilityEndDate")
                           ? format(watch("availabilityEndDate") as Date, "PPP")
                           : "Pick an end date"}
                       </Button>
@@ -289,9 +293,7 @@ export function VolunteerOnboardingForm() {
                       <Calendar
                         mode="single"
                         selected={watch("availabilityEndDate")}
-                        onSelect={(date) =>
-                          setValue("availabilityEndDate", date)
-                        }
+                        onSelect={(date) => setValue("availabilityEndDate", date)}
                         initialFocus
                       />
                     </PopoverContent>
@@ -306,33 +308,37 @@ export function VolunteerOnboardingForm() {
             )}
           </div>
         )}
+
         {step === 3 && (
           <div>
             <h2 className="text-lg font-semibold mb-2">
               Select Volunteer Location
             </h2>
-            {/* Pass the defensive handler instead of setSelectedLocations directly */}
-            <LocationSelector //@ts-ignore
-              onSelectionChange={handleLocationsChange} />
+            <LocationSelector
+              //@ts-ignore
+              onSelectionChange={handleLocationsChange}
+            />
           </div>
         )}
+
         <div className="flex justify-between mt-6">
           {step > 1 && (
             <Button type="button" variant="outline" onClick={handleBack}>
               Back
             </Button>
           )}
+
           <Button
             type="button"
             onClick={handleNext}
             className="bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
             disabled={
+              isLoading ||
               (step === 1 && watch("skills").length === 0) ||
               (step === 2 && !watch("availabilityType")) ||
               (step === 2 &&
                 watch("availabilityType") === "specific-period" &&
                 (!watch("availabilityStartDate") || !watch("availabilityEndDate"))) ||
-              // Defensive: Use optional chaining here too for the button state
               (step === 3 && (!selectedLocations || selectedLocations.length === 0))
             }
           >

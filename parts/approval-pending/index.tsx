@@ -15,8 +15,8 @@ import React, { useEffect, useState } from "react";
 import Footer from "../landingPage/footer";
 import { getUserId } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
-// Define interface for Supabase profile response
 interface Profile {
   organization_name: string | null;
 }
@@ -25,6 +25,7 @@ const ApprovalPending = () => {
   const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const getOrganizationName = async () => {
     try {
@@ -57,6 +58,10 @@ const ApprovalPending = () => {
     getOrganizationName();
   }, []);
 
+  const handleGoHome = () => {
+    router.push("/");
+  };
+
   return (
     <div className="min-h-screen bg-[#F0F9FF] flex flex-col space-y-8 px-4 py-8">
       <div className="max-w-md mx-auto space-y-6 bg-white border rounded-lg p-6 shadow-sm">
@@ -72,7 +77,7 @@ const ApprovalPending = () => {
             application is now under review by our team.
           </p>
           <Button
-            className="bg-[#F0F9FF] hover:bg-[#EFF6FF] text-[#0C4A6E] border rounded-lg px-4 py-2"
+            className="bg-[#F0F9FF] hover:bg-[#EFF6FF] text-[#0C4A6E] border rounded-lg px-4 py-2 w-full"
             disabled={isLoading}
           >
             <OrganisationIcon aria-hidden="true" />
@@ -169,6 +174,15 @@ const ApprovalPending = () => {
             </div>
           </div>
         </div>
+
+        {/* Go to Home Button */}
+        <Button
+          onClick={handleGoHome}
+          className="w-full bg-[#0C4A6E] hover:bg-[#0A3A5A] text-white font-medium"
+          aria-label="Go to home page"
+        >
+          Go to Home
+        </Button>
       </div>
 
       {/* Footer with spacing */}

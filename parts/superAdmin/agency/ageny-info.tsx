@@ -1,28 +1,50 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useForm, Controller } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from '@/components/ui/use-toast';
-import Image from 'next/image';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { useSendMail } from '@/services/mail'; // ← Your function
+import React, { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Loader2,
+  AlertCircle,
+  Upload,
+  AlertTriangle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { useSendMail } from "@/services/mail";
+import ProjectsList from "./project-list";
 
-// Initialize Supabase client
 const supabase = createClient();
 
-// Define TypeScript interface for agency profile
 interface AgencyProfile {
   id: string;
   organization_name: string | null;
@@ -39,425 +61,469 @@ interface AgencyProfile {
   is_active: boolean;
 }
 
-// Zod schema
 const profileSchema = z.object({
-  organization_name: z.string().min(1, 'Organization name is required'),
-  contact_person_email: z.string().email('Invalid email address').optional().or(z.literal('')),
-  contact_person_phone: z.string().optional().or(z.literal('')),
-  website: z.string(),
-  // .url('Invalid URL').optional().or(z.literal('')),
-  address: z.string().optional().or(z.literal('')),
-  organization_type: z.string().optional().or(z.literal('')),
-  description: z.string().optional().or(z.literal('')),
-  focus_areas: z.string().optional().or(z.literal('')),
-  environment_cities: z.string().optional().or(z.literal('')),
-  environment_states: z.string().optional().or(z.literal('')),
+  organization_name: z.string().min(1, "Organization name is required"),
+  contact_person_email: z.string().email("Invalid email").or(z.literal("")),
+  contact_person_phone: z.string().optional(),
+  website: z.string().optional(),
+  address: z.string().optional(),
+  organization_type: z.string().optional(),
+  description: z.string().optional(),
+  focus_areas: z.string().optional(),
+  environment_cities: z.string().optional(),
+  environment_states: z.string().optional(),
   is_active: z.boolean(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
-const AgencyProfile: React.FC = () => {
+const AgencyProfile = () => {
   const { id } = useParams<{ id: string }>();
-  const [profile, setProfile] = useState<AgencyProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const router = useRouter();
+  const [profile, setProfile] = useState<AgencyProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
+  const [pendingDeactivation, setPendingDeactivation] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-    control,
     watch,
+    setValue,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      organization_name: '',
-      contact_person_email: '',
-      contact_person_phone: '',
-      website: '',
-      address: '',
-      organization_type: '',
-      description: '',
-      focus_areas: '',
-      environment_cities: '',
-      environment_states: '',
-      is_active: true,
-    },
+    defaultValues: { is_active: true },
   });
 
-  // Watch current is_active value
-  const currentActiveStatus = watch('is_active');
+  const currentActiveStatus = watch("is_active");
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      setLoading(true);
-      setError(null);
+  // Fetch profile
+  const fetchProfile = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", id)
+      .eq("role", "agency")
+      .single();
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(
-          'id, organization_name, contact_person_email, contact_person_phone, website, focus_areas, address, organization_type, description, environment_cities, environment_states, profile_picture, is_active',
-        )
-        .eq('id', id)
-        .eq('role', 'agency')
-        .single();
-
-      if (error) {
-        setError('Failed to fetch agency profile');
-        console.error(error);
-      } else {
-        setProfile(data);
-        reset({
-          organization_name: data.organization_name || '',
-          contact_person_email: data.contact_person_email || '',
-          contact_person_phone: data.contact_person_phone || '',
-          website: data.website || '',
-          address: data.address || '',
-          organization_type: data.organization_type || '',
-          description: data.description || '',
-          focus_areas: data.focus_areas?.join(', ') || '',
-          environment_cities: data.environment_cities?.join(', ') || '',
-          environment_states: data.environment_states?.join(', ') || '',
-          is_active: data.is_active ?? true,
-        });
-      }
+    if (error || !data) {
+      toast.error("Failed to load agency profile");
       setLoading(false);
+      return;
+    }
+
+    const profileData: AgencyProfile = {
+      ...data,
+      focus_areas: data.focus_areas || [],
+      environment_cities: data.environment_cities || [],
+      environment_states: data.environment_states || [],
     };
 
-    if (id) {
-      fetchProfile();
-    }
+    setProfile(profileData);
+    reset({
+      organization_name: profileData.organization_name || "",
+      contact_person_email: profileData.contact_person_email || "",
+      contact_person_phone: profileData.contact_person_phone || "",
+      website: profileData.website || "",
+      address: profileData.address || "",
+      organization_type: profileData.organization_type || "",
+      description: profileData.description || "",
+      focus_areas: profileData.focus_areas?.join(", ") || "",
+      environment_cities: profileData.environment_cities?.join(", ") || "",
+      environment_states: profileData.environment_states?.join(", ") || "",
+      is_active: profileData.is_active ?? true,
+    });
+    setPreviewUrl(profileData.profile_picture || null);
+    setLoading(false);
   }, [id, reset]);
 
-  const onSubmit = async (data: ProfileFormData) => {
-    try {
-      const oldActiveStatus = profile?.is_active ?? true;
-      const newActiveStatus = data.is_active;
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
+  // Image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+
+    setImageUploading(true);
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${id}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+    const filePath = `agency-avatars/${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      setPreviewUrl(publicUrl);
+      toast.success("Profile picture updated");
+    } catch {
+      toast.error("Failed to upload image");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  // Save handler
+  const saveProfile = async (data: ProfileFormData) => {
+    setSaving(true);
+    try {
       const updatedData = {
-        organization_name: data.organization_name,
-        contact_person_email: data.contact_person_email || null,
-        contact_person_phone: data.contact_person_phone || null,
-        website: data.website || null,
-        address: data.address || null,
-        organization_type: data.organization_type || null,
-        description: data.description || null,
-        focus_areas: data.focus_areas ? data.focus_areas.split(',').map((item) => item.trim()) : null,
-        environment_cities: data.environment_cities ? data.environment_cities.split(',').map((item) => item.trim()) : null,
-        environment_states: data.environment_states ? data.environment_states.split(',').map((item) => item.trim()) : null,
-        is_active: newActiveStatus,
+        ...data,
+        focus_areas: data.focus_areas
+          ? data.focus_areas.split(",").map(s => s.trim()).filter(Boolean)
+          : null,
+        environment_cities: data.environment_cities
+          ? data.environment_cities.split(",").map(s => s.trim()).filter(Boolean)
+          : null,
+        environment_states: data.environment_states
+          ? data.environment_states.split(",").map(s => s.trim()).filter(Boolean)
+          : null,
+        profile_picture: previewUrl || null,
         updated_at: new Date().toISOString(),
       };
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update(updatedData)
-        .eq('id', id)
-        .eq('role', 'agency');
+        .eq("id", id);
 
       if (error) throw error;
 
-      setProfile({ ...profile!, ...updatedData });
+      setProfile(prev => prev ? { ...prev, ...updatedData } : null);
       setIsModalOpen(false);
+      toast.success("Profile updated successfully");
 
-      toast({
-        title: 'Success',
-        description: 'Agency profile updated successfully',
-        className: 'bg-green-50 border-green-200 text-green-800',
-      });
-
-      // --- SEND EMAIL IF is_active CHANGED ---
-      if (oldActiveStatus !== newActiveStatus && data.contact_person_email) {
-        const statusText = newActiveStatus ? 'activated' : 'deactivated';
-        const subject = `Your Agency Account Has Been ${statusText === 'activated' ? 'Activated' : 'Deactivated'}`;
-        const html = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-            <h2 style="color: #1a73e8;">DiasporaBase</h2>
-            <p>Dear <strong>${data.organization_name}</strong>,</p>
-            <p>Your agency account has been <strong>${statusText}</strong>.</p>
-            ${newActiveStatus
-              ? `<p>You can now log in and add projects.</p>`
-              : `<p>Your account is currently inactive. Contact support for more info.</p>`
-            }
-            <p style="margin-top: 20px;">Thank you,<br/>DiasporaBase Team</p>
-          </div>
-        `;
-
+      // Send email on status change
+      if (profile?.is_active !== data.is_active && data.contact_person_email) {
+        const status = data.is_active ? "activated" : "deactivated";
         await useSendMail({
           to: data.contact_person_email,
-          subject,
-          html,
-          onSuccess: () => {
-            toast({
-              title: 'Email Sent',
-              description: `Status change email sent to ${data.contact_person_email}`,
-              className: 'bg-blue-50 border-blue-200 text-blue-800',
-            });
-          },
-          onError: (msg) => {
-            console.error("Failed to send status email:", msg);
-            toast({
-              title: 'Email Failed',
-              description: 'Profile updated, but status email failed.',
-              variant: 'destructive',
-            });
-          },
+          subject: `Your Agency Has Been ${data.is_active ? "Activated" : "Deactivated"}`,
+          html: `<p>Your agency <strong>${data.organization_name}</strong> is now <strong>${status}</strong>.</p>`,
+          onSuccess: () => toast.success("Status email sent"),
+          onError: () => toast.error("Profile saved, but email failed"),
         });
       }
     } catch (err: any) {
-      console.error("Update failed:", err);
-      toast({
-        title: 'Error',
-        description: err.message || 'Failed to update profile',
-        variant: 'destructive',
-      });
+      toast.error(err.message || "Failed to save");
+    } finally {
+      setSaving(false);
+      setPendingDeactivation(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Submit: only show dialog if deactivating
+  const onSubmit = async (data: ProfileFormData) => {
+    if (!data.is_active && profile?.is_active) {
+      setPendingDeactivation(true);
+      setShowDeactivateDialog(true);
+      return;
+    }
+    await saveProfile(data);
+  };
 
-  if (error || !profile) {
-    return (
-      <div className="container mx-auto p-6">
-        <Alert variant="destructive" className="max-w-lg mx-auto rounded-lg shadow-sm">
-          <AlertCircle className="h-5 w-5" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error || 'Agency not found'}</AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+  // Switch handler
+  const handleStatusChange = (checked: boolean) => {
+    setValue("is_active", checked);
+  };
+
+  // Modal close cleanup
+  const handleModalClose = (open: boolean) => {
+    if (!open) {
+      setPendingDeactivation(false);
+    }
+    setIsModalOpen(open);
+  };
+
+  if (loading) return <ProfileSkeleton />;
+  if (!profile) return <ErrorState message="Agency not found" />;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              {profile.profile_picture ? (
-                <Image
-                  src={profile.profile_picture}
-                  alt={`${profile.organization_name} profile picture`}
-                  width={80}
-                  height={80}
-                  className="h-20 w-20 rounded-full object-cover ring-2 ring-primary/10"
-                />
-              ) : (
-                <div className="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center ring-2 ring-primary/10">
-                  <span className="text-2xl font-semibold text-gray-500">
-                    {profile.organization_name?.charAt(0) || 'A'}
-                  </span>
+    <>
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={profile.profile_picture || ""} />
+                  <AvatarFallback className="text-2xl">
+                    {profile.organization_name?.[0] || "A"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle className="text-2xl">{profile.organization_name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">Agency Profile</p>
                 </div>
-              )}
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  {profile.organization_name || 'Unnamed Agency'}
-                </h1>
-                <p className="text-sm text-gray-500 mt-1">Agency Profile</p>
               </div>
-            </div>
-            <Button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-2"
-            >
-              Edit Agency Info
-            </Button>
-          </div>
-
-          {/* Status Badge */}
-          <div className="mb-4">
-            <Badge variant={profile.is_active ? "default" : "secondary"}>
-              {profile.is_active ? "Active" : "Inactive"}
-            </Badge>
-          </div>
-
-          {/* Profile Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white shadow-sm rounded-lg p-6">
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Contact Details</h2>
-              <div className="space-y-2">
-                <p className="text-gray-600">
-                  <strong>Email:</strong> {profile.contact_person_email || 'N/A'}
-                </p>
-                <p className="text-gray-600">
-                  <strong>Phone:</strong> {profile.contact_person_phone || 'N/A'}
-                </p>
-                <p className="text-gray-600">
-                  <strong>Website:</strong>{' '}
-                  {profile.website ? (
-                    <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                      {profile.website}
-                    </a>
-                  ) : 'N/A'}
-                </p>
-                <p className="text-gray-600">
-                  <strong>Type:</strong> {profile.organization_type || 'N/A'}
-                </p>
-                <p className="text-gray-600">
-                  <strong>Address:</strong> {profile.address || 'N/A'}
-                </p>
+              <div className="flex items-center gap-3">
+                <Badge
+                  variant="outline"
+                  className={`font-medium ${
+                    profile.is_active
+                      ? "bg-green-100 text-green-800 border-green-300"
+                      : "bg-red-100 text-red-800 border-red-300"
+                  }`}
+                >
+                  {profile.is_active ? "Active" : "Inactive"}
+                </Badge>
+                <Button onClick={() => setIsModalOpen(true)} className="action-btn">Edit Profile</Button>
               </div>
-            </div>
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Operations</h2>
-              <div className="space-y-2">
-                <p className="text-gray-600">
-                  <strong>Focus Areas:</strong> {profile.focus_areas?.join(', ') || 'N/A'}
-                </p>
-                <p className="text-gray-600">
-                  <strong>Cities:</strong> {profile.environment_cities?.join(', ') || 'N/A'}
-                </p>
-                <p className="text-gray-600">
-                  <strong>States:</strong> {profile.environment_states?.join(', ') || 'N/A'}
-                </p>
-                <p className="text-gray-600">
-                  <strong>Description:</strong> {profile.description || 'N/A'}
-                </p>
-              </div>
-            </div>
-          </div>
+            </CardHeader>
 
-          {/* Back Button */}
-          <div className="mt-8">
-            <Button
-              variant="outline"
-              onClick={() => router.back()}
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            >
-              Back to Agency List
-            </Button>
-          </div>
+            <CardContent className="grid md:grid-cols-2 gap-8">
+              <InfoSection title="Contact" data={{
+                Email: profile.contact_person_email,
+                Phone: profile.contact_person_phone,
+                Website: profile.website,
+                Type: profile.organization_type,
+                Address: profile.address,
+              }} />
+              <InfoSection title="Operations" data={{
+                "Focus Areas": profile.focus_areas?.join(", "),
+                Cities: profile.environment_cities?.join(", "),
+                States: profile.environment_states?.join(", "),
+                Description: profile.description,
+              }} />
+            </CardContent>
+
+            <div className="px-6 pb-6">
+              <Button variant="outline" onClick={() => router.back()}>
+                Back to List
+              </Button>
+            </div>
+          </Card>
+
+          <ProjectsList agencyId={id} />
         </div>
       </div>
 
       {/* Edit Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[600px] rounded-lg bg-white p-6 overflow-y-auto max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              Edit Agency Profile
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 gap-4">
-              {/* All form fields */}
-              <div>
-                <Label htmlFor="organization_name">Organization Name</Label>
-                <Input id="organization_name" {...register('organization_name')} />
-                {errors.organization_name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.organization_name.message}</p>
-                )}
-              </div>
+      <EditModal
+        open={isModalOpen}
+        onOpenChange={handleModalClose}
+        profile={profile}
+        register={register}
+        control={control}
+        errors={errors}
+        isSubmitting={saving || isSubmitting}
+        onSubmit={handleSubmit(onSubmit)}
+        previewUrl={previewUrl}
+        imageUploading={imageUploading}
+        handleImageUpload={handleImageUpload}
+        currentActiveStatus={currentActiveStatus}
+        handleStatusChange={handleStatusChange}
+      />
 
-              <div>
-                <Label htmlFor="contact_person_email">Contact Email</Label>
-                <Input id="contact_person_email" type="email" {...register('contact_person_email')} />
-                {errors.contact_person_email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.contact_person_email.message}</p>
-                )}
-              </div>
+      {/* Deactivate Confirmation */}
+      <AlertDialog open={showDeactivateDialog} onOpenChange={setShowDeactivateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Deactivate Agency?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This agency will no longer be able to create projects or receive applications.
+              You can reactivate it later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setValue("is_active", true);
+              setPendingDeactivation(false);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setShowDeactivateDialog(false);
+                const data = watch();
+                await saveProfile(data);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+};
 
-              <div>
-                <Label htmlFor="contact_person_phone">Contact Phone</Label>
-                <Input id="contact_person_phone" {...register('contact_person_phone')} />
-              </div>
-
-              <div>
-                <Label htmlFor="website">Website</Label>
-                <Input id="website" {...register('website')} />
-                {errors.website && <p className="mt-1 text-sm text-red-600">{errors.website.message}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" {...register('address')} />
-              </div>
-
-              <div>
-                <Label htmlFor="organization_type">Organization Type</Label>
-                <Input id="organization_type" {...register('organization_type')} />
-              </div>
-
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" {...register('description')} />
-              </div>
-
-              <div>
-                <Label htmlFor="focus_areas">Focus Areas (comma-separated)</Label>
-                <Input id="focus_areas" {...register('focus_areas')} />
-              </div>
-
-              <div>
-                <Label htmlFor="environment_cities">Operating Cities</Label>
-                <Input id="environment_cities" {...register('environment_cities')} />
-              </div>
-
-              <div>
-                <Label htmlFor="environment_states">Operating States</Label>
-                <Input id="environment_states" {...register('environment_states')} />
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <Label htmlFor="is_active" className="cursor-pointer">
-                  Active Status
-                </Label>
-                <Controller
-                  name="is_active"
-                  control={control}
-                  render={({ field }) => (
-                    <Switch
-                      id="is_active"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                        ${field.value ? 'bg-green-600' : 'bg-red-600'}`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                          ${field.value ? 'translate-x-6' : 'translate-x-1'}`}
-                      />
-                    </Switch>
-                  )}
-                />
-                <span className="text-sm font-medium">
-                  {currentActiveStatus ? 'Active' : 'Inactive'}
-                </span>
-              </div>
+// ——— Helper Components (unchanged) ———
+const ProfileSkeleton = () => (
+  <div className="container mx-auto p-6 max-w-5xl">
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-20 w-20 rounded-full" />
+          <div>
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-32 mt-2" />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid md:grid-cols-2 gap-8">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="space-y-4">
+              <Skeleton className="h-6 w-32" />
+              {[...Array(4)].map((_, j) => (
+                <Skeleton key={j} className="h-4 w-full" />
+              ))}
             </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsModalOpen(false)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-primary hover:bg-primary/90 text-white"
-              >
-                {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Save Changes'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+const ErrorState = ({ message }: { message: string }) => (
+  <div className="container mx-auto p-6">
+    <Alert variant="destructive" className="max-w-lg mx-auto">
+      <AlertCircle className="h-5 w-5" />
+      <AlertTitle>Error</AlertTitle>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
+  </div>
+);
+
+const InfoSection = ({ title, data }: { title: string; data: Record<string, string | null | undefined> }) => (
+  <div className="space-y-3">
+    <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+    <dl className="space-y-2 text-sm">
+      {Object.entries(data).map(([key, value]) => (
+        <div key={key} className="flex justify-between">
+          <dt className="font-medium text-gray-600">{key}:</dt>
+          <dd className="text-gray-900 ml-4">
+            {value ? (
+              key === "Website" ? (
+                <a href={value} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  {value}
+                </a>
+              ) : value
+            ) : "—"}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+);
+
+interface EditModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  profile: AgencyProfile;
+  register: any;
+  control: any;
+  errors: any;
+  isSubmitting: boolean;
+  onSubmit: () => void;
+  previewUrl: string | null;
+  imageUploading: boolean;
+  handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  currentActiveStatus: boolean;
+  handleStatusChange: (checked: boolean) => void;
+}
+
+const EditModal: React.FC<EditModalProps> = ({
+  open, onOpenChange, register, control, errors, isSubmitting, onSubmit,
+  profile, previewUrl, imageUploading, handleImageUpload, currentActiveStatus, handleStatusChange
+}) => {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Agency Profile</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-5">
+          {/* Profile Picture */}
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={previewUrl || ""} />
+              <AvatarFallback>{profile.organization_name?.[0]}</AvatarFallback>
+            </Avatar>
+            <div>
+              <Label htmlFor="picture" className="cursor-pointer">
+                <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  {imageUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  <span>Change Photo</span>
+                </div>
+                <Input id="picture" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">JPG, PNG up to 2MB</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Organization Name *</Label>
+              <Input {...register("organization_name")} />
+              {errors.organization_name && <p className="text-sm text-red-600 mt-1">{errors.organization_name.message}</p>}
+            </div>
+            <div>
+              <Label>Contact Email</Label>
+              <Input type="email" {...register("contact_person_email")} />
+              {errors.contact_person_email && <p className="text-sm text-red-600 mt-1">{errors.contact_person_email.message}</p>}
+            </div>
+            <div><Label>Phone</Label><Input {...register("contact_person_phone")} /></div>
+            <div><Label>Website</Label><Input {...register("website")} /></div>
+            <div><Label>Address</Label><Input {...register("address")} /></div>
+            <div><Label>Type</Label><Input {...register("organization_type")} /></div>
+            <div className="md:col-span-2"><Label>Description</Label><Textarea {...register("description")} rows={3} /></div>
+            <div><Label>Focus Areas</Label><Input {...register("focus_areas")} placeholder="Education, Health" /></div>
+            <div><Label>Cities</Label><Input {...register("environment_cities")} placeholder="Lagos, Abuja" /></div>
+            <div><Label>States</Label><Input {...register("environment_states")} placeholder="Lagos State" /></div>
+
+            <div className="flex items-center justify-between md:col-span-2">
+              <Label htmlFor="is_active" className="cursor-pointer">Account Status</Label>
+              <Controller
+                name="is_active"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={handleStatusChange}
+                    className={field.value ? "data-[state=checked]:bg-green-600" : "data-[state=unchecked]:bg-red-600"}
+                  />
+                )}
+              />
+              <Badge variant="outline" className={`font-medium ml-2 ${currentActiveStatus ? "bg-green-100 text-green-800 border-green-300" : "bg-red-100 text-red-800 border-red-300"}`}>
+                {currentActiveStatus ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting} className="action-btn">
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 
