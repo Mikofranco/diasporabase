@@ -55,7 +55,7 @@ export interface SelectedData {
   selectedLgas: string[];
 }
 
-interface LocationSelectorHandle {
+export interface LocationSelectorHandle {
   setSelected: (data: SelectedData) => void;
 }
 
@@ -386,7 +386,7 @@ export default function VolunteerProfilePage() {
   const selectedLocationsDisplay = useMemo(() => {
     const { selectedCountries, selectedStates, selectedLgas } = selectedLocations;
 
-    if (selectedStates.length > 10) {
+    if (selectedStates?.length > 10) {
       return (
         <div className="text-sm text-gray-600 mt-2">
           <p>

@@ -40,7 +40,7 @@ const NavBar = () => {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200"
+              className="text-sm font-medium text-gray-700 hover:text-[#0ea5e9] transition-colors duration-200"
               aria-label={link.label}
             >
               {link.label}
