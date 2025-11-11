@@ -55,7 +55,7 @@ export interface SelectedData {
   selectedLgas: string[];
 }
 
-interface LocationSelectorHandle {
+export interface LocationSelectorHandle {
   setSelected: (data: SelectedData) => void;
 }
 
