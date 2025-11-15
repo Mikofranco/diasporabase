@@ -40,8 +40,9 @@ const AgencyList: React.FC = () => {
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const pageSize = 10;
-  const [user, setUser] = useState<any>(null); // Replace with Supabase's User type if available
+  const [user, setUser] = useState<any>(null); 
   const router = useRouter();
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   // Check user authentication and role
   useEffect(() => {
@@ -64,6 +65,7 @@ const AgencyList: React.FC = () => {
         router.push('/unauthorized');
         return;
       }
+      setUserRole(profile.role)
       setUser(user);
     };
 
@@ -128,7 +130,7 @@ const AgencyList: React.FC = () => {
 
   // Handle row click to navigate to agency profile
   const handleRowClick = (agencyId: string) => {
-    router.replace(`/dashboard/admin/agencies/${agencyId}`);
+    router.replace(`/dashboard/${userRole}/agencies/${agencyId}`);
   };
 
   if (!user) return null;
