@@ -24,7 +24,7 @@ interface Project {
 }
 
 const ViewProject: React.FC = () => {
-  const { projectId } = useParams(); // Extract projectId from params object
+  const { projectId } = useParams(); 
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -32,7 +32,7 @@ const ViewProject: React.FC = () => {
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    console.log("Project ID:", projectId); // Debug: Should log a string
+    console.log("Project ID:", projectId);
     const fetchUserAndProject = async () => {
       try {
         // Get current user
@@ -77,11 +77,11 @@ const ViewProject: React.FC = () => {
   }, [projectId, router]);
 
   const handleProjectSelect = (project: Project) => {
-    router.push(`/dashboard/admin/projects/${project.id}`);
+    router.push(`/dashboard/${userRole}/projects/${project.id}`);
   };
 
   const handleEditProject = () => {
-    router.push(`/dashboard/admin/projects/${projectId}/edit`);
+    router.push(`/dashboard/${userRole}/projects/${projectId}/edit`);
   };
 
   if (loading) {
