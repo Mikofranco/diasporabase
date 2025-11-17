@@ -15,6 +15,7 @@ import {
   ChevronUp,
   LayoutDashboard,
   Send,
+  UserRoundPlus,
 } from "lucide-react";
 import {
   Sidebar,
@@ -111,7 +112,7 @@ const MENU_ITEMS = {
     { path: ROUTES.super_admin.volunteers, label: "Volunteers", icon: Users },
     { path: ROUTES.super_admin.agencies, label: "Agencies", icon: Home },
     { path: ROUTES.super_admin.settings, label: "Settings", icon: Settings },
-    { path: ROUTES.super_admin.invite_admin, label: "Invite Admin", icon: Settings },
+    { path: ROUTES.super_admin.invite_admin, label: "Invite Admin", icon: UserRoundPlus },
   ],
   volunteer: [
     { path: ROUTES.volunteer.dashboard, label: "Dashboard", icon: LayoutDashboard },
@@ -129,8 +130,8 @@ const MENU_ITEMS = {
     { path: ROUTES.agency.settings, label: "Settings", icon: Settings },
   ],
   guest: [
-    { path: ROUTES.guest.home, label: "Home", icon: Home },
-    { path: ROUTES.guest.login, label: "Login", icon: LogOut },
+    // { path: ROUTES.guest.home, label: "Home", icon: Home },
+    // { path: ROUTES.guest.login, label: "Login", icon: LogOut },
   ],
 };
 

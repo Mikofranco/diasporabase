@@ -4,6 +4,7 @@ import { Poppins } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import LoadingBar from '@/components/loading-bar';
+import GlobalLoading from '@/components/GlobalLoading';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -47,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={poppins.className}>
-        <LoadingBar />
+        <GlobalLoading /> {/* ← INSTANT LOADER */}
         {children}
         <Toaster richColors />
       </body>
