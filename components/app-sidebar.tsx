@@ -332,11 +332,6 @@ export function AppSidebar() {
                   {userRole && (
                     <>
                       <DropdownMenuItem>
-                        <Link href={ROUTES[userRole].profile} className="w-full">
-                          <span>Profile</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
                         <Link href={ROUTES[userRole].settings} className="w-full">
                           <span>Settings</span>
                         </Link>

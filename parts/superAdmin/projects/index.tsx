@@ -5,21 +5,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import ProjectCard from '@/components/project-card';
+import ProjectCard, { Project } from '@/components/project-card';
 import { useRouter } from 'next/navigation';
 
-interface Project {
-  id: string;
-  title: string;
-  organization_name: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  category: string;
-  volunteers_registered: number;
-  volunteers_needed: number;
-  status: 'active' | 'pending' | 'completed' | 'cancelled';
-}
 
 const supabase = createClient();
 
@@ -90,7 +78,7 @@ const AdminProjectsScreen: React.FC = () => {
 
   // Handle project selection
   const handleProjectSelect = (project: Project) => {
-    router.push(`/dashboard/admin/projects/${project.id}`);
+    router.push(`/dashboard/${userRole}/projects/${project.id}`);
   };
 
   if (loading) {
