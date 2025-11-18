@@ -6,7 +6,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 
 // Define TypeScript interface for project props
-interface Project {
+export interface Project {
   id: string;
   title: string;
   organization_name?: string;
