@@ -1,4 +1,3 @@
-// app/register-volunteer/page.tsx (or wherever you have it)
 "use client";
 
 import { useState, useEffect } from "react";
@@ -251,7 +250,7 @@ export default function VolunteerRegistrationForm() {
               <div className="space-y-2">
                 <Label>First Name</Label>
                 <Input
-                  placeholder="Micheal"
+                  placeholder="Enter First Name"
                   value={formData.firstName}
                   onChange={(e) => handleChange("firstName", e.target.value)}
                   disabled={loading}
@@ -268,7 +267,7 @@ export default function VolunteerRegistrationForm() {
               <div className="space-y-2">
                 <Label>Last Name</Label>
                 <Input
-                  placeholder="Ogbechie"
+                  placeholder="Enter Last Name"
                   value={formData.lastName}
                   onChange={(e) => handleChange("lastName", e.target.value)}
                   disabled={loading}
@@ -288,7 +287,7 @@ export default function VolunteerRegistrationForm() {
               <Label>Email Address</Label>
               <Input
                 type="email"
-                placeholder="micheal@example.com"
+                placeholder="email@example.com"
                 value={formData.email}
                 onChange={(e) => handleChange("email", e.target.value)}
                 disabled={loading}
