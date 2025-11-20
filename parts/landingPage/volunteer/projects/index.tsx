@@ -228,6 +228,10 @@ const fetchProjects = async (userId: string) => {
     }
   };
 
+  const handleRouteToSelectedProject=(projectId:string)=>{
+    router.push(`/dashboard/volunteer/projects/${projectId}`)
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -297,7 +301,7 @@ const fetchProjects = async (userId: string) => {
                   </div>
                   <Button
                     className="w-full mt-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
-                    onClick={() => setSelectedProject(project)}
+                    onClick={()=>handleRouteToSelectedProject(project.id)}
                   >
                     View Details
                   </Button>

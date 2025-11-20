@@ -380,7 +380,7 @@ export default function AdminManagement() {
                 <TableRow
                   key={admin.id}
                   className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => router.push(`/super-admin/admins/${admin.id}`)}
+                  onClick={() => router.replace(`dashboard/super_admin/admins/${admin.id}`)}
                 >
                   <TableCell>{admin.full_name || "N/A"}</TableCell>
                   <TableCell>{admin.email}</TableCell>
