@@ -266,7 +266,7 @@ const AdminVolunteerDetails: React.FC = () => {
                 </>
               )}
             </Button>
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen} >
               <DialogTrigger asChild>
                 <Button
                   className="bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 transition-all duration-300"
@@ -275,7 +275,7 @@ const AdminVolunteerDetails: React.FC = () => {
                   Edit Details
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Edit Volunteer Details</DialogTitle>
                 </DialogHeader>
