@@ -200,7 +200,7 @@ export default function VolunteerProjectsManagement() {
             </p>
             <Button
               className="action-btn"
-              onClick={() => router.push("/view-opportunities")}
+              onClick={() => router.push("/dashboard/volunteer/find-opportunities")}
             >
               Browse Projects
             </Button>
