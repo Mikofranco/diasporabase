@@ -248,7 +248,7 @@ const Opportunities: React.FC = () => {
                 )}
                 {project.required_skills && project.required_skills.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {project.required_skills.map((skill) => (
+                    {project.required_skills.slice(0,5).map((skill) => (
                       <Badge key={skill} variant="outline" className="text-sm">
                         {skill.charAt(0).toUpperCase() + skill.slice(1).replace("_", " ")}
                       </Badge>
