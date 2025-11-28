@@ -152,3 +152,15 @@ export type ConfirmationLink = {
   expires_at: string;
   is_resent: boolean;
 };
+
+export type OrganizationContact = {
+  organization_name?: string | null;
+  contact_person_first_name?: string | null;
+  contact_person_last_name?: string | null;
+  contact_person_email?: string | null;
+  contact_person_phone?: string | null;
+  website?: string | null;
+  description?: string | null;
+  organization_type?: string | null;
+  profile_picture?: string | null;
+};

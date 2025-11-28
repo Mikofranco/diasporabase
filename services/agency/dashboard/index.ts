@@ -1,4 +1,5 @@
-import { Project } from "@/lib/types";
+import { supabase } from "@/lib/supabase/client";
+import { OrganizationContact, Project } from "@/lib/types";
 import { getUserId } from "@/lib/utils";
 import { getActiveProjectForAgecy } from "@/services/projects";
 import { useEffect, useState } from "react";
@@ -58,3 +59,33 @@ export const useFetchActiveProjects = () => {
 
   return { activeProjectdata, activeProjectError, activeProjectIsLoading };
 };
+
+export async function getOrganizationContact(
+  organizationId: string
+): Promise<OrganizationContact | null> {
+  if (!organizationId) return null;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(`
+      organization_name,
+      contact_person_first_name,
+      contact_person_last_name,
+      contact_person_email,
+      contact_person_phone,
+      website,
+      description,
+      organization_type,
+      profile_picture
+    `)
+    .eq("id", organizationId)
+    .eq("role", "agency") 
+    .single();
+
+  if (error || !data) {
+    console.error("Failed to fetch organization contact:", error?.message);
+    return null;
+  }
+
+  return data as OrganizationContact;
+}

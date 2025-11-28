@@ -1,59 +1,101 @@
 // app/dashboard/volunteer-projects/[id]/page.tsx
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 
 import ProjectView from "./project-view";
-import { Project } from "@/lib/types";
+import { OrganizationContact, Project } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import MilestonesView from "./milestones-view";
 import DeliverablesView from "./deliverables-view";
 import VolunteersList from "./volunteer-list";
+import LeaveProjectModal from "@/components/modals/leave-project";
+import ContactOrganizationModal from "@/components/modals/contact-organizer";
+import { getOrganizationContact } from "@/services/agency/dashboard";
 
 export default function ViewProjectDetails() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+
   const [project, setProject] = useState<Project | null>(null);
   const [milestones, setMilestones] = useState<any[]>([]);
   const [deliverables, setDeliverables] = useState<any[]>([]);
   const [volunteers, setVolunteers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUserInProject, setIsUserInProject] = useState(false);
+  const [organizationDetails, setOrganizationDetails] = useState<OrganizationContact>({
+    contact_person_email: "",
+    contact_person_first_name: "",
+    contact_person_last_name: "",
+    contact_person_phone: "",
+    organization_name: "",
+    website: "",
+    description: "",
+    organization_type: "",
+  });
+
+  // Check if current user is in this project
+  const checkUserMembership = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data, error } = await supabase
+      .from("project_volunteers")
+      .select("1")
+      .eq("project_id", id)
+      .eq("volunteer_id", user.id)
+      .maybeSingle(); // Use maybeSingle() to avoid error if no row
+
+    return !!data;
+  };
 
   useEffect(() => {
-    if (!id || Array.isArray(id)) return;
+    if (!id) return;
 
-    async function fetchAll() {
+    async function loadData() {
       try {
-        // Fetch project
-        const { data: proj } = await supabase
+        // 1. Fetch project
+        const { data: proj, error: projError } = await supabase
           .from("projects")
           .select("*")
           .eq("id", id)
           .single();
-        if (!proj) throw new Error("Project not found");
+
+        if (projError || !proj) throw new Error("Project not found");
         setProject(proj as Project);
 
-        // Fetch related data in parallel
-        const [miles, dels, vols] = await Promise.all([
+        // 2. Check if user is in project
+        const isInProject = await checkUserMembership();
+        setIsUserInProject(isInProject);
+
+        const organizationContactInfo = await getOrganizationContact(proj.organization_id);
+        setOrganizationDetails(organizationContactInfo || {});
+        console.log("Organization Contact Info:", organizationContactInfo);
+
+        // 3. Fetch related data in parallel
+        const [milesRes, delsRes, volsRes] = await Promise.all([
           supabase.from("milestones").select("*").eq("project_id", id),
           supabase.from("deliverables").select("*").eq("project_id", id),
           supabase
             .from("project_volunteers")
             .select(
-              "volunteer_id, created_at, profiles!volunteer_id(full_name, profile_picture)"
+              "volunteer_id, created_at, profiles!volunteer_id(full_name, profile_picture, email)"
             )
-            .eq("project_id", id)
-            .eq("status", "approved"),
+            .eq("project_id", id),
         ]);
 
-        setMilestones(miles.data || []);
-        setDeliverables(dels.data || []);
+        setMilestones(milesRes.data || []);
+        setDeliverables(delsRes.data || []);
+
         setVolunteers(
-          (vols.data || []).map((v: any) => ({
+          (volsRes.data || []).map((v: any) => ({
             id: v.volunteer_id,
             full_name: v.profiles?.full_name || "Anonymous",
             email: v.profiles?.email || "",
@@ -62,31 +104,44 @@ export default function ViewProjectDetails() {
           }))
         );
       } catch (err: any) {
-        setError(err.message);
+        console.error(err);
+        setError(err.message || "Failed to load project");
       } finally {
         setLoading(false);
       }
     }
 
-    fetchAll();
+
+    loadData();
   }, [id]);
 
-  if (loading)
+  const handleLeaveSuccess = () => {
+    router.push("/dashboard/volunteer/projects"); // Correct absolute path
+    router.refresh(); // Optional: refresh server data
+  };
+
+  if (loading) {
     return (
       <div className="container mx-auto p-6">
-        <Skeleton className="h-96 w-full" />
+        <Skeleton className="h-96 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full mt-8" />
       </div>
     );
-  if (error || !project)
+  }
+
+  if (error || !project) {
     return (
-      <div className="container mx-auto p-6 text-center py-20 text-destructive">
-        <AlertCircle className="h-12 w-12 mx-auto mb-4" />
-        {error || "Project not found"}
+      <div className="container mx-auto p-6 text-center py-20">
+        <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+        <p className="text-lg text-destructive">
+          {error || "Project not found"}
+        </p>
       </div>
     );
+  }
 
   return (
-    <div className="container p-6 space-y-16 pb-20 bg-white mx-auto rounded-2xl">
+    <div className="container mx-auto p-6 space-y-16 pb-20">
       <section>
         <ProjectView project={project} />
       </section>
@@ -95,28 +150,52 @@ export default function ViewProjectDetails() {
 
       <div className="grid gap-8 lg:grid-cols-3">
         <section className="lg:col-span-2 space-y-8">
-          <h2 className="text-3xl font-bold mb-8">
+          <h2 className="text-3xl font-bold">
             Volunteers ({volunteers.length})
           </h2>
           <VolunteersList volunteers={volunteers} />
         </section>
 
-        <div>
+        <aside className="space-y-8">
           <section>
-            <h2 className="font-bold mb-2">Milestones</h2>
+            <h2 className="text-xl font-bold mb-4">Milestones</h2>
             <MilestonesView milestones={milestones} />
           </section>
 
           <Separator />
 
           <section>
-            <h2 className="font-bold mb-2">Deliverables</h2>
+            <h2 className="text-xl font-bold mb-4">Deliverables</h2>
             <DeliverablesView deliverables={deliverables} />
           </section>
-        </div>
+        </aside>
       </div>
 
       <Separator />
+
+      {/* Only show Leave button if user is in the project */}
+      {/* {isUserInProject && ( */}
+        <div className="flex justify-center">
+          <LeaveProjectModal
+            project={{ id: project.id, title: project.title }}
+            onSuccess={handleLeaveSuccess}
+          />
+        </div>
+      {/* )} */}
+
+      <ContactOrganizationModal
+        project={{ id: project.id, title: project.title }}
+        organization={{
+          organization_name: organizationDetails.organization_name,
+          contact_person_first_name: organizationDetails.contact_person_first_name,
+          contact_person_last_name: organizationDetails.contact_person_last_name,
+          contact_person_email: organizationDetails.contact_person_email,
+          contact_person_phone: organizationDetails.contact_person_phone,
+          website: organizationDetails.website,
+          description: organizationDetails.description,
+          organization_type: organizationDetails.organization_type,
+        }}
+      />
     </div>
   );
 }
