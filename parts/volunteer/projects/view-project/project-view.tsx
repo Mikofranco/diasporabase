@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import ViewTaskModal from "@/components/modals/view-task";
 
 const statusConfig: Record<
   ProjectStatus,
@@ -26,9 +27,10 @@ const statusConfig: Record<
 
 interface ProjectViewProps {
   project: Project;
+  isUserInProject?: boolean;
 }
 
-const ProjectView: React.FC<ProjectViewProps> = ({ project }) => {
+const ProjectView: React.FC<ProjectViewProps> = ({ project, isUserInProject }) => {
   const spotsLeft = Math.max(0, (project.volunteersNeeded || 0) - (project.volunteersRegistered || 0));
   const isFull = spotsLeft === 0;
 
@@ -151,7 +153,6 @@ const ProjectView: React.FC<ProjectViewProps> = ({ project }) => {
             </Card>
           </div>
 
-          {/* Required Skills */}
           {project.required_skills && project.required_skills.length > 0 && (
             <Card>
               <CardHeader>
@@ -171,7 +172,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({ project }) => {
         </div>
 
         {/* Sidebar - Action Card */}
-        <div className="space-y-6">
+          <div className="space-y-6">
           <Card className="sticky top-6 border-green-200 bg-green-50/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -187,20 +188,21 @@ const ProjectView: React.FC<ProjectViewProps> = ({ project }) => {
               <Separator />
 
               <div className="space-y-3">
-                <Button className="w-full" size="lg">
+                <Button className="w-full" size="lg" data-modal-trigger="view-tasks-modal">
                   View Tasks & Check-In
                 </Button>
-                <Button variant="outline" className="w-full" size="lg">
+                <Button variant="outline" className="w-full" size="lg" data-modal-trigger="contact-organization-modal">
                   Contact Organizer
                 </Button>
-                <Button variant="destructive" className="w-full" size="lg">
+                {/* <Button variant="destructive" className="w-full" size="lg" data-modal-trigger="leave-project-modal">
                   Leave Project
-                </Button>
+                </Button> */}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+      <ViewTaskModal/>
     </div>
   );
 };

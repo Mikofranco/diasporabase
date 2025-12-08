@@ -5,6 +5,7 @@ import './globals.css';
 import { Toaster } from 'sonner';
 import LoadingBar from '@/components/loading-bar';
 import GlobalLoading from '@/components/GlobalLoading';
+import { ModalSetup } from '@/components/ui/modal';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={poppins.className}>
         <GlobalLoading /> {/* ← INSTANT LOADER */}
+        <ModalSetup/>
         {children}
         <Toaster richColors />
       </body>
