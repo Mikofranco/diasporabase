@@ -1,7 +1,16 @@
 // components/project/VolunteersList.tsx
 import { format } from "date-fns";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, CalendarDays } from "lucide-react";
+import { Users, CalendarDays, Mail } from "lucide-react";
 
 interface Volunteer {
   id: string;
@@ -27,32 +36,54 @@ export default function VolunteersList({ volunteers }: VolunteersListProps) {
   }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {volunteers.map((v) => (
-        <Card key={v.id} className="p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-4">
-            <div className="bg-muted rounded-full w-16 h-16 flex items-center justify-center shrink-0">
-              {v.avatar_url ? (
-                <img
-                  src={v.avatar_url}
-                  alt={v.full_name}
-                  className="rounded-full object-cover w-full h-full"
-                />
-              ) : (
-                <Users className="h-8 w-8 text-muted-foreground" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <h4 className="font-semibold truncate">{v.full_name}</h4>
-              <p className="text-sm text-muted-foreground truncate">{v.email}</p>
-              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                <CalendarDays className="h-3 w-3" />
-                Joined {format(new Date(v.joined_at), "MMM d, yyyy")}
-              </p>
-            </div>
-          </div>
-        </Card>
-      ))}
-    </div>
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableCaption className="text-left pl-6 pb-4">
+            A list of all volunteers currently registered for this project.
+          </TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12"></TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead className="text-right">Joined Date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {volunteers.map((v) => (
+              <TableRow key={v.id}>
+                <TableCell>
+                  <div className="bg-muted rounded-full w-10 h-10 flex items-center justify-center shrink-0">
+                    {v.avatar_url ? (
+                      <img
+                        src={v.avatar_url}
+                        alt={v.full_name}
+                        className="rounded-full object-cover w-full h-full"
+                      />
+                    ) : (
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="font-medium">{v.full_name}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    <span className="truncate max-w-xs">{v.email}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right text-sm text-muted-foreground">
+                  <div className="flex items-center justify-end gap-1">
+                    <CalendarDays className="h-4 w-4" />
+                    {format(new Date(v.joined_at), "MMM d, yyyy")}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

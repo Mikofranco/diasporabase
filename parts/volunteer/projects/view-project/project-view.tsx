@@ -96,13 +96,12 @@ const ProjectView: React.FC<ProjectViewProps> = ({
 
   const status = statusConfig[project.status ?? "pending"];
 
-   const handleVolunteerRequest = async () => {
-    
-      
+   const handleVolunteerRequest = async () => {   
+    console.log("Submitting volunteer request for user:", userId, "to project:", project.organization_id);   
       try {
         const { error } = await supabase
           .from("volunteer_requests")
-          .insert({ project_id: project.id, volunteer_id: userId, status: "pending", organization_id: project?.organizationId });
+          .insert({ project_id: project.id, volunteer_id: userId, status: "pending", organization_id: project?.organization_id });
   
         if (error) throw new Error("Error submitting volunteer request: " + error.message);
   
