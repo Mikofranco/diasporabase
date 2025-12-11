@@ -1,11 +1,10 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, } from '@/components/ui/card'; // Adjust path to your Shadcn/UI components
-import { Calendar, Users } from 'lucide-react'; // Adjust if using a different icon library
-import { cn } from '@/lib/utils'; // Shadcn's utility for className merging
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, } from '@/components/ui/card'; 
+import { Calendar, Users } from 'lucide-react'; 
+import { cn } from '@/lib/utils'; 
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 
-// Define TypeScript interface for project props
 export interface Project {
   id: string;
   title: string;
@@ -22,7 +21,7 @@ export interface Project {
 interface ProjectCardProps {
   project: Project;
   handleProjectSelect: (project: Project) => void;
-  className?: string; // Optional for additional styling
+  className?: string; 
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project, handleProjectSelect, className }) => {

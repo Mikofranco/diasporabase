@@ -209,7 +209,7 @@ export default function VolunteerRegistrationForm() {
 
   return (
     <>
-      <Card className="w-full max-w-2xl mx-auto shadow-xl border-0">
+      <Card className="w-full max-w-2xl mx-auto shadow-xl border-0 my-20">
         <CardHeader className="text-center pb-8">
           <CardTitle className="text-3xl font-bold text-[#1E293B]">
             Join as a Volunteer
@@ -219,7 +219,7 @@ export default function VolunteerRegistrationForm() {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-2 sm:space-y-6">
           {/* Google Sign-Up */}
           {/* <Button
             onClick={handleGoogleSignUp}

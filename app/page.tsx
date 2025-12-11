@@ -51,79 +51,120 @@ export default function LandingPage() {
       <NavBar />
       <main className="flex-1">
         {/* Hero Section */}
+        {/* Hero Section – Glassmorphic Center Masterpiece */}
         <section
-          className="w-full py-12 md:py-24 lg:py-32 xl:py-48 h-[80vh] relative bg-cover bg-center bg-no-repeat"
+          className="relative w-full h-screen sm:h-[80vh] min-h-[600px] flex items-center justify-center overflow-hidden"
           style={{
-            background:
-              "linear-gradient(90deg, rgba(14, 165, 233, 0.7) 0%, rgba(59, 7, 100, 0.7) 100%), url('https://diasporabase.com/About.PNG') no-repeat center/cover",
+            backgroundImage: `
+      linear-gradient(to bottom, rgba(14, 165, 233, 0.4), rgba(59, 7, 100, 0.8)),
+      url('https://diasporabase.com/About.PNG')
+    `,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundAttachment: "fixed", 
           }}
-          aria-labelledby="hero-heading"
         >
-          <div className="container px-4 md:px-6 mx-auto relative z-10">
-            <motion.div
-              className="flex flex-col items-center space-y-6 text-center"
-              initial="hidden"
-              animate="visible" //@ts-ignore
-              variants={heroVariants}
+          {/* Optional subtle animated overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
+
+          {/* Glassmorphic Content Card – Perfectly Centered */}
+          <motion.div
+            initial={{ opacity: 0, y: 40, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="relative z-10 mx-6 max-w-5xl w-full"
+          >
+            <div
+              className="
+        backdrop-blur-xl bg-white/10 
+        border border-white/20 
+        rounded-3xl shadow-2xl 
+        p-10 md:p-16 lg:p-20 
+        text-center 
+        ring-1 ring-white/30
+        shadow-black/20
+      "
             >
-              <motion.div
-                className="space-y-4 bg-white/10 backdrop-blur-md rounded-xl p-8 shadow-lg border border-white/20 max-w-[1000px] mx-auto" //@ts-ignore
-                variants={heroVariants}
+              {/* Main Heading */}
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.8 }}
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight drop-shadow-2xl"
               >
-                <h1
-                  id="hero-heading"
-                  className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl text-white drop-shadow-lg"
-                >
-                  Welcome to DiasporaBase
-                </h1>
-                <p className="mx-auto max-w-[700px] text-gray-200 md:text-xl drop-shadow-md">
-                  Lead change in your home country - from anywhere <br />
-                  in the world.
-                </p>
-                <div className="flex flex-col gap-3 sm:flex-row justify-center">
-                  <motion.div
-                    custom={0}
-                    initial="hidden"
-                    animate="visible" //@ts-ignore
-                    variants={buttonVariants}
-                    whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+                Welcome to{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-purple-400">
+                  DiasporaBase
+                </span>
+              </motion.h1>
+
+              {/* Subheading */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.8 }}
+                className="mt-6 text-lg sm:text-xl md:text-2xl text-gray-100 font-light max-w-3xl mx-auto drop-shadow-lg leading-relaxed"
+              >
+                Lead change in your home country —{" "}
+                <br className="hidden sm:block" />
+                from anywhere in the world.
+              </motion.p>
+
+              {/* CTA Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8, duration: 0.7 }}
+                className="mt-12 flex flex-col sm:flex-row gap-5 justify-center items-center"
+              >
+                <Link href="/projects">
+                  <Button
+                    size="lg"
+                    className="
+              min-w-[220px] px-10 py-7 text-lg font-bold
+              bg-gradient-to-r from-cyan-500 to-blue-600
+              hover:from-cyan-400 hover:to-blue-500
+              shadow-xl hover:shadow-2xl
+              transform hover:scale-105 transition-all duration-300
+              border border-white/30
+            "
                   >
-                    <Link
-                      href="/projects"
-                      aria-label="Browse volunteer projects"
-                    >
-                      <Button
-                        size="lg"
-                        className="min-w-[200px] bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 text-white font-semibold shadow-lg"
-                      >
-                        Browse Projects
-                      </Button>
-                    </Link>
-                  </motion.div>
-                  <motion.div
-                    custom={1}
-                    initial="hidden"
-                    animate="visible" //@ts-ignore
-                    variants={buttonVariants}
-                    whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+                    Browse Projects
+                  </Button>
+                </Link>
+
+                <Link href="/register-volunteer">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="
+              min-w-[220px] px-10 py-7 text-lg font-bold
+              bg-white/20 backdrop-blur-md
+              text-white border-2 border-white/40
+              hover:bg-white/30 hover:border-white/60
+              shadow-xl hover:shadow-2xl
+              transform hover:scale-105 transition-all duration-300
+            "
                   >
-                    <Link
-                      href="/register-volunteer"
-                      aria-label="Join as a volunteer"
-                    >
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="min-w-[200px] bg-white/80 hover:bg-white text-gray-800 font-semibold shadow-lg border-2 border-white/50"
-                      >
-                        Join as Volunteer
-                      </Button>
-                    </Link>
-                  </motion.div>
-                </div>
+                    Join as Volunteer
+                  </Button>
+                </Link>
               </motion.div>
-            </motion.div>
-          </div>
+
+              {/* Optional Trust Indicator */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.2, duration: 1 }}
+                className="mt-10 text-sm text-gray-300 font-medium tracking-wider"
+              >
+                Trusted by volunteers in 47+ countries
+              </motion.p>
+            </div>
+          </motion.div>
+
+          {/* Bottom fade gradient */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
         </section>
 
         <StatsSection />

@@ -204,7 +204,7 @@ export default function AgencyRegistrationForm() {
 
   return (
     <>
-      <Card className="w-full max-w-2xl mx-auto shadow-xl border-0">
+      <Card className="w-full max-w-2xl mx-auto shadow-xl border-0 my-20">
         <CardHeader className="text-center pb-8">
           <CardTitle className="text-3xl font-bold text-[#1E293B]">
             Register Your Agency

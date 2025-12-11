@@ -82,10 +82,6 @@ export async function getOrganizationContact(
     .eq("role", "agency") 
     .single();
 
-  if (error || !data) {
-    console.error("Failed to fetch organization contact:", error?.message);
-    return null;
-  }
 
   return data as OrganizationContact;
 }

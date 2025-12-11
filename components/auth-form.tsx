@@ -44,6 +44,7 @@ export default function LoginForm() {
             // setMessage({ text: "Logged in successfully!", isError: false });
             console.log("Redirecting to:", `/dashboard/${profile.role}`);
             localStorage.setItem("diaspobase_role", profile.role);
+            localStorage.setItem("diaspobase_userId", session.user.id);
             router.replace(`/dashboard/${profile.role}`);
             
           });
