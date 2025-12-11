@@ -5,7 +5,7 @@ import { getUserId } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // For navigation
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Plus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CreateProjectForm from "../create-project";
 import { Badge } from "@/components/ui/badge";
@@ -99,7 +99,7 @@ const OrganizationsProjects: React.FC = () => {
         onClick={handleCreateProjectClick}
         variant={"outline"}
         // className="mb-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-      >
+      > <Plus className="mr-2 h-4 w-4" />
         Create Project
       </Button>
 

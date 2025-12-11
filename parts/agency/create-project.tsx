@@ -491,7 +491,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         return (
           <div className="space-y-6">
             <LocationSelects
-              label="Project Location *"
+              label="*"
               country={formData.country}
               state={formData.state}
               lga={formData.lga}

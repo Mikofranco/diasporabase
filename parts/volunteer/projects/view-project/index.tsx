@@ -13,7 +13,6 @@ import { AlertCircle } from "lucide-react";
 import MilestonesView from "./milestones-view";
 import DeliverablesView from "./deliverables-view";
 import VolunteersList from "./volunteer-list";
-import LeaveProjectModal from "@/components/modals/leave-project";
 import ContactOrganizationModal from "@/components/modals/contact-organizer";
 import { getOrganizationContact } from "@/services/agency/dashboard";
 
@@ -21,17 +20,18 @@ export default function ViewProjectDetails() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [ratings, setRatings] = useState<ProjectRating[]>([]);
-  const [hasRequested, setHasRequested] = useState(false);
-  const [hasRated, setHasRated] = useState(false);
-  const [hoveredRating, setHoveredRating] = useState<number | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [milestones, setMilestones] = useState<any[]>([]);
   const [deliverables, setDeliverables] = useState<any[]>([]);
   const [volunteers, setVolunteers] = useState<any[]>([]);
+  const [ratings, setRatings] = useState<ProjectRating[]>([]);
+  const [hasRequested, setHasRequested] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
+  const [isUserInProject, setIsUserInProject] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isUserInProject, setIsUserInProject] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
   const [organizationDetails, setOrganizationDetails] =
     useState<OrganizationContact>({
       contact_person_email: "",
@@ -44,25 +44,40 @@ export default function ViewProjectDetails() {
       organization_type: "",
     });
 
-  // Check if current user is in this project
-  const checkUserMembership = async () => {
+  // Check if current user is in this project and return user ID
+  const checkUserMembership = async (): Promise<{
+    isMember: boolean;
+    userId: string | null;
+  }> => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return false;
+
+    if (!user) {
+      return { isMember: false, userId: null };
+    }
+    setCurrentUserId(user.id);
 
     const { data, error } = await supabase
       .from("project_volunteers")
-      .select("*")
+      .select("id")
       .eq("project_id", id)
       .eq("volunteer_id", user.id)
       .maybeSingle();
 
-    return !!data;
+    if (error) {
+      console.error("Error checking membership:", error);
+    }
+
+    return { isMember: !!data, userId: user.id };
   };
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      setError("Invalid project ID");
+      setLoading(false);
+      return;
+    }
 
     async function loadData() {
       try {
@@ -76,16 +91,17 @@ export default function ViewProjectDetails() {
         if (projError || !proj) throw new Error("Project not found");
         setProject(proj as Project);
 
-        // 2. Check if user is in project
-        const isInProject = await checkUserMembership();
-        setIsUserInProject(isInProject);
+        // 2. Check membership and get user ID
+        const { isMember, userId } = await checkUserMembership();
+        setIsUserInProject(isMember);
 
+        // Fetch organization contact
         const organizationContactInfo = await getOrganizationContact(
           proj.organization_id
         );
         setOrganizationDetails(organizationContactInfo || {});
 
-        // 3. Fetch related data in parallel
+        // 3. Fetch shared data (milestones, deliverables, volunteers)
         const [milesRes, delsRes, volsRes] = await Promise.all([
           supabase.from("milestones").select("*").eq("project_id", id),
           supabase.from("deliverables").select("*").eq("project_id", id),
@@ -105,12 +121,58 @@ export default function ViewProjectDetails() {
             id: v.volunteer_id,
             full_name: v.profiles?.full_name || "Anonymous",
             email: v.profiles?.email || "",
-            profile_picture: v.profiles?.profile_picture,
+            profile_picture: v.profiles?.profile_picture || null,
             joined_at: v.created_at,
           }))
         );
+
+        // 4. Fetch ratings (public)
+        const { data: ratingsData, error: ratingsError } = await supabase
+          .from("project_ratings")
+          .select("user_name, rating, comment, created_at")
+          .eq("project_id", id)
+          .order("created_at", { ascending: false });
+
+        if (ratingsError) {
+          console.error("Error fetching ratings:", ratingsError);
+        } else {
+          setRatings(ratingsData || []);
+        }
+
+        // 5. User-specific checks (only if logged in)
+        if (userId) {
+          const [requestRes, ratingRes] = await Promise.all([
+            supabase
+              .from("volunteer_requests")
+              .select("id")
+              .eq("project_id", id)
+              .eq("volunteer_id", userId)
+              .eq("status", "pending"),
+
+            supabase
+              .from("project_ratings")
+              .select("id")
+              .eq("project_id", id)
+              .eq("user_id", userId),
+          ]);
+
+          if (requestRes.error) {
+            console.error("Error checking volunteer request:", requestRes.error);
+          } else {
+            setHasRequested(!!requestRes.data && requestRes.data.length > 0);
+          }
+
+          if (ratingRes.error) {
+            console.error("Error checking user rating:", ratingRes.error);
+          } else {
+            setHasRated(!!ratingRes.data && ratingRes.data.length > 0);
+          }
+        } else {
+          setHasRequested(false);
+          setHasRated(false);
+        }
       } catch (err: any) {
-        console.error(err);
+        console.error("Load error:", err);
         setError(err.message || "Failed to load project");
       } finally {
         setLoading(false);
@@ -121,8 +183,8 @@ export default function ViewProjectDetails() {
   }, [id]);
 
   const handleLeaveSuccess = () => {
-    router.push("/dashboard/volunteer/projects"); // Correct absolute path
-    router.refresh(); // Optional: refresh server data
+    router.push("/dashboard/volunteer/projects");
+    router.refresh();
   };
 
   if (loading) {
@@ -148,7 +210,13 @@ export default function ViewProjectDetails() {
   return (
     <div className="container mx-auto p-6 space-y-16 pb-20 bg-white rounded-lg shadow-sm">
       <section>
-        <ProjectView project={project} isUserInProject={isUserInProject} />
+        <ProjectView
+          project={project}
+          isUserInProject={isUserInProject}
+          hasRequested={hasRequested}
+          setHasRequested={setHasRequested}
+          userID={currentUserId}    
+        />
       </section>
 
       <Separator />
