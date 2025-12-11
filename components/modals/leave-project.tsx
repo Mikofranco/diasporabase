@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { LogOut, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const supabase = createClient();
 
@@ -101,7 +102,7 @@ export default function LeaveProjectModal({
   };
 
   const defaultTrigger = (
-    <Button variant="destructive" size="sm">
+    <Button variant="destructive" className="w-full">
       <LogOut className="mr-2 h-4 w-4" />
       Leave Project
     </Button>

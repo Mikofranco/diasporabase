@@ -125,6 +125,8 @@ export interface Project {
   requiredSkills?: string[];
   updatedAt?: string;
   volunteersNeeded?: number;
+  required_skills?: string;
+  start_date?:string;
 }
 
 export interface Skillset {

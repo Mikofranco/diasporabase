@@ -179,9 +179,11 @@ export default function VolunteerProjectsManagement() {
               Projects you've signed up for and are participating in
             </p>
           </div>
-          <Button className="action-btn" onClick={handleRouteToViewProject}>
-            View Ongoing Projects
-          </Button>
+          {projects.length != 0 && (
+            <Button className="action-btn" onClick={handleRouteToViewProject}>
+              View Ongoing Projects
+            </Button>
+          )}
         </div>
       </div>
 
@@ -200,7 +202,9 @@ export default function VolunteerProjectsManagement() {
             </p>
             <Button
               className="action-btn"
-              onClick={() => router.push("/dashboard/volunteer/find-opportunities")}
+              onClick={() =>
+                router.push("/dashboard/volunteer/find-opportunity")
+              }
             >
               Browse Projects
             </Button>

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 
 import ProjectView from "./project-view";
-import { OrganizationContact, Project } from "@/lib/types";
+import { OrganizationContact, Project, ProjectRating } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
@@ -21,6 +21,10 @@ export default function ViewProjectDetails() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
+  const [ratings, setRatings] = useState<ProjectRating[]>([]);
+  const [hasRequested, setHasRequested] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
+  const [hoveredRating, setHoveredRating] = useState<number | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [milestones, setMilestones] = useState<any[]>([]);
   const [deliverables, setDeliverables] = useState<any[]>([]);
@@ -28,16 +32,17 @@ export default function ViewProjectDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUserInProject, setIsUserInProject] = useState(false);
-  const [organizationDetails, setOrganizationDetails] = useState<OrganizationContact>({
-    contact_person_email: "",
-    contact_person_first_name: "",
-    contact_person_last_name: "",
-    contact_person_phone: "",
-    organization_name: "",
-    website: "",
-    description: "",
-    organization_type: "",
-  });
+  const [organizationDetails, setOrganizationDetails] =
+    useState<OrganizationContact>({
+      contact_person_email: "",
+      contact_person_first_name: "",
+      contact_person_last_name: "",
+      contact_person_phone: "",
+      organization_name: "",
+      website: "",
+      description: "",
+      organization_type: "",
+    });
 
   // Check if current user is in this project
   const checkUserMembership = async () => {
@@ -48,10 +53,10 @@ export default function ViewProjectDetails() {
 
     const { data, error } = await supabase
       .from("project_volunteers")
-      .select("1")
+      .select("*")
       .eq("project_id", id)
       .eq("volunteer_id", user.id)
-      .maybeSingle(); // Use maybeSingle() to avoid error if no row
+      .maybeSingle();
 
     return !!data;
   };
@@ -75,9 +80,10 @@ export default function ViewProjectDetails() {
         const isInProject = await checkUserMembership();
         setIsUserInProject(isInProject);
 
-        const organizationContactInfo = await getOrganizationContact(proj.organization_id);
+        const organizationContactInfo = await getOrganizationContact(
+          proj.organization_id
+        );
         setOrganizationDetails(organizationContactInfo || {});
-        console.log("Organization Contact Info:", organizationContactInfo);
 
         // 3. Fetch related data in parallel
         const [milesRes, delsRes, volsRes] = await Promise.all([
@@ -111,7 +117,6 @@ export default function ViewProjectDetails() {
       }
     }
 
-
     loadData();
   }, [id]);
 
@@ -141,9 +146,9 @@ export default function ViewProjectDetails() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-16 pb-20">
+    <div className="container mx-auto p-6 space-y-16 pb-20 bg-white rounded-lg shadow-sm">
       <section>
-        <ProjectView project={project} />
+        <ProjectView project={project} isUserInProject={isUserInProject} />
       </section>
 
       <Separator />
@@ -156,7 +161,7 @@ export default function ViewProjectDetails() {
           <VolunteersList volunteers={volunteers} />
         </section>
 
-        <aside className="space-y-8">
+        <aside className="space-y-8 bg-gray-50 p-6 rounded-lg">
           <section>
             <h2 className="text-xl font-bold mb-4">Milestones</h2>
             <MilestonesView milestones={milestones} />
@@ -173,22 +178,14 @@ export default function ViewProjectDetails() {
 
       <Separator />
 
-      {/* Only show Leave button if user is in the project */}
-      {/* {isUserInProject && ( */}
-        <div className="flex justify-center">
-          <LeaveProjectModal
-            project={{ id: project.id, title: project.title }}
-            onSuccess={handleLeaveSuccess}
-          />
-        </div>
-      {/* )} */}
-
       <ContactOrganizationModal
         project={{ id: project.id, title: project.title }}
         organization={{
           organization_name: organizationDetails.organization_name,
-          contact_person_first_name: organizationDetails.contact_person_first_name,
-          contact_person_last_name: organizationDetails.contact_person_last_name,
+          contact_person_first_name:
+            organizationDetails.contact_person_first_name,
+          contact_person_last_name:
+            organizationDetails.contact_person_last_name,
           contact_person_email: organizationDetails.contact_person_email,
           contact_person_phone: organizationDetails.contact_person_phone,
           website: organizationDetails.website,
