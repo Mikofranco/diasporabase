@@ -76,6 +76,7 @@ const ROUTES = {
     settings: "/dashboard/super_admin/settings",
     profile: "/dashboard/super_admin/profile",
     invite_admin: "/dashboard/super_admin/invite_admin",
+    users: "/dashboard/super_admin/users",
   },
   volunteer: {
     dashboard: "/dashboard/volunteer",
@@ -113,6 +114,7 @@ const MENU_ITEMS = {
     { path: ROUTES.super_admin.agencies, label: "Agencies", icon: Home },
     { path: ROUTES.super_admin.settings, label: "Settings", icon: Settings },
     { path: ROUTES.super_admin.invite_admin, label: "Invite Admin", icon: UserRoundPlus },
+    { path: ROUTES.super_admin.users, label: "User Management", icon: UserRoundPlus },
   ],
   volunteer: [
     { path: ROUTES.volunteer.dashboard, label: "Dashboard", icon: LayoutDashboard },

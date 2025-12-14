@@ -61,11 +61,17 @@ const statusConfig: Record<
 interface ProjectViewProps {
   project: Project;
   isUserInProject?: boolean;
+  hasRequested: boolean;
+  setHasRequested: (requested: boolean) => void;
+  userID: string | null;
 }
 
 const ProjectView: React.FC<ProjectViewProps> = ({
   project,
   isUserInProject,
+  hasRequested,
+  setHasRequested,
+  userID,
 }) => {
   const spotsLeft = Math.max(
     0,
@@ -73,8 +79,9 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   );
   const isFull = spotsLeft === 0;
   const router = useRouter();
-  const [hasRequested, setHasRequested] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    console.log("User ID in ProjectView:", userID);
+  }, []);
 
   const formatDate = (date?: string) =>
     date ? format(new Date(date), "EEEE, MMMM d, yyyy") : "Date not set";
@@ -96,13 +103,11 @@ const ProjectView: React.FC<ProjectViewProps> = ({
 
   const status = statusConfig[project.status ?? "pending"];
 
-   const handleVolunteerRequest = async () => {
-    
-      
+   const handleVolunteerRequest = async () => {   
       try {
         const { error } = await supabase
           .from("volunteer_requests")
-          .insert({ project_id: project.id, volunteer_id: userId, status: "pending", organization_id: project?.organizationId });
+          .insert({ project_id: project.id, volunteer_id: userID, status: "pending", organization_id: project?.organization_id });
   
         if (error) throw new Error("Error submitting volunteer request: " + error.message);
   
@@ -113,20 +118,6 @@ const ProjectView: React.FC<ProjectViewProps> = ({
       }
     };
 
-    useEffect(() => {
-      const fetchedId= localStorage.getItem("diaspobase_userId") ||  getUserId().then(data => data.data);
-      setUserId(fetchedId);
-      // const { data: requestData, error: requestError } = await supabase
-      //     .from("volunteer_requests")
-      //     .select("id")
-      //     .eq("project_id", project.id)
-      //     .eq("volunteer_id", userId)
-      //     .eq("status", "pending");
-
-      //   if (requestError) throw new Error("Error checking volunteer request: " + requestError.message);
-
-    }, []);
-  
 
   return (
     <div className="container mx-auto p-6">
