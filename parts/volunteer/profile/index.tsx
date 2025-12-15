@@ -803,7 +803,7 @@ export default function VolunteerProfile() {
           {/* Volunteer Preferences */}
           <div className="grid gap-2">
             <Label className="text-base font-medium text-gray-800">
-              Volunteer Location Preferences
+              Nationality
             </Label>
             <LocationSelector
               ref={locationSelectorRef}

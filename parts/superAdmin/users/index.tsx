@@ -151,7 +151,7 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 bg-white rounded-lg shadow">
       <h1 className="text-3xl font-bold">User Management</h1>
 
       {/* Filters & Search Bar */}

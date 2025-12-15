@@ -5,16 +5,43 @@ import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { User, Lock, Mail, Bell, LogOut, ArrowLeft, Trash2 } from "lucide-react";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import {
+  User,
+  Lock,
+  Mail,
+  Bell,
+  LogOut,
+  ArrowLeft,
+  Trash2,
+} from "lucide-react";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,18 +58,27 @@ interface Profile {
 
 // Zod schemas for forms
 const profileSchema = z.object({
-  full_name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name cannot exceed 100 characters"),
+  full_name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name cannot exceed 100 characters"),
   email: z.string().email("Invalid email address"),
 });
 
-const passwordSchema = z.object({
-  current_password: z.string().min(6, "Password must be at least 6 characters"),
-  new_password: z.string().min(6, "New password must be at least 6 characters"),
-  confirm_password: z.string().min(6, "Please confirm your new password"),
-}).refine((data) => data.new_password === data.confirm_password, {
-  message: "Passwords do not match",
-  path: ["confirm_password"],
-});
+const passwordSchema = z
+  .object({
+    current_password: z
+      .string()
+      .min(6, "Password must be at least 6 characters"),
+    new_password: z
+      .string()
+      .min(6, "New password must be at least 6 characters"),
+    confirm_password: z.string().min(6, "Please confirm your new password"),
+  })
+  .refine((data) => data.new_password === data.confirm_password, {
+    message: "Passwords do not match",
+    path: ["confirm_password"],
+  });
 
 const VolunteerSettings: React.FC = () => {
   const router = useRouter();
@@ -60,7 +96,11 @@ const VolunteerSettings: React.FC = () => {
   // Password form
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
-    defaultValues: { current_password: "", new_password: "", confirm_password: "" },
+    defaultValues: {
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    },
   });
 
   useEffect(() => {
@@ -79,7 +119,8 @@ const VolunteerSettings: React.FC = () => {
           .eq("id", userId)
           .single();
 
-        if (profileError) throw new Error("Error fetching profile: " + profileError.message);
+        if (profileError)
+          throw new Error("Error fetching profile: " + profileError.message);
         if (!profileData || profileData.role !== "volunteer") {
           throw new Error("Only volunteers can access this page.");
         }
@@ -125,7 +166,9 @@ const VolunteerSettings: React.FC = () => {
     try {
       // Note: Supabase does not provide a direct way to verify current_password client-side.
       // For production, implement server-side verification via a Supabase function or edge function.
-      const { error } = await supabase.auth.updateUser({ password: data.new_password });
+      const { error } = await supabase.auth.updateUser({
+        password: data.new_password,
+      });
 
       if (error) throw new Error("Error updating password: " + error.message);
 
@@ -148,9 +191,15 @@ const VolunteerSettings: React.FC = () => {
         .update({ notification_preferences: { email_notifications: checked } })
         .eq("id", profile.id);
 
-      if (error) throw new Error("Error updating notification preferences: " + error.message);
+      if (error)
+        throw new Error(
+          "Error updating notification preferences: " + error.message
+        );
 
-      setProfile({ ...profile, notification_preferences: { email_notifications: checked } });
+      setProfile({
+        ...profile,
+        notification_preferences: { email_notifications: checked },
+      });
       toast.success("Notification preferences updated!");
     } catch (err: any) {
       toast.error(err.message);
@@ -229,9 +278,11 @@ const VolunteerSettings: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 space-y-6 ">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">Settings</h1>
+        <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+          Settings
+        </h1>
         <Button
           variant="outline"
           className="border-gray-300 text-gray-700 hover:bg-gray-100"
@@ -241,229 +292,256 @@ const VolunteerSettings: React.FC = () => {
           Back to Dashboard
         </Button>
       </div>
-
-      <Card className="shadow-lg border-0 bg-white rounded-xl">
-        <CardHeader className="border-b border-gray-200">
-          <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
-            <User className="h-5 w-5 mr-2 text-gray-500" />
-            Profile Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <Form {...profileForm}>
-            <form onSubmit={profileForm.handleSubmit(handleProfileUpdate)} className="space-y-6">
-              <FormField
-                control={profileForm.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-600">Full Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Enter your full name"
-                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
-                        aria-describedby="full-name-description"
-                      />
-                    </FormControl>
-                    <p id="full-name-description" className="text-sm text-gray-500 mt-1">
-                      Your name as it will appear in your profile.
-                    </p>
-                    <FormMessage className="text-red-500 text-sm" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={profileForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-600">Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="email"
-                        placeholder="Enter your email"
-                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
-                        aria-describedby="email-description"
-                      />
-                    </FormControl>
-                    <p id="email-description" className="text-sm text-gray-500 mt-1">
-                      Your contact email for notifications and updates.
-                    </p>
-                    <FormMessage className="text-red-500 text-sm" />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="submit"
-                className="w-full action-btn text-lg py-6 rounded-lg transition-colors duration-200"
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="shadow-lg border-0 bg-white rounded-xl">
+          <CardHeader className="border-b border-gray-200">
+            <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
+              <User className="h-5 w-5 mr-2 text-gray-500" />
+              Profile Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <Form {...profileForm}>
+              <form
+                onSubmit={profileForm.handleSubmit(handleProfileUpdate)}
+                className="space-y-6"
               >
-                Save Profile
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                <FormField
+                  control={profileForm.control}
+                  name="full_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-600">
+                        Full Name
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Enter your full name"
+                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
+                          aria-describedby="full-name-description"
+                        />
+                      </FormControl>
+                      <p
+                        id="full-name-description"
+                        className="text-sm text-gray-500 mt-1"
+                      >
+                        Your name as it will appear in your profile.
+                      </p>
+                      <FormMessage className="text-red-500 text-sm" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={profileForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-600">
+                        Email
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="Enter your email"
+                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
+                          aria-describedby="email-description"
+                        />
+                      </FormControl>
+                      <p
+                        id="email-description"
+                        className="text-sm text-gray-500 mt-1"
+                      >
+                        Your contact email for notifications and updates.
+                      </p>
+                      <FormMessage className="text-red-500 text-sm" />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full action-btn text-lg py-6 rounded-lg transition-colors duration-200"
+                >
+                  Save Profile
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
 
-      <Card className="shadow-lg border-0 bg-white rounded-xl">
-        <CardHeader className="border-b border-gray-200">
-          <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
-            <Lock className="h-5 w-5 mr-2 text-gray-500" />
-            Change Password
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <Form {...passwordForm}>
-            <form onSubmit={passwordForm.handleSubmit(handlePasswordChange)} className="space-y-6">
-              <FormField
-                control={passwordForm.control}
-                name="current_password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-600">Current Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Enter current password"
-                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
-                      />
-                    </FormControl>
-                    <FormMessage className="text-red-500 text-sm" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={passwordForm.control}
-                name="new_password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-600">New Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Enter new password"
-                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
-                      />
-                    </FormControl>
-                    <FormMessage className="text-red-500 text-sm" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={passwordForm.control}
-                name="confirm_password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-600">Confirm New Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Confirm new password"
-                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
-                      />
-                    </FormControl>
-                    <FormMessage className="text-red-500 text-sm" />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="submit"
-                className="w-full action-btn text-lg py-6 rounded-lg transition-colors duration-200"
+        <Card className="shadow-lg border-0 bg-white rounded-xl">
+          <CardHeader className="border-b border-gray-200">
+            <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
+              <Lock className="h-5 w-5 mr-2 text-gray-500" />
+              Change Password
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <Form {...passwordForm}>
+              <form
+                onSubmit={passwordForm.handleSubmit(handlePasswordChange)}
+                className="space-y-6"
               >
-                Change Password
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                <FormField
+                  control={passwordForm.control}
+                  name="current_password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-600">
+                        Current Password
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="password"
+                          placeholder="Enter current password"
+                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-500 text-sm" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
+                  name="new_password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-600">
+                        New Password
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="password"
+                          placeholder="Enter new password"
+                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-500 text-sm" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
+                  name="confirm_password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-600">
+                        Confirm New Password
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="password"
+                          placeholder="Confirm new password"
+                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-500 text-sm" />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full action-btn text-lg py-6 rounded-lg transition-colors duration-200"
+                >
+                  Change Password
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
 
-      <Card className="shadow-lg border-0 bg-white rounded-xl">
-        <CardHeader className="border-b border-gray-200">
-          <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
-            <Bell className="h-5 w-5 mr-2 text-gray-500" />
-            Notification Preferences
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium text-gray-600">Receive Email Notifications</Label>
-            <Switch
-              checked={profile?.notification_preferences.email_notifications}
-              onCheckedChange={handleNotificationToggle}
-              className="data-[state=checked]:bg-[#0EA5E9]"
-              aria-label="Toggle email notifications"
-            />
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
-            Enable to receive email updates about volunteer requests and project updates.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-lg border-0 bg-white rounded-xl">
-        <CardHeader className="border-b border-gray-200">
-          <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
-            <Trash2 className="h-5 w-5 mr-2 text-gray-500" />
-            Account Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-6">
-          <div>
-            <Button
-              onClick={handleSignOut}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white text-lg py-6 rounded-lg transition-colors duration-200"
-            >
-              <LogOut className="h-5 w-5 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-          <div>
-            <Button
-              variant="destructive"
-              className="w-full text-lg py-6 rounded-lg"
-              onClick={() => setIsDeleteDialogOpen(true)}
-            >
-              <Trash2 className="h-5 w-5 mr-2" />
-              Delete Account
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900">
-              Confirm Account Deletion
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              Are you sure you want to delete your account? This action cannot be undone.
+        <Card className="shadow-lg border-0 bg-white rounded-xl">
+          <CardHeader className="border-b border-gray-200">
+            <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
+              <Bell className="h-5 w-5 mr-2 text-gray-500" />
+              Notification Preferences
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-gray-600">
+                Receive Email Notifications
+              </Label>
+              <Switch
+                checked={profile?.notification_preferences.email_notifications}
+                onCheckedChange={handleNotificationToggle}
+                className="data-[state=checked]:bg-[#0EA5E9]"
+                aria-label="Toggle email notifications"
+              />
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              Enable to receive email updates about volunteer requests and
+              project updates.
             </p>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleDeleteAccount}
-            >
-              Delete Account
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg border-0 bg-white rounded-xl">
+          <CardHeader className="border-b border-gray-200">
+            <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
+              <Trash2 className="h-5 w-5 mr-2 text-gray-500" />
+              Account Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            <div>
+              <Button
+                onClick={handleSignOut}
+                className="w-full bg-gray-600 hover:bg-gray-700 text-white text-lg py-6 rounded-lg transition-colors duration-200"
+              >
+                <LogOut className="h-5 w-5 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+            <div>
+              <Button
+                variant="destructive"
+                className="w-full text-lg py-6 rounded-lg"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-5 w-5 mr-2" />
+                Delete Account
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-gray-900">
+                Confirm Account Deletion
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Are you sure you want to delete your account? This action cannot
+                be undone.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                onClick={() => setIsDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700"
+                onClick={handleDeleteAccount}
+              >
+                Delete Account
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 };

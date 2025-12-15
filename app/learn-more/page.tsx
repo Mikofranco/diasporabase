@@ -31,8 +31,9 @@ const LearnMore = () => {
           <Button
             asChild
             className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6"
+            data-modal-trigger="select-signup-type-modal"
           >
-            <a href="/register">Get Started <ArrowRight className="ml-2 h-5 w-5" /></a>
+            Get Started <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
       </section>
@@ -125,7 +126,7 @@ const LearnMore = () => {
       <section className="py-12 bg-gray-100">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-8">Who Benefits from DiasporaBase?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
             <Card className="border-none shadow-lg">
               <CardHeader>
                 <CardTitle className="text-lg">Diaspora Professionals</CardTitle>
@@ -156,16 +157,6 @@ const LearnMore = () => {
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-none shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-lg">Administrators</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>
-                  Manage users, verify institutions, and access real-time analytics to oversee platform performance and project success.
-                </p>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </section>
@@ -179,9 +170,9 @@ const LearnMore = () => {
           </p>
           <div className="flex justify-center space-x-4">
             <Button asChild className="bg-green-500 hover:bg-green-600 text-white">
-              <a href="/register">Sign Up Now</a>
+              <a href="/register-volunteer">Sign Up as a Volunteer</a>
             </Button>
-            <Button asChild variant="outline" className="text-white border-white hover:bg-blue-700">
+            <Button asChild variant="outline" className="text-black border-white hover:bg-blue-700/20 hover:border-white hover:text-white">
               <a href="/contact">Contact Us</a>
             </Button>
           </div>
