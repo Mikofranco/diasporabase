@@ -8,6 +8,7 @@ import Footer from "@/parts/landingPage/footer";
 import StatsSection from "@/parts/landingPage/stats";
 import TestimonialsSection from "@/parts/landingPage/testimonials";
 import AboutUsSection from "@/parts/landingPage/about-us";
+import SelectSignUpType from "@/components/modals/select-signup-type";
 
 const heroVariants = {
   hidden: { opacity: 0, y: 50 },

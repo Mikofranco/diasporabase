@@ -31,9 +31,9 @@ const SmallCard = ({ image, count = 0, title = "Untitled" }: SmallCardProps) => 
   return (
     <motion.div
       whileHover={{ scale: 1.02, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
-      className="w-full h-fit"
+      className="w-[280px] h-[120px]"
     >
-      <Card className="p-4 shadow-sm rounded-lg bg-white border border-gray-200">
+      <Card className="p-4 shadow-sm rounded-2xl  border border-gray-200">
         <CardContent className="p-0">
           <div className="flex items-center gap-3 sm:gap-4 py-6" aria-label={title}>
             <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
@@ -41,8 +41,8 @@ const SmallCard = ({ image, count = 0, title = "Untitled" }: SmallCardProps) => 
                 <Image
                   src={image}
                   alt={title}
-                  width={30}
-                  height={30}
+                  width={50}
+                  height={50}
                   className="object-contain"
                   onError={(e) => (e.currentTarget.src = "/fallback-icon.png")}
                 />
@@ -55,7 +55,7 @@ const SmallCard = ({ image, count = 0, title = "Untitled" }: SmallCardProps) => 
             <div className="flex flex-col min-w-0">
               <p
                 ref={countRef}
-                className="text-lg sm:text-xl font-semibold text-gray-900"
+                className="text-lg sm:text-2xl font-bold text-gray-900"
               >
                 {count}
               </p>

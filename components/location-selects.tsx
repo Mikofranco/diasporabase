@@ -35,7 +35,7 @@ export function LocationSelects({
     <div className="grid gap-4">
       <div className="grid gap-2">
         <Label htmlFor={`${label}-country`}>
-          {label} Country {required && "*"}
+          {label} {label != "Nationality" && "Country"} {required && "*"}
         </Label>
         <Select value={country} onValueChange={onChangeCountry} required={required}>
           <SelectTrigger id={`${label}-country`}>
