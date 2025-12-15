@@ -321,7 +321,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     const result = schema.safeParse(formData);
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors);
-      toast.error("Please correct the errors in the current step.");
+      toast.error("Please add minuimum of 1 miletone and deliverable.");
       return false;
     }
     setErrors({});
@@ -369,6 +369,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
           lga: formData.lga || null,       // ← single string
           start_date: formData.start_date,
           end_date: formData.end_date,
+          location: `${formData.country}, ${formData.lga || formData.state} ` ,
           volunteers_registered: 0,
           status: "pending",
           category: formData.category,
@@ -491,7 +492,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         return (
           <div className="space-y-6">
             <LocationSelects
-              label="*"
+              label=""
               country={formData.country}
               state={formData.state}
               lga={formData.lga}

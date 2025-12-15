@@ -287,6 +287,7 @@ export async function getProjectsByUserSkills(): Promise<{
         data: null,
         error: profileError?.message || "No skills found for user",
       };
+      console.log("User skills:", profile.skills);
     }
 
 
