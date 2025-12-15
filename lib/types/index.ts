@@ -125,7 +125,7 @@ export interface Project {
   requiredSkills?: string[];
   updatedAt?: string;
   volunteersNeeded?: number;
-  required_skills?: string;
+  required_skills?: string[];
   start_date?:string;
   organization_id?: string;
 

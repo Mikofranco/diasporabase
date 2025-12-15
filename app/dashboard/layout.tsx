@@ -36,7 +36,7 @@ export default function DashboardLayout({
 }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [unreadNotifications, setUnredNotifications] = useState<number>(0);
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isActive, setIsActive] = useState<boolean | null>(null);
 
@@ -45,7 +45,7 @@ export default function DashboardLayout({
   useEffect(() => {
    
     const fetchedUnreadNotifications = getUnreadNotificationCount().then(
-      ({ data }) => setUnredNotifications(data || 0)
+      ({ data }) => setUnreadNotifications(data || 0)
     );
     const fetchProfile = async () => {
       setLoading(true);
@@ -79,6 +79,109 @@ export default function DashboardLayout({
 
     fetchProfile();
   }, []);
+
+//   useEffect(() => {
+//   const fetchData = async () => {
+//     setLoading(true);
+//     try {
+//       const { data: userId, error: userIdError } = await getUserId();
+//       if (userIdError || !userId) {
+//         throw new Error(userIdError?.message || "Please log in");
+//       }
+
+//         const fetchedUnreadNotifications = getUnreadNotificationCount().then(
+//       ({ data }) => setUnreadNotifications(data || 0)
+//     );
+//     const fetchProfile = async () => {
+//       setLoading(true);
+//       try {
+//         const { data: userId, error: userIdError } = await getUserId();
+//         if (userIdError) throw new Error(userIdError);
+//         if (!userId) throw new Error("Please log in to view the dashboard.");
+
+//         const { data: profileData, error: profileError } = await supabase
+//           .from("profiles")
+//           .select("full_name, profile_picture, role")
+//           .eq("id", userId)
+//           .single();
+
+//         if (profileError)
+//           throw new Error("Error fetching profile: " + profileError.message);
+//         if (!profileData) throw new Error("Profile not found.");
+
+//         setProfile({
+//           full_name: profileData.full_name || "User",
+//           profile_picture: profileData.profile_picture || null,
+//         });
+//         setUserRole(profileData.role);
+//         localStorage.setItem("disporabase_fullName", profileData.full_name);
+//       } catch (err: any) {
+//         toast.error(err.message);
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//       // Initial unread count
+//       const { data: initialCount } = await getUnreadNotificationCount();
+//       setUnreadNotifications(initialCount || 0);
+
+//       // Realtime subscription
+//       const channel = supabase
+//         .channel('notifications-changes')
+//         .on(
+//           'postgres_changes',
+//           {
+//             event: 'INSERT',              // New notification inserted
+//             schema: 'public',
+//             table: 'notifications',
+//             filter: `recipient_id=eq.${userId}`,  // Only user's own notifications
+//           },
+//           (payload) => {
+//             // If the new notification is unread, increment the badge
+//             if (payload.new.is_read === false) {
+//               setUnredNotifications((prev) => prev + 1);
+//             }
+//           }
+//         )
+//         .on(
+//           'postgres_changes',
+//           {
+//             event: 'UPDATE',              // Optional: if someone marks as read elsewhere
+//             schema: 'public',
+//             table: 'notifications',
+//             filter: `recipient_id=eq.${userId}`,
+//           },
+//           (payload) => {
+//             const oldRead = payload.old.is_read;
+//             const newRead = payload.new.is_read;
+
+//             if (oldRead === false && newRead === true) {
+//               setUnreadNotifications((prev) => Math.max(0, prev - 1));
+//             } else if (oldRead === true && newRead === false) {
+//               setUnreadNotifications((prev) => prev + 1);
+//             }
+//           }
+//         )
+//         .subscribe();
+
+//       // Cleanup on unmount
+//       return () => {
+//         supabase.removeChannel(channel);
+//       };
+//     } catch (err: any) {
+//       toast.error(err.message || "Failed to load data");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const cleanup = fetchData();
+
+//   return () => {
+//     if (cleanup) cleanup.then((channel) => supabase.removeChannel(channel));
+//   };
+// }, []);
 
   const handleRouteToNotifications = () => {
     router.push(`/dashboard/${userRole}/notifications`);

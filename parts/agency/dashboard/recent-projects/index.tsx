@@ -10,6 +10,8 @@ import { AlertCircle, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EditProjectDialogue from "@/components/dialogues/edit-project";
 import ViewProjectDialogue from "@/components/dialogues/view-project";
+import { ro } from "date-fns/locale";
+import { useRouter } from "next/navigation";
 
 
 const RecentProjects = ({ userId }: { userId: string }) => {
@@ -19,6 +21,7 @@ const RecentProjects = ({ userId }: { userId: string }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined);
+  const router = useRouter();
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -67,6 +70,10 @@ const RecentProjects = ({ userId }: { userId: string }) => {
     setSelectedProject(project);
     setIsViewModalOpen(true);
   };
+  const redirectToCreateProject =()=>{
+     toast.info("Redirecting to create a new project...");
+    router.replace("/dashboard/agency/projects")
+  }
 
   return (
     <section className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
@@ -135,9 +142,7 @@ const RecentProjects = ({ userId }: { userId: string }) => {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => {
-                  toast.info("Redirecting to create a new project...");
-                }}
+                onClick={redirectToCreateProject}
                 aria-label="Create a new project"
               >
                 Create New Project

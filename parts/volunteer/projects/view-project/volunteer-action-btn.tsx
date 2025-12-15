@@ -16,7 +16,7 @@ export const VolunteerActionButton: React.FC<VolunteerActionButtonProps> = ({
     <Button
       onClick={onClick}
       disabled={hasRequested || isFull}
-      className="w-full text-lg py-6"
+      className="w-full text-lg py-6 action-btn"
     >
       {hasRequested
         ? "Request Submitted"

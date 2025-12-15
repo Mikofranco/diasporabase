@@ -15,6 +15,7 @@ import DeliverablesView from "./deliverables-view";
 import VolunteersList from "./volunteer-list";
 import ContactOrganizationModal from "@/components/modals/contact-organizer";
 import { getOrganizationContact } from "@/services/agency/dashboard";
+import { ReviewsList } from "./review-list";
 
 export default function ViewProjectDetails() {
   const { id } = useParams<{ id: string }>();
@@ -60,7 +61,7 @@ export default function ViewProjectDetails() {
 
     const { data, error } = await supabase
       .from("project_volunteers")
-      .select("id")
+      .select("volunteer_id")
       .eq("project_id", id)
       .eq("volunteer_id", user.id)
       .maybeSingle();
@@ -215,7 +216,9 @@ export default function ViewProjectDetails() {
           isUserInProject={isUserInProject}
           hasRequested={hasRequested}
           setHasRequested={setHasRequested}
-          userID={currentUserId}    
+          userID={currentUserId} //@ts-ignore
+          contactEmail={organizationDetails.contact_person_email}
+          hasRated={hasRated}
         />
       </section>
 
@@ -245,6 +248,7 @@ export default function ViewProjectDetails() {
       </div>
 
       <Separator />
+      {/* <ReviewsList reviews={}/> */}
 
       <ContactOrganizationModal
         project={{ id: project.id, title: project.title }}
