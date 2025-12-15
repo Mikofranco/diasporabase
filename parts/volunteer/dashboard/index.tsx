@@ -121,7 +121,7 @@ const VolunteerDashBoard = () => {
   const smallCardItems: SmallCardProps[] = [
     { title: "Hours Volunteered", count: 120, image: "/svg/time.svg" },
     { title: "Projects Attached", count: attachedProjectsCount, image: "/svg/completed.svg" },
-    { title: "Upcoming Events", count: 2, image: "/svg/star.svg" },
+    { title: "Average Rating", count: 2, image: "/svg/star.svg" },
     { title: "Completed Projects", count: completedProjectsCount, image: "/svg/completed-project.svg" },
   ];
 
@@ -166,7 +166,7 @@ const VolunteerDashBoard = () => {
       )}
 
       {/* ---------- DASHBOARD (blurred while modal is open) ---------- */}
-      <div className={`container mx-auto p-2 ${onboardingRequired ? "pointer-events-none blur-sm" : ""}`}>
+      <div className={`container mx-auto p-2 ${onboardingRequired ? "pointer-events-none blur-sm" : ""} `}>
         <div className="mb-6 text-center sm:mb-8">
           <h1 className="mb-2 text-xl font-bold sm:text-2xl">
             Welcome Back{" "}
@@ -179,8 +179,8 @@ const VolunteerDashBoard = () => {
           </p>
         </div>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-8">
+          <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
             {smallCardItems.map((item, i) => (
               <SmallCard key={i} image={item.image} title={item.title} count={item.count} />
             ))}

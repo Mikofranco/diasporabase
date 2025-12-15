@@ -362,6 +362,7 @@ const VolunteerSettings: React.FC = () => {
                 <Button
                   type="submit"
                   className="w-full action-btn text-lg py-6 rounded-lg transition-colors duration-200"
+                  disabled={profileForm.formState.isSubmitting}
                 >
                   Save Profile
                 </Button>
@@ -497,7 +498,7 @@ const VolunteerSettings: React.FC = () => {
                 Sign Out
               </Button>
             </div>
-            <div>
+            {/* <div>
               <Button
                 variant="destructive"
                 className="w-full text-lg py-6 rounded-lg"
@@ -506,7 +507,7 @@ const VolunteerSettings: React.FC = () => {
                 <Trash2 className="h-5 w-5 mr-2" />
                 Delete Account
               </Button>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
 

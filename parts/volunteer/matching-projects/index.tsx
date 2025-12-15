@@ -1,3 +1,5 @@
+"use client";
+import BackButton from "@/components/back-button";
 import ProjectCard from "@/components/project-card";
 import { Button } from "@/components/ui/button";
 import { Project } from "@/lib/types";
@@ -6,7 +8,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 
-const MatchingProjects = () => {
+const MatchingProjectsFull = () => {
   const {
     skillMatchedProjectError,
     skillMatchedProjectIsLoading,
@@ -17,10 +19,6 @@ const MatchingProjects = () => {
   const handleProjectSelect = (projectId: string) => {
     router.push(`/dashboard/volunteer/projects/${projectId}`);
   };
-  
-  const handleViewAll = () => {
-    router.push(`/dashboard/volunteer/matching-projects`);
-  };
 
   // useEffect(() => {
   //   if (skillMatchedProjectError) {
@@ -30,16 +28,14 @@ const MatchingProjects = () => {
 
   return (
     <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4 bg-white">
-      <div className=" items-center justify-between flex mb-4">
-        <h2 className="text-gray-600 font-bold mb-6">Matching Projects</h2>
-        <Button variant={"link"} className="text-[#0ea5e9]" onClick={handleViewAll}>
-          View all <ArrowRight className="h-3 w-3" />
-        </Button>
-      </div>
+     <div className=" items-center justify-between flex mb-4">
+       <h2 className="text-gray-600 font-bold mb-6 text-2xl">Matching Projects</h2>
+       <BackButton/>
+     </div>
 
       {skillMatchedProjectIsLoading && (
         <div
-          className="flex justify-center items-center py-4"
+          className="flex justify-center items-center py-4 h-[80vh]"
           aria-live="polite"
         >
           <div
@@ -65,8 +61,8 @@ const MatchingProjects = () => {
           </div>
         )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {skillMatchedProjectdata?.slice(0, 3).map((project: Project) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+        {skillMatchedProjectdata?.map((project: Project) => (
           <ProjectCard
             key={project.id}
             handleProjectSelect={() => handleProjectSelect(project.id)} //@ts-ignore
@@ -79,4 +75,4 @@ const MatchingProjects = () => {
   );
 };
 
-export default MatchingProjects;
+export default MatchingProjectsFull;
