@@ -17,7 +17,7 @@ const MatchingProjects = () => {
   const handleProjectSelect = (projectId: string) => {
     router.push(`/dashboard/volunteer/projects/${projectId}`);
   };
-  
+
   const handleViewAll = () => {
     router.push(`/dashboard/volunteer/matching-projects`);
   };
@@ -32,9 +32,15 @@ const MatchingProjects = () => {
     <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4 bg-white">
       <div className=" items-center justify-between flex mb-4">
         <h2 className="text-gray-600 font-bold mb-6">Matching Projects</h2>
-        <Button variant={"link"} className="text-[#0ea5e9]" onClick={handleViewAll}>
-          View all <ArrowRight className="h-3 w-3" />
-        </Button>
+        {skillMatchedProjectdata?.length > 0 && (
+          <Button
+            variant={"link"}
+            className="text-[#0ea5e9]"
+            onClick={handleViewAll}
+          >
+            View all <ArrowRight className="h-3 w-3" />
+          </Button>
+        )}
       </div>
 
       {skillMatchedProjectIsLoading && (
@@ -52,7 +58,10 @@ const MatchingProjects = () => {
       )}
 
       {skillMatchedProjectError && (
-        <div className="text-gray-500 text-center py-4" aria-live="polite">
+        <div
+          className="text-gray-500 text-center py-4 h-[250px]"
+          aria-live="polite"
+        >
           No matching projects found
         </div>
       )}
@@ -60,7 +69,10 @@ const MatchingProjects = () => {
       {!skillMatchedProjectIsLoading &&
         !skillMatchedProjectError &&
         (!skillMatchedProjectdata || skillMatchedProjectdata.length === 0) && (
-          <div className="text-gray-500 text-center py-4" aria-live="polite">
+          <div
+            className="text-gray-500 text-center py-4 h-[250px]"
+            aria-live="polite"
+          >
             No matching projects found
           </div>
         )}

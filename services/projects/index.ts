@@ -289,7 +289,6 @@ export async function getProjectsByUserSkills(): Promise<{
       };
     }
 
-    console.log("User skills:", profile.skills);
 
     // Fetch projects where required_skills overlap with user skills
     const { data: projects, error } = await supabase

@@ -31,6 +31,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { getUserId } from "@/lib/utils";
+import { sendEmail } from "@/lib/email";
+import { useSendMail } from "@/services/mail";
+import { RatingForm } from "./rating-form";
 
 const statusConfig: Record<
   ProjectStatus,
@@ -64,6 +67,10 @@ interface ProjectViewProps {
   hasRequested: boolean;
   setHasRequested: (requested: boolean) => void;
   userID: string | null;
+  contactEmail?: string;
+  hasRated?: boolean;
+  setHasRated?: (rated: boolean) => void;
+  onLeaveSuccess?: () => void;
 }
 
 const ProjectView: React.FC<ProjectViewProps> = ({
@@ -72,6 +79,10 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   hasRequested,
   setHasRequested,
   userID,
+  contactEmail,
+  hasRated,
+  setHasRated,
+  onLeaveSuccess,
 }) => {
   const spotsLeft = Math.max(
     0,
@@ -80,7 +91,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   const isFull = spotsLeft === 0;
   const router = useRouter();
   useEffect(() => {
-    console.log("User ID in ProjectView:", userID);
+    console.log("Is user in project", isUserInProject);
   }, []);
 
   const formatDate = (date?: string) =>
@@ -110,6 +121,18 @@ const ProjectView: React.FC<ProjectViewProps> = ({
           .insert({ project_id: project.id, volunteer_id: userID, status: "pending", organization_id: project?.organization_id });
   
         if (error) throw new Error("Error submitting volunteer request: " + error.message);
+        console.log("project", project);
+        await useSendMail({
+          to: contactEmail || "",
+          subject: "New Volunteer Request",
+          html: `<p>A new volunteer has requested to join your project: <strong>${project.title}</strong>.</p><p>Please review the request in your dashboard.</p>`,
+          onError(error) {
+            console.error("Error sending email:", error);
+          },
+          onSuccess() {
+            console.log("Volunteer request email sent successfully.");
+          },
+        });
   
         setHasRequested(true);
         toast.success("Volunteer request submitted successfully!");
@@ -213,7 +236,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {project.required_skills.map((skill) => (
+                  {project.required_skills.map((skill:any) => (
                     <Badge key={skill} variant="outline" className="py-1">
                       {skill}
                     </Badge>
@@ -226,17 +249,27 @@ const ProjectView: React.FC<ProjectViewProps> = ({
 
         {/* Sidebar - Action Card */}
         <div className="space-y-6">
-          <Card className="sticky top-6 border-green-200 bg-green-50/50">
+          <Card className={`sticky top-6 ${isUserInProject ? "border-green-200 bg-green-50/50" : "border-blue-200 bg-blue-50/50"} `}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+             {isUserInProject ? (
+              <CardTitle className="text-2xl flex items-center gap-2">
                 <CheckCircle2 className="h-6 w-6 text-green-600" />
-                You're In!
+                You're Registered!
               </CardTitle>
+             ) : (
+              <CardTitle className="text-2xl">Join This Project</CardTitle>
+             )}
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                You are successfully registered for this project.
-              </p>
+             {isUserInProject ? (
+              <div className="text-green-500">
+                You are currently registered as a volunteer for this project.
+              </div>
+             ) : (
+              <div className="text-gray-500">
+                Interested in contributing? Join this project as a volunteer!
+              </div>
+             )}
 
               <Separator />
 
@@ -260,7 +293,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                 ) : (
                   <VolunteerActionButton
                     hasRequested={hasRequested}
-                    isFull={
+                    isFull={//@ts-ignore
                       project.volunteersRegistered >= project.volunteersNeeded
                     }
                     onClick={handleVolunteerRequest}
@@ -269,6 +302,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
               </div>
             </CardContent>
           </Card>
+          {/* <RatingForm form={} hasRated={hasRated} onSubmit={} /> */}
         </div>
       </div>
       <ViewTaskModal />

@@ -350,7 +350,7 @@ const ProjectDetails: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
               <div className="flex items-center gap-2"><MapPin className="h-5 w-5" /><span>{project.location}</span></div>
               <div className="flex items-center gap-2"><Calendar className="h-5 w-5" /><span>{new Date(project.start_date).toLocaleDateString()} - {new Date(project.end_date).toLocaleDateString()}</span></div>
-              <div className="flex items-center gap-2"><Users className="h-5 w-5" /><span>{project.volunteers_registered} / {project.volunteers_needed} volunteers</span></div>
+              <div className="flex items-center gap-2"><Users className="h-5 w-5" /><span>{project.volunteers_registered}  volunteers</span></div>
             </div>
 
             {/* MILESTONES */}
@@ -624,7 +624,7 @@ const ProjectDetails: React.FC = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsProjectEditModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleProjectEditSubmit}>Save Changes</Button>
+              <Button onClick={handleProjectEditSubmit} className="action-btn">Save Changes</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
