@@ -119,9 +119,9 @@ const VolunteerDashBoard = () => {
 
   /* --------------------------------------------------------------- */
   const smallCardItems: SmallCardProps[] = [
-    { title: "Hours Volunteered", count: 120, image: "/svg/time.svg" },
+    // { title: "Hours Volunteered", count: 120, image: "/svg/time.svg" },
     { title: "Projects Attached", count: attachedProjectsCount, image: "/svg/completed.svg" },
-    { title: "Average Rating", count: 2, image: "/svg/star.svg" },
+    // { title: "Average Rating", count: 2, image: "/svg/star.svg" },
     { title: "Completed Projects", count: completedProjectsCount, image: "/svg/completed-project.svg" },
   ];
 

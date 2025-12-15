@@ -35,6 +35,7 @@ import { cn, getSkillsets, getUserLocation } from "@/lib/utils";
 import { toast } from "sonner";
 import LocationSelector from "@/components/location-selector";
 import BackButton from "@/components/back-button";
+import { expertiseData } from "@/data/expertise";
 
 interface ProfileData {
   full_name: string | null;
@@ -88,7 +89,7 @@ export default function VolunteerProfile() {
   const [userPhone, setUserPhone] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [expertiseData, setExpertiseData] = useState<any[]>([]);
+  // const [expertiseData, setExpertiseData] = useState<any[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<SelectedData>({
     selectedCountries: [],
     selectedStates: [],
@@ -104,13 +105,13 @@ export default function VolunteerProfile() {
   }, []);
 
   // Fetch skillsets
-  useEffect(() => {
-    const fetchSkillsets = async () => {
-      const skillsets = await getSkillsets();
-      setExpertiseData(skillsets);
-    };
-    fetchSkillsets();
-  }, []);
+  // useEffect(() => {
+  //   const fetchSkillsets = async () => {
+  //     const skillsets = await getSkillsets();
+  //     setExpertiseData(skillsets);
+  //   };
+  //   fetchSkillsets();
+  // }, []);
 
   // Fetch profile and location
   useEffect(() => {

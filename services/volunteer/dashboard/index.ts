@@ -211,13 +211,14 @@ export const useFetchSkillMatchedProjects = () => {
         const { data: skillMatchedProjectdata, error: skillMatchedProjectError } = await getProjectsByUserSkills();
         if (skillMatchedProjectError) {
           console.error("Error fetching skill-matched projects:", skillMatchedProjectError);
-          // toast.error(`Failed to load skill-matched projects: ${skillMatchedProjectError}`, {
-          //   duration: 4000,
-          //   position: "top-right",
-          // });
+          toast.error(`Failed to load skill-matched projects: ${skillMatchedProjectError}`, {
+            duration: 4000,
+            position: "top-right",
+          });
           setSkillMatchedProjectError(skillMatchedProjectError);
           setSkillMatchedProjectdata(null);
         } else {
+          console.log("Skill-matched projects data:", skillMatchedProjectdata);
           setSkillMatchedProjectdata(skillMatchedProjectdata);
           setSkillMatchedProjectError(null);
         }

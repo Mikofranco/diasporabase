@@ -3,7 +3,7 @@ import Modal from "../ui/modal";
 import { Button } from "../ui/button";
 
 const SelectSignUpType = () => {
-  const [open, setOpen] = React.useState(true);
+  const [open, setOpen] = React.useState(false);
   return (
     <Modal
       id="select-signup-type-modal"

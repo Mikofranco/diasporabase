@@ -94,7 +94,7 @@ export default function PublicProjectView() {
 
   const handleSubmitRating = async () => {
     if (!selectedProject || !userName.trim() || newRating === 0) {
-      alert("Please fill in all fields and select a rating");
+      toast.error("Please fill in all fields and select a rating");
       return;
     }
 
