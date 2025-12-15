@@ -8,7 +8,7 @@ const Footer = () => {
     Platform: [
       { label: "Find Opportunities", href: "/opportunities" },
       { label: "Post Projects", href: "/post-projects" },
-      { label: "Join Community", href: "/community" },
+      // { label: "Join Community", href: "/community" },
       { label: "Success Stories", href: "/success-stories" },
     ],
     Support: [
@@ -86,7 +86,7 @@ const Footer = () => {
             <p className="text-gray-200 text-base leading-relaxed max-w-xs">
               Connecting volunteers with meaningful opportunities worldwide.
             </p>
-            <div className="flex space-x-4">
+            {/* <div className="flex space-x-4">
               {socialIcons.map(({ Icon, href, label }, index) => (
                 <motion.div
                   key={index}
@@ -98,7 +98,7 @@ const Footer = () => {
                   </Link>
                 </motion.div>
               ))}
-            </div>
+            </div> */}
           </motion.div>
 
           {Object.entries(footerLinks).map(

@@ -309,7 +309,6 @@ export default function LandingPage() {
         </motion.section>
       </main>
       <Footer />
-      {/* <SelectSignUpType/> */}
     </div>
   );
 }
