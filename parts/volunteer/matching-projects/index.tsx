@@ -29,7 +29,7 @@ const MatchingProjectsFull = () => {
   return (
     <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4 bg-white">
      <div className=" items-center justify-between flex mb-4">
-       <h2 className="text-gray-600 font-bold mb-6 text-2xl">Matching Projects</h2>
+       <h2 className="text-gray-600 font-bold mb-6 text-xl md:text-2xl">Matching Projects</h2>
        <BackButton/>
      </div>
 
