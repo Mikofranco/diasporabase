@@ -50,7 +50,6 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
       if (error) {
         throw new Error("Error fetching requests: " + error.message);
       }
-      console.log("Raw request data:", volunteerRequestData);
 
       const formattedRequests: VolunteerRequest[] = volunteerRequestData.map((request: any) => ({
         id: request.id,

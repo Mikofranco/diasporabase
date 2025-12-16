@@ -13,100 +13,138 @@ import AgencyRequestFromVolunteer from "./requests";
 
 const AgencyDashboard = () => {
   const [isActive, setIsActive] = useState<boolean | null>(null);
-  const [ongoingProjects, setOngoingProjects] = useState<Project[] | null>(null);
-  const [completedProjects, setCompletedProjects] = useState<Project[] | null>(null);
-  const [pendingProjects, setPendingProjects] = useState<Project[] | null>(null);
+  const [ongoingProjects, setOngoingProjects] = useState<Project[]>([]);
+  const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
+  const [pendingProjects, setPendingProjects] = useState<Project[]>([]);
   const [projectError, setProjectError] = useState<string | null>(null);
-  const [projectIsLoading, setProjectIsLoading] = useState<boolean>(false);
+  const [projectIsLoading, setProjectIsLoading] = useState<boolean>(true); // Start as true
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
-
-  // Fetch user status and determine if active
-  async function fetchUserStatus() {
-    try {
-      const { data: userData, error: userError } = await getUserId();
-      if (userError || !userData) {
-        throw new Error(userError?.message || "Failed to fetch user ID");
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("is_active")
-        .eq("id", userData)
-        .single();
-
-      if (profileError || profile === null) {
-        throw new Error(profileError?.message || "Failed to fetch profile");
-      }
-
-      setUserId(userData);
-      return profile.is_active;
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
-      return null;
-    }
-  }
+  const [totalVolunteers, setTotalVolunteers] = useState<number>(0);
 
   // Fetch projects by status
-  async function fetchProjects(userId: string, status: string): Promise<Project[]> {
+  const fetchProjects = async (
+    orgId: string,
+    status: string
+  ): Promise<Project[]> => {
     const { data, error } = await supabase
       .from("projects")
       .select("*")
-      .eq("organization_id", userId)
+      .eq("organization_id", orgId)
       .eq("status", status);
 
-    if (error) throw new Error(`Failed to fetch ${status} projects: ${error.message}`);
-    return data as Project[];
-  }
+    if (error) {
+      throw new Error(`Failed to fetch ${status} projects: ${error.message}`);
+    }
+    return (data as Project[]) ?? [];
+  };
 
-  // Fetch all project counts
-  async function fetchAllProjects() {
-    if (!userId) return;
+async function getTotalVolunteersForOrganization(organizationId: string): Promise<number> {
+  if (!organizationId) return 0;
+
+  try {
+    // First get all project IDs for this organization
+    const { data: projects, error: projError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("organization_id", organizationId)
+      // Optional: only active/completed projects
+      .in("status", ["active", "completed"]);
+
+    if (projError || !projects || projects.length === 0) {
+      return 0;
+    }
+
+    const projectIds = projects.map(p => p.id);
+    console.log("Project IDs for organization:", projectIds);
+
+    // Now call the Supabase function
+    const { data, error } = await supabase
+      .rpc("get_total_volunteers_for_projects", {
+        project_ids: projectIds
+      });
+
+    if (error) {
+      console.error("Error calling RPC:", error);
+      return 0;
+    }
+
+    return data ?? 0;
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    return 0;
+  }
+}
+  // Fetch all projects – now takes userId as parameter
+  const fetchAllProjects = async (orgId: string) => {
+    if (!orgId) return;
 
     setProjectIsLoading(true);
     setProjectError(null);
 
     try {
       const [ongoing, completed, pending] = await Promise.all([
-        fetchProjects(userId, "active"),
-        fetchProjects(userId, "completed"),
-        fetchProjects(userId, "pending"),
+        fetchProjects(orgId, "active"),
+        fetchProjects(orgId, "completed"),
+        fetchProjects(orgId, "pending"),
       ]);
 
       setOngoingProjects(ongoing);
       setCompletedProjects(completed);
       setPendingProjects(pending);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "Failed to load projects";
+      const msg =
+        error instanceof Error ? error.message : "Failed to load projects";
       setProjectError(msg);
       toast.error(msg);
     } finally {
       setProjectIsLoading(false);
     }
-  }
+  };
 
-  // Main effect: check activation → redirect or load data
+  // Main initialization effect
   useEffect(() => {
     let isMounted = true;
 
     const initialize = async () => {
-      const active = await fetchUserStatus();
+      try {
+        const { data: currentUserId, error: userError } = await getUserId();
+        if (userError || !currentUserId) {
+          throw new Error(userError?.message || "Failed to fetch user ID");
+        }
 
-      if (!isMounted) return;
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("is_active")
+          .eq("id", currentUserId)
+          .single();
 
-      if (active === null) {
-        // Error case – could redirect to login or show error
-        return;
+        if (profileError || profile === null) {
+          throw new Error(profileError?.message || "Failed to fetch profile");
+        }
+
+        if (!isMounted) return;
+
+        setUserId(currentUserId);
+        setIsActive(profile.is_active);
+
+        if (!profile.is_active) {
+          toast.error("Your agency is pending approval.");
+          router.replace("/approval-pending");
+          return;
+        }
+
+        // Now we have the real userId → fetch projects with it
+        await fetchAllProjects(currentUserId);
+      } catch (error) {
+        if (!isMounted) return;
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred"
+        );
+        setIsActive(false); // Or handle appropriately
       }
-
-      setIsActive(active);
-
-      if (!active) {
-        toast.error("Your agency is pending approval.");
-        router.replace("/approval-pending");
-        return;
-      }
-      await fetchAllProjects();
     };
 
     initialize();
@@ -116,71 +154,79 @@ const AgencyDashboard = () => {
     };
   }, [router]);
 
+  // Optional: Refetch when userId changes (extra safety)
+  useEffect(() => {
+    if (userId && isActive) {
+      fetchAllProjects(userId);
+      getTotalVolunteersForOrganization(userId).then(setTotalVolunteers);
+    }
+  }, [userId, isActive]);
+
   if (isActive === null) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600"></div>
       </div>
     );
   }
 
   if (!isActive) {
-    return null;
+    return null; // Redirect handled above
   }
 
   return (
-    <div className="p-4 rounded-lg">
-      <h1 className="text-2xl font-bold mb-6">Dashboard Overview</h1>
-      <p className="text-gray-500 mb-6">
+    <div className="p-4 md:p-6 rounded-lg">
+      <h1 className="text-3xl font-bold mb-4">Dashboard Overview</h1>
+      <p className="text-muted-foreground mb-8">
         Welcome back! Here's what's happening with your projects.
       </p>
 
       {projectIsLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 animate-pulse">
-              <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-              <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+            <div key={i} className="bg-muted/50 rounded-xl p-6 animate-pulse">
+              <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+              <div className="h-10 bg-muted rounded w-1/2"></div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             <SmallCard
-              count={ongoingProjects?.length ?? 0}
+              count={ongoingProjects.length}
               title="Ongoing Projects"
               image="/svg/active-project.svg"
             />
             <SmallCard
-              count={ongoingProjects?.length ?? 0}
+              count={totalVolunteers}
               title="Total Volunteers"
               image="/svg/total-volunteers.svg"
             />
             <SmallCard
-              count={pendingProjects?.length ?? 0}
+              count={pendingProjects.length}
               title="Pending Projects"
               image="/svg/pending-projects.svg"
             />
             <SmallCard
-              count={completedProjects?.length ?? 0}
+              count={completedProjects.length}
               title="Completed Projects"
               image="/svg/dashboard-completed-project.svg"
             />
           </div>
 
-          <RecentProjects userId={userId || ""} />
-          <AgencyRequestFromVolunteer />
-        </div>
+          <div className="space-y-10">
+            <RecentProjects userId={userId || ""} />
+            <AgencyRequestFromVolunteer />
+          </div>
+        </>
       )}
 
       {projectError && (
-        <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">
+        <div className="mt-8 p-6 bg-destructive/10 border border-destructive/50 rounded-lg text-destructive">
           {projectError}
         </div>
       )}
-
-      {/* <Notifications /> */}
     </div>
   );
 };

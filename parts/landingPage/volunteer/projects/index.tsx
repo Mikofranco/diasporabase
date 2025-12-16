@@ -111,8 +111,6 @@ const fetchProjects = async (userId: string) => {
     .eq("projects.status", "active")
     .order("created_at", { ascending: false });
 
-  console.log("Raw project_volunteers data:", data); 
-
   if (error) {
     console.error("Error fetching projects:", error);
     setProjects([]);
