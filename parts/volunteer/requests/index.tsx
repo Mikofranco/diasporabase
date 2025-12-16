@@ -345,7 +345,7 @@ const VolunteerRequests: React.FC = () => {
     >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="text-base md:text-lg font-semibold flex items-center gap-2">
             {request.request_type === "volunteer" ? <User className="h-4 w-4" /> : <Briefcase className="h-4 w-4" />}
             {request.project_title}
           </CardTitle>
@@ -511,8 +511,8 @@ const VolunteerRequests: React.FC = () => {
         <Card className="border-dashed border-2 border-muted">
           <CardContent className="text-center py-12">
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No requests yet</h3>
-            <p className="text-muted-foreground mb-4">Get started by applying to a project or waiting for invitations.</p>
+            <h3 className="text-base sm:text-xs font-semibold mb-2">No requests yet</h3>
+            <p className="text-muted-foreground text-base sm:text-xs mb-4">Get started by applying to a project or waiting for invitations.</p>
             <Button variant="outline">Browse Projects</Button>
           </CardContent>
         </Card>
@@ -522,7 +522,7 @@ const VolunteerRequests: React.FC = () => {
           onValueChange={(value) =>
             setActiveTab(value as "all" | "volunteer" | "agency")
           }
-          className="w-full"
+          className="w-full text-base sm:text-xs"
         >
           <TabsList className="grid w-full grid-cols-3 h-10 bg-white rounded-t-lg border-b">
             <TabsTrigger 

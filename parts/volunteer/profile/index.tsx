@@ -470,7 +470,7 @@ export default function VolunteerProfile() {
       .join(", ") || "Unknown";
 
   return (
-    <Card className="w-full max-w-5xl mx-auto border-gray-200 rounded-xl shadow-sm">
+    <Card className="w-full max-w-7xl mx-auto border-gray-200 rounded-xl shadow-sm">
       <style>
         {`@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap'); * { font-family: 'Roboto', sans-serif; }`}
       </style>
@@ -645,9 +645,9 @@ export default function VolunteerProfile() {
 
           {/* Skills */}
           <div className="grid gap-2">
-            <Label className="text-base font-medium text-gray-800">
+            {/* <Label className="text-base font-medium text-gray-800">
               Skills & Interests
-            </Label>
+            </Label> */}
             <CheckboxReactHookFormMultiple
               items={expertiseData}
               onChange={handleSkillsChange}

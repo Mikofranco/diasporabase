@@ -114,7 +114,7 @@ export interface Project {
   createdAt?: string;
   title?: string;
   description?: string;
-  organizationId?: string;
+  // organizationId?: string;
   organizationName?: string;
   location?: string;
   startDate?: string;
@@ -128,6 +128,7 @@ export interface Project {
   required_skills?: string[];
   start_date?:string;
   organization_id?: string;
+  organization_name?: string;
 
 }
 

@@ -170,9 +170,9 @@ export default function VolunteerProjectsManagement() {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-8">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center md:flex-row flex-col">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
               My Volunteer Projects
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -180,7 +180,7 @@ export default function VolunteerProjectsManagement() {
             </p>
           </div>
           {projects.length != 0 && (
-            <Button className="action-btn" onClick={handleRouteToViewProject}>
+            <Button className="action-btn text-base md:text-sm" onClick={handleRouteToViewProject}>
               View Ongoing Projects
             </Button>
           )}
