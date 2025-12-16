@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { Project } from "@/lib/types";
+import { title } from "process";
 
 const projectSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -72,6 +73,16 @@ export function EditProjectModal({ project, open, onOpenChange, onSuccess }: Edi
     if (!project?.id) return;
 
     setSaving(true);
+
+    const payload = { 
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      category: data.category,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      location: data.location,
+     };
     try {
       const { error } = await supabase
         .from("projects")

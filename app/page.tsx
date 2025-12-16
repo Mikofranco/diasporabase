@@ -91,10 +91,10 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.8 }}
-                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight drop-shadow-2xl"
+                className="text-2xl sm:text-5xl font-bold text-white tracking-tight drop-shadow-2xl"
               >
                 Welcome to{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-purple-400">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-sky-100">
                   DiasporaBase
                 </span>
               </motion.h1>
@@ -120,9 +120,9 @@ export default function LandingPage() {
               >
                 <Link href="/projects">
                   <Button
-                    size="lg"
+                    size="default"
                     className="
-              min-w-[220px] px-10 py-7 text-lg font-bold
+              min-w-[220px] px-3 py-5 text-lg font-bold
               bg-gradient-to-r from-cyan-500 to-blue-600
               hover:from-cyan-400 hover:to-blue-500
               shadow-xl hover:shadow-2xl
@@ -134,12 +134,13 @@ export default function LandingPage() {
                   </Button>
                 </Link>
 
-                <Link href="/register-volunteer">
+                {/* <Link href="/register-volunteer"> */}
                   <Button
                     size="lg"
                     variant="outline"
+                    data-modal-trigger="select-signup-type-modal"
                     className="
-              min-w-[220px] px-10 py-7 text-lg font-bold
+              min-w-[220px] px-3 py-5 text-lg font-bold
               bg-white/20 backdrop-blur-md
               text-white border-2 border-white/40
               hover:bg-white/30 hover:border-white/60
@@ -147,9 +148,9 @@ export default function LandingPage() {
               transform hover:scale-105 transition-all duration-300
             "
                   >
-                    Join as Volunteer
+                    Get Started
                   </Button>
-                </Link>
+                {/* </Link> */}
               </motion.div>
 
               {/* Optional Trust Indicator */}
@@ -309,6 +310,7 @@ export default function LandingPage() {
         </motion.section>
       </main>
       <Footer />
+      <SelectSignUpType/>
     </div>
   );
 }

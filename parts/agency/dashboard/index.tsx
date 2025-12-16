@@ -54,8 +54,8 @@ async function getTotalVolunteersForOrganization(organizationId: string): Promis
     if (projError || !projects || projects.length === 0) {
       return 0;
     }
-
-    const projectIds = projects.map(p => p.id);
+    //@ts-ignore
+    const projectIds = projects.map(p=> p.id);
     console.log("Project IDs for organization:", projectIds);
 
     // Now call the Supabase function

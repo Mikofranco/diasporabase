@@ -1,4 +1,5 @@
 "use client";
+import SelectSignUpType from "@/components/modals/select-signup-type";
 import NavBar from "@/components/navbar";
 import Footer from "@/parts/landingPage/footer";
 import React from "react";
@@ -24,12 +25,12 @@ const AboutUs = () => {
             countries—no relocation required.
           </p>
           <div className="flex justify-center gap-4">
-            <a
-              href="/register-volunteer"
+            <button
+              data-modal-trigger="select-signup-type-modal"
               className="bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 text-white px-6 py-3 rounded-full font-inter font-semibold transition duration-300"
             >
               Get Started
-            </a>
+            </button>
             <a
               href="/learn-more"
               className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-full font-inter font-semibold hover:bg-white hover:text-teal-900 transition duration-300"
@@ -179,12 +180,12 @@ const AboutUs = () => {
           with DiasporaBase—no passport needed.
         </p>
         <div className="flex justify-center gap-4">
-          <a
-            href="/register-volunteer"
+          <button
+            data-modal-trigger="select-signup-type-modal"
             className="bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 text-white px-6 py-3 rounded-full font-inter font-semibold hover:bg-teal-100 transition duration-300"
           >
             Get Started Now
-          </a>
+          </button>
           <a
             href="/learn-more"
             className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-full font-inter font-semibold hover:bg-white hover:text-[#0F172A] transition duration-300"
@@ -194,6 +195,7 @@ const AboutUs = () => {
         </div>
       </div>
       <Footer />
+      <SelectSignUpType />
     </div>
   );
 };

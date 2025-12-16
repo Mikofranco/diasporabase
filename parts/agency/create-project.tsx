@@ -30,10 +30,15 @@ import { LocationSelects } from "@/components/location-selects";
 const supabase = createClient();
 
 const CATEGORIES = [
-  "Agriculture",
-  "Health",
-  "Technology",
-  "Construction",
+  "Media & Communication",
+  "Art & Design",
+  "Information Technology",
+  "Engineering",
+  "Education",
+  "Business & Finance",
+  "Legal & Law Services",
+  "Business & Finance",
+  "Medicine & Healthcare",
   "Others",
 ] as const;
 
@@ -321,7 +326,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     const result = schema.safeParse(formData);
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors);
-      toast.error("Please add minuimum of 1 miletone and deliverable.");
+      toast.error("Please correct the errors in the form.");
       return false;
     }
     setErrors({});
