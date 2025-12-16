@@ -43,7 +43,7 @@ export default function ContactForm() {
 
     try {
       await useSendMail({
-        to: "ogbechiemicheal@gmail.com", // Replace with your actual contact email
+        to: "support@diasporabase.com", // Replace with your actual contact email
         subject: `New Contact Message from ${data.name}`,
         html: `
           <h2>New message from your website</h2>

@@ -48,6 +48,7 @@ const NotificationScreen: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     async function setupNotifications() {
@@ -109,7 +110,7 @@ const NotificationScreen: React.FC = () => {
         supabase.removeChannel(subscription);
       };
     }
-
+    setUserRole(localStorage.getItem('diaspobase_role'));
     setupNotifications();
   }, [user?.id]);
 
@@ -169,12 +170,12 @@ const NotificationScreen: React.FC = () => {
         return (
           <div className="space-y-2">
             <p className="text-sm text-gray-900 dark:text-gray-100">{notification.message}</p>
-            <Link
-              href={`/dashboard/projects/${notification.project_id}`}
+            {/* <Link
+              href={`/dashboard/${userRole}/projects/${notification.project_id}`}
               className="text-[#0284C7] hover:underline text-sm"
             >
               View Project
-            </Link>
+            </Link> */}
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -197,16 +198,17 @@ const NotificationScreen: React.FC = () => {
           </div>
         );
       case 'project_approval':
+        
       case 'new_project':
         return (
           <div className="space-y-2">
             <p className="text-sm text-gray-900 dark:text-gray-100">{notification.message}</p>
-            <Link
-              href={`/dashboard/projects/${notification.project_id}`}
+            {/* <Link
+              href={`/dashboard/${userRole}/projects/${notification.project_id}`}
               className="text-[#0284C7] hover:underline text-sm"
             >
               View Project
-            </Link>
+            </Link> */}
           </div>
         );
       default:
