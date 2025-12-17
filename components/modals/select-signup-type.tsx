@@ -10,11 +10,11 @@ const SelectSignUpType = () => {
       isOpen={open}
       onClose={() => setOpen(false)}
       onOpen={() => setOpen(true)}
-      className="max-w-xl"
+      className="max-w-md"
     >
       <Modal.Body className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="font-semibold text-xl">Select Sign up type</h2>
+          <h2 className="font-semibold text-xl text-muted-foreground">Select Sign up type</h2>
           <Button
             variant={"outline"}
             size={"sm"}
@@ -24,18 +24,18 @@ const SelectSignUpType = () => {
           </Button>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 justify-center items-center">
           <a
             href="/register-volunteer"
-            className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-md transition duration-300"
+            className="text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-md transition duration-300 w-fit p-4"
           >
             Sign Up as Volunteer
           </a>
           <a
             href="/register-agency"
-            className="w-full text-center bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-md transition duration-300"
+            className="w-fit text-center bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-md transition duration-300 p-4"
           >
-            Sign Up as Agency
+            Sign Up as Government Organization or Agency
           </a>
         </div>
       </Modal.Body>
