@@ -16,7 +16,7 @@ const NavBar = () => {
     // { href: "/projects", label: "Browse Projects" },
     { href: "/login", label: "Login" },
     { href: "/register-volunteer", label: "Join as Volunteer" },
-    { href: "/register-agency", label: "Register Organization" },
+    { href: "/register-agency", label: "Register Organization or Government Agency" },
   ];
 
   return (

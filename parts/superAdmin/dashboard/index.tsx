@@ -45,7 +45,7 @@ const AdminDashboard = () => {
           status,
           category,
           created_at,
-          profiles:organization_id (
+          profiles!organization_id (
             contact_person_first_name,
             contact_person_last_name,
             contact_person_email
@@ -63,6 +63,9 @@ const AdminDashboard = () => {
         data?.map((project: any) => ({
           id: project.id,
           title: project.title,
+          description: project.description,
+          organization_name: project.organization_name,
+          location: project.location,
           contact_person_first_name:
             project.profiles?.contact_person_first_name || "",
           contact_person_last_name:
@@ -146,12 +149,12 @@ const AdminDashboard = () => {
         onOpenChange={setViewOpen}
       />
 
-      <EditProjectModal
+      {/* <EditProjectModal
         project={selectedProject}
         open={editOpen}
         onOpenChange={setEditOpen}
         onSuccess={handleRefresh}
-      />
+      /> */}
     </div>
   );
 };

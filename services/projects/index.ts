@@ -290,7 +290,6 @@ export async function getProjectsByUserSkills(): Promise<{
       console.log("User skills:", profile.skills);
     }
 
-
     // Fetch projects where required_skills overlap with user skills
     const { data: projects, error } = await supabase
       .from("projects")
@@ -350,4 +349,15 @@ export async function getCompletedProjetsForAgecy(organiazation_id: string) {
     return { data: null, error: projectsError.message };
   }
   return { data: projects as Project[], error: null };
+}
+
+export async function getMileStonesAndDeliverablesForProject(
+  project_id: string
+) {
+  
+  const [milesRes, delsRes,] = await Promise.all([
+    supabase.from("milestones").select("*").eq("project_id", project_id),
+    supabase.from("deliverables").select("*").eq("project_id", project_id),
+  ]);
+  return { milesRes, delsRes };
 }
