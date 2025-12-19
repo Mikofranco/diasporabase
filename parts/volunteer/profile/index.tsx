@@ -89,7 +89,7 @@ export default function VolunteerProfile() {
   const [userPhone, setUserPhone] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  // const [expertiseData, setExpertiseData] = useState<any[]>([]);
+  const [expertiseData, setExpertiseData] = useState<any[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<SelectedData>({
     selectedCountries: [],
     selectedStates: [],
@@ -105,13 +105,13 @@ export default function VolunteerProfile() {
   }, []);
 
   // Fetch skillsets
-  // useEffect(() => {
-  //   const fetchSkillsets = async () => {
-  //     const skillsets = await getSkillsets();
-  //     setExpertiseData(skillsets);
-  //   };
-  //   fetchSkillsets();
-  // }, []);
+  useEffect(() => {
+    const fetchSkillsets = async () => {
+      const skillsets = await getSkillsets();
+      setExpertiseData(skillsets);
+    };
+    fetchSkillsets();
+  }, []);
 
   // Fetch profile and location
   useEffect(() => {
@@ -810,7 +810,7 @@ export default function VolunteerProfile() {
               </div>
 
               {/* Origin */}
-              <p className="text-base font-medium text-gray-800 mb-0">
+              <p className="text-base font-medium text-gray-800 my-2">
                 Nationality
               </p>
               <LocationSelects
@@ -834,7 +834,7 @@ export default function VolunteerProfile() {
 
               {/* Volunteer Preferences */}
               <div className="grid gap-2">
-                <Label className="text-base font-medium text-gray-800">
+                <Label className="text-base font-medium text-gray-800 my-2">
                   Volunteer Location Preferences
                 </Label>
                 <LocationSelector
@@ -842,7 +842,7 @@ export default function VolunteerProfile() {
                   onSelectionChange={handleLocationChange}
                 />
                 {selectedLocationsDisplay}
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 bg-slate-200 p-2 rounded w-fit">
                   Select your preferred countries, states, and LGAs for
                   volunteering.
                 </p>

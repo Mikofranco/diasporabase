@@ -8,9 +8,11 @@ export interface Location {
 
 export const africanLocations = [
   {
+    countryCode: "NG",
     country: "Nigeria",
     states: [
       {
+        stateCode: "AB",
         state: "Abia",
         lgas: [
           "Aba North",
@@ -33,6 +35,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "FC",
         state: "Abuja (FCT)",
         lgas: [
           "Abaji",
@@ -44,6 +47,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "AD",
         state: "Adamawa",
         lgas: [
           "Demsa",
@@ -70,6 +74,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "AK",
         state: "Akwa Ibom",
         lgas: [
           "Abak",
@@ -106,6 +111,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "AN",
         state: "Anambra",
         lgas: [
           "Aguata",
@@ -132,6 +138,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "BA",
         state: "Bauchi",
         lgas: [
           "Alkaleri",
@@ -157,6 +164,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "BY",
         state: "Bayelsa",
         lgas: [
           "Brass",
@@ -170,6 +178,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "BE",
         state: "Benue",
         lgas: [
           "Ado",
@@ -198,6 +207,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "BO",
         state: "Borno",
         lgas: [
           "Abadam",
@@ -230,6 +240,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "CR",
         state: "Cross River",
         lgas: [
           "Abi",
@@ -253,6 +264,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "DE",
         state: "Delta",
         lgas: [
           "Aniocha North",
@@ -283,6 +295,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "EB",
         state: "Ebonyi",
         lgas: [
           "Abakaliki",
@@ -300,6 +313,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "ED",
         state: "Edo",
         lgas: [
           "Akoko-Edo",
@@ -323,6 +337,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "EK",
         state: "Ekiti",
         lgas: [
           "Ado Ekiti",
@@ -344,6 +359,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "EN",
         state: "Enugu",
         lgas: [
           "Aninri",
@@ -366,6 +382,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "GO",
         state: "Gombe",
         lgas: [
           "Akko",
@@ -382,6 +399,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "IM",
         state: "Imo",
         lgas: [
           "Aboh Mbaise",
@@ -413,6 +431,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "JI",
         state: "Jigawa",
         lgas: [
           "Auyo",
@@ -444,6 +463,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "KD",
         state: "Kaduna",
         lgas: [
           "Birnin Gwari",
@@ -472,6 +492,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "KN",
         state: "Kano",
         lgas: [
           "Ajingi",
@@ -521,6 +542,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "KT",
         state: "Katsina",
         lgas: [
           "Bakori",
@@ -560,6 +582,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "KE",
         state: "Kebbi",
         lgas: [
           "Aleiro",
@@ -586,6 +609,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "KO",
         state: "Kogi",
         lgas: [
           "Adavi",
@@ -612,6 +636,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "KW",
         state: "Kwara",
         lgas: [
           "Asa",
@@ -633,6 +658,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "LA",
         state: "Lagos",
         lgas: [
           "Agege",
@@ -658,6 +684,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "NA",
         state: "Nasarawa",
         lgas: [
           "Akwanga",
@@ -676,6 +703,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "NI",
         state: "Niger",
         lgas: [
           "Agaie",
@@ -706,6 +734,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "OG",
         state: "Ogun",
         lgas: [
           "Abeokuta North",
@@ -731,6 +760,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "ON",
         state: "Ondo",
         lgas: [
           "Akoko North-East",
@@ -754,6 +784,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "OS",
         state: "Osun",
         lgas: [
           "Atakunmosa East",
@@ -789,6 +820,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "OY",
         state: "Oyo",
         lgas: [
           "Afijio",
@@ -827,6 +859,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "PL",
         state: "Plateau",
         lgas: [
           "Barkin Ladi",
@@ -849,6 +882,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "RI",
         state: "Rivers",
         lgas: [
           "Abua/Odual",
@@ -877,6 +911,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "SO",
         state: "Sokoto",
         lgas: [
           "Binji",
@@ -904,6 +939,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "TA",
         state: "Taraba",
         lgas: [
           "Ardo Kola",
@@ -925,6 +961,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "YO",
         state: "Yobe",
         lgas: [
           "Bade",
@@ -947,6 +984,7 @@ export const africanLocations = [
         ],
       },
       {
+        stateCode: "ZA",
         state: "Zamfara",
         lgas: [
           "Anka",
@@ -965,7 +1003,7 @@ export const africanLocations = [
           "Zurmi",
         ],
       },
-    ],
+    ].sort((a, b) => a.state.localeCompare(b.state)), // Optional: sort states alphabetically
   },
   // {
   //   country: "Kenya",

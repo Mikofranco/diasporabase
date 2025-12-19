@@ -148,13 +148,13 @@ export function EditProjectModal({ project, open, onOpenChange, onSuccess }: Edi
             </div>
 
             <div>
-              <Label>Start Date *</Label>
+              <Label>Target Start Date *</Label>
               <Input type="date" {...register("start_date")} />
               {errors.start_date && <p className="text-sm text-red-600 mt-1">{errors.start_date.message}</p>}
             </div>
 
             <div>
-              <Label>End Date</Label>
+              <Label>Target End Date</Label>
               <Input type="date" {...register("end_date")} />
             </div>
 

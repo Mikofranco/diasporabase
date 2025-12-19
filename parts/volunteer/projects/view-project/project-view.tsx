@@ -31,6 +31,7 @@ import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useSendMail } from "@/services/mail";
 import { RatingForm } from "./rating-form";
+import { formatLocation } from "@/lib/utils";
 
 const statusConfig: Record<
   ProjectStatus,
@@ -257,7 +258,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     <div>
                       <p className="text-sm font-medium">Location</p>
                       <p className="text-sm text-muted-foreground">
-                        {project.location || "Not specified"}
+                        {formatLocation(project.location )|| "Not specified"}
                       </p>
                     </div>
                   </div>
