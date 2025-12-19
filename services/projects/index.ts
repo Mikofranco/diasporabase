@@ -401,3 +401,30 @@ const {} =await supabase
   .eq('id', projectId);
 
 }
+
+export async function checkIfProjectManagerAssigned(projectId: string){
+  const { data, error } = await supabase
+    .from('projects')
+    .select('project_manager_id')
+    .eq('id', projectId)
+    .single();
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  return { data: data?.project_manager_id, error: null };
+}
+
+export async function isAProjectManager(userId: string){
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('skills')
+    .eq('id', userId)
+    .contains('skills', ['project_management']);
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+  return { data: data && data.length > 0, error: null };
+}

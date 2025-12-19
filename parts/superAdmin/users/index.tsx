@@ -186,7 +186,7 @@ export default function UserManagement() {
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="w-32">ID</TableHead>
+                <TableHead className="w-32">S/N</TableHead>
                 <TableHead>Full Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
@@ -202,14 +202,14 @@ export default function UserManagement() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                filteredUsers.map((user, index) => (
                   <TableRow
                     key={user.id}
                     className="cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => handleRowClick(user.id)}
                   >
                     <TableCell className="font-mono text-xs">
-                      {user.id.slice(0, 8)}...
+                      {index + 1}
                     </TableCell>
                     <TableCell>{user.full_name || "N/A"}</TableCell>
                     <TableCell>{user.email || "N/A"}</TableCell>
