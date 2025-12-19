@@ -129,6 +129,7 @@ export interface Project {
   start_date?:string;
   organization_id?: string;
   organization_name?: string;
+  project_manager_id?: string;
 
 }
 

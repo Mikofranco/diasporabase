@@ -28,10 +28,13 @@ const AdminDashboard = () => {
   const [editOpen, setEditOpen] = useState(false);
 
   const fetchProjects = async () => {
+    console.log("Fetching projects..."); // ← Should appear immediately
+
     try {
       setIsLoading(true);
       setError(null);
-      const { data, error } = await supabase
+
+      const { data, error, status, statusText } = await supabase
         .from("projects")
         .select(
           `
@@ -54,44 +57,60 @@ const AdminDashboard = () => {
         )
         .order("created_at", { ascending: false });
 
+      // Enhanced logging
+      console.log("Supabase response status:", status, statusText);
+      console.log("Raw data from Supabase:", data);
+      console.log("Supabase error (if any):", error);
+
       if (error) {
-        throw new Error(`Failed to fetch projects: ${error.message}`);
+        console.error("Supabase threw an error:", error);
+        throw new Error(`Supabase error: ${error.message}`);
       }
 
-      // Flatten profiles data to match Project type
-      const formattedData =
-        data?.map((project: any) => ({
-          id: project.id,
-          title: project.title,
-          description: project.description,
-          organization_name: project.organization_name,
-          location: project.location,
-          contact_person_first_name:
-            project.profiles?.contact_person_first_name || "",
-          contact_person_last_name:
-            project.profiles?.contact_person_last_name || "",
-          contact_person_email: project.profiles?.contact_person_email || "",
-          status: project.status,
-          category: project.category,
-          start_date: project.start_date,
-        })) || [];
+      if (!data || data.length === 0) {
+        console.warn("No projects found. Is there data in the 'projects' table?");
+        setProjects([]);
+        return;
+      }
 
+      const formattedData = data.map((project: any) => {
+        console.log("Processing project:", project); // See each project
+
+        return {
+          id: project.id,
+          title: project.title || "No Title",
+          description: project.description || "",
+          organization_name: project.organization_name || "Unknown",
+          location: project.location || "",
+          start_date: project.start_date || "",
+          status: project.status || "pending",
+          category: project.category || "General",
+          contact_person_first_name:
+            project.profiles?.contact_person_first_name || "N/A",
+          contact_person_last_name:
+            project.profiles?.contact_person_last_name || "N/A",
+          contact_person_email:
+            project.profiles?.contact_person_email || "N/A",
+        };
+      });
+
+      console.log("Final formatted projects:", formattedData);
       setProjects(formattedData);
-      console.log("Fetched projects:", formattedData);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred"
-      );
-      console.error("Error fetching projects:", err);
+    } catch (err: any) {
+      console.error("Caught error in fetchProjects:", err);
+      setError(err.message || "Failed to load projects");
     } finally {
       setIsLoading(false);
+      console.log("fetchProjects completed. isLoading:", false);
     }
   };
 
   useEffect(() => {
+    console.log("AdminDashboard mounted – calling fetchProjects");
     fetchProjects();
   }, []);
 
+  // Rest of your handlers...
   const handleView = (project: Project) => {
     setSelectedProject(project);
     setViewOpen(true);
@@ -103,58 +122,52 @@ const AdminDashboard = () => {
   };
 
   const handleRefresh = () => {
+    console.log("Manual refresh triggered");
     fetchProjects();
   };
+
   if (error) {
     return (
       <div className="space-y-6 p-4 bg-white rounded-lg shadow-sm">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h3 className="text-2xl font-bold tracking-tight text-red-600">
-            Error Loading Dashboard
-          </h3>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <button
-            onClick={handleRefresh}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Retry
-          </button>
-        </div>
+        <h3 className="text-2xl font-bold text-red-600">Error Loading Dashboard</h3>
+        <p>{error}</p>
+        <button onClick={handleRefresh} className="px-4 py-2 bg-blue-600 text-white rounded">
+          Retry
+        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 p-4 bg-white rounded-lg shadow-sm">
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h3 className="text-2xl font-bold tracking-tight">
-          Welcome to Admin Dashboard
-        </h3>
+      <div className="text-center">
+        <h3 className="text-2xl font-bold">Welcome to Admin Dashboard</h3>
         <p className="text-sm text-muted-foreground">
           Manage projects, volunteers, and agencies.
         </p>
       </div>
+
       <CardsSection />
-      <RecentApplicationsTable
-        data={isLoading ? [] : projects}
-        onEdit={handleEdit}
-        onView={handleView}
-        onRefresh={handleRefresh}
-      />
 
-      {/* Modals */}
-      <ViewProjectModal
-        project={selectedProject}
-        open={viewOpen}
-        onOpenChange={setViewOpen}
-      />
+      <div>
+        <p className="text-sm text-gray-500 mb-2">
+          Total projects loaded: {projects.length} {isLoading && "(loading...)"}
+        </p>
+        <RecentApplicationsTable
+          data={projects}
+          onEdit={handleEdit}
+          onView={handleView}
+          onRefresh={handleRefresh}
+        />
+      </div>
 
-      {/* <EditProjectModal
+      <ViewProjectModal project={selectedProject} open={viewOpen} onOpenChange={setViewOpen} />
+      <EditProjectModal
         project={selectedProject}
         open={editOpen}
         onOpenChange={setEditOpen}
         onSuccess={handleRefresh}
-      /> */}
+      />
     </div>
   );
 };

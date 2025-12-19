@@ -2,7 +2,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { getUserId } from "@/lib/utils";
+import { formatLocation, getUserId } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
@@ -39,6 +39,7 @@ import { Calendar, MapPin, Users, Trash2, Edit } from "lucide-react";
 import ProjectRecommendation from "../project-recommendation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
+import AssignProjectManager from "@/parts/PM";
 
 const supabase = createClient();
 
@@ -57,6 +58,7 @@ interface Project {
   category: string;
   created_at: string;
   required_skills: string[];
+  project_manager_id: string | null;
 }
 
 interface Volunteer {
@@ -329,6 +331,8 @@ const ProjectDetails: React.FC = () => {
               Back to Projects
             </Button>
             <Button variant="outline" onClick={openProjectEditModal} className="action-btn">Edit Project</Button>
+            {/* <Button data-modal-trigger="assign-project-manager">Assign Project Manager</Button> */}
+            <AssignProjectManager projectId={project.id} currentManagerId={project.project_manager_id}/>
           </div>
         </div>
 
@@ -347,8 +351,8 @@ const ProjectDetails: React.FC = () => {
           <CardContent className="space-y-8">
             <p className="text-muted-foreground">{project.description}</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-              <div className="flex items-center gap-2"><MapPin className="h-5 w-5" /><span>{project.location}</span></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">{/*@ts-ignore */}
+              <div className="flex items-center gap-2"><MapPin className="h-5 w-5" /><span>{formatLocation(project.location)}</span></div>
               <div className="flex items-center gap-2"><Calendar className="h-5 w-5" /><span>{new Date(project.start_date).toLocaleDateString()} - {new Date(project.end_date).toLocaleDateString()}</span></div>
               <div className="flex items-center gap-2"><Users className="h-5 w-5" /><span>{project.volunteers_registered}  volunteers</span></div>
             </div>

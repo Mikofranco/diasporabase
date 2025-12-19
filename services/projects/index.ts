@@ -287,7 +287,6 @@ export async function getProjectsByUserSkills(): Promise<{
         data: null,
         error: profileError?.message || "No skills found for user",
       };
-      console.log("User skills:", profile.skills);
     }
 
     // Fetch projects where required_skills overlap with user skills
@@ -295,10 +294,11 @@ export async function getProjectsByUserSkills(): Promise<{
       .from("projects")
       .select("*")
       .eq("status", "active")
-      .containedBy("required_skills", profile.skills) // Match any skill
+      .overlaps("required_skills", profile.skills)
       .order("created_at", { ascending: false });
 
     if (error) {
+      console.error("Error fetching projects:", error);
       return { data: null, error: error.message };
     }
 
@@ -354,10 +354,77 @@ export async function getCompletedProjetsForAgecy(organiazation_id: string) {
 export async function getMileStonesAndDeliverablesForProject(
   project_id: string
 ) {
-  
-  const [milesRes, delsRes,] = await Promise.all([
+  const [milesRes, delsRes] = await Promise.all([
     supabase.from("milestones").select("*").eq("project_id", project_id),
     supabase.from("deliverables").select("*").eq("project_id", project_id),
   ]);
   return { milesRes, delsRes };
+}
+
+
+export async function getProjectManagers(){
+  const { data: eligiblePMs , error: dataError} = await supabase
+  .from('profiles')
+  .select('id, full_name, profile_picture, skills, residence_country, residence_state, experience')
+  .eq('role', 'volunteer')
+  .contains('skills', ['project_management']);
+  if(dataError){
+    return {data: null, error: dataError.message};
+  }
+  return {data: eligiblePMs as Array<{id: string; full_name: string; skills: string[]}>, error: null};
+}
+
+export async function notifyProjectManagers(projectId: string, managerIds: string[]){
+  const notifications = managerIds.map((managerId) => ({
+    user_id: managerId,
+    project_id: projectId,
+    message: `You have been assigned as a Project Manager for project ID: ${projectId}`,
+    read: false,
+    created_at: new Date().toISOString(),
+  }));
+
+  const { data, error } = await supabase
+    .from('notifications')
+    .insert(notifications);
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  return { data, error: null };
+}
+
+export async function assignProjectManagersToProject(projectId: string, selectedVolunteerId: string[]){
+const {} =await supabase
+  .from('projects')
+  .update({ project_manager_id: selectedVolunteerId })
+  .eq('id', projectId);
+
+}
+
+export async function checkIfProjectManagerAssigned(projectId: string){
+  const { data, error } = await supabase
+    .from('projects')
+    .select('project_manager_id')
+    .eq('id', projectId)
+    .single();
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  return { data: data?.project_manager_id, error: null };
+}
+
+export async function isAProjectManager(userId: string){
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('skills')
+    .eq('id', userId)
+    .contains('skills', ['project_management']);
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+  return { data: data && data.length > 0, error: null };
 }

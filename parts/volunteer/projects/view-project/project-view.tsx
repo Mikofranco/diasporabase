@@ -31,6 +31,8 @@ import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useSendMail } from "@/services/mail";
 import { RatingForm } from "./rating-form";
+import { formatLocation } from "@/lib/utils";
+import { Span } from "next/dist/trace";
 
 const statusConfig: Record<
   ProjectStatus,
@@ -111,16 +113,15 @@ const ProjectView: React.FC<ProjectViewProps> = ({
 
   const handleVolunteerRequest = async () => {
     try {
-      const { error } = await supabase
-        .from("volunteer_requests")
-        .insert({
-          project_id: project.id,
-          volunteer_id: userID,
-          status: "pending",
-          organization_id: project?.organization_id,
-        });
+      const { error } = await supabase.from("volunteer_requests").insert({
+        project_id: project.id,
+        volunteer_id: userID,
+        status: "pending",
+        organization_id: project?.organization_id,
+      });
 
-      if (error) throw new Error("Error submitting volunteer request: " + error.message);
+      if (error)
+        throw new Error("Error submitting volunteer request: " + error.message);
 
       await useSendMail({
         to: contactEmail || "",
@@ -152,7 +153,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
             </h1>
             <p className="text-lg text-muted-foreground flex items-center gap-2 md:text-xl">
               <Building2 className="h-5 w-5 flex-shrink-0" /> //
-              {project.organization_name  || "Unknown Organization"}
+              {project.organization_name || "Unknown Organization"}
             </p>
           </div>
 
@@ -210,14 +211,32 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                   </Button>
 
                   {isUserInProject ? (
-                    <LeaveProjectModal
-                      project={{ id: project.id, title: project.title }}
-                      onSuccess={handleLeaveSuccess}
-                    />
+                    <div>
+                      {project.project_manager_id === userID && (
+                        <Button
+                          variant="secondary"
+                          size="lg"
+                          className="w-full mb-2 text-base py-6"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/volunteer/projects/${project.id}/project_management`
+                            )
+                          }
+                        >
+                          Manage Project
+                        </Button>
+                      )}
+                      <LeaveProjectModal
+                        project={{ id: project.id, title: project.title }}
+                        onSuccess={handleLeaveSuccess}
+                      />
+                    </div>
                   ) : (
                     <VolunteerActionButton
-                      hasRequested={hasRequested}//@ts-ignore
-                      isFull={project.volunteersRegistered >= project.volunteersNeeded}
+                      hasRequested={hasRequested} //@ts-ignore
+                      isFull={
+                        project.volunteersRegistered >= project.volunteersNeeded
+                      }
                       onClick={handleVolunteerRequest}
                     />
                   )}
@@ -247,7 +266,9 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     <div>
                       <p className="text-sm font-medium">Start Date</p>
                       <p className="text-sm text-muted-foreground">
-                        {project.start_date ? formatDate(project.start_date) : "Not set"}
+                        {project.start_date
+                          ? formatDate(project.start_date)
+                          : "Not set"}
                       </p>
                     </div>
                   </div>
@@ -257,7 +278,8 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     <div>
                       <p className="text-sm font-medium">Location</p>
                       <p className="text-sm text-muted-foreground">
-                        {project.location || "Not specified"}
+                        {/*@ts-ignore*/}
+                        {formatLocation(project.location) || "Not specified"}
                       </p>
                     </div>
                   </div>
@@ -266,8 +288,13 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     <Users className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Spots Left</p>
-                      <p className={`text-sm font-medium ${isFull ? "text-destructive" : "text-green-600"}`}>
-                        {spotsLeft} of {project.volunteersNeeded || "?"} available
+                      <p
+                        className={`text-sm font-medium ${
+                          isFull ? "text-destructive" : "text-green-600"
+                        }`}
+                      >
+                        {spotsLeft} of {project.volunteersNeeded || "?"}{" "}
+                        available
                       </p>
                     </div>
                   </div>
@@ -276,7 +303,9 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     <Tag className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Category</p>
-                      <p className="text-sm text-muted-foreground">{project.category || "N/A"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {project.category || "N/A"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -293,7 +322,11 @@ const ProjectView: React.FC<ProjectViewProps> = ({
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {project.required_skills.map((skill: string) => (
-                    <Badge key={skill} variant="secondary" className="py-1.5 px-3">
+                    <Badge
+                      key={skill}
+                      variant="secondary"
+                      className="py-1.5 px-3"
+                    >
                       {skill}
                     </Badge>
                   ))}

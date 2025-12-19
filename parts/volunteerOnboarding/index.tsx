@@ -21,8 +21,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
 import { StepIndicator } from "./stepIndicator";
-import LocationSelector from "@/components/location-selector";
-import { LocationSelectorHandle, SelectedData } from "@/app/dashboard/volunteer/profile/page";
+import LocationSelector, { LocationSelectorHandle, SelectedData } from "@/components/location-selector";
+// import { LocationSelectorHandle, SelectedData } from "@/app/dashboard/volunteer/profile/page";
 
 const onboardingSchema = z
   .object({

@@ -2,7 +2,7 @@
 "use client";
 
 import { supabase } from "@/lib/supabase/client";
-import { getUserId } from "@/lib/utils";
+import { formatLocation, getUserId } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
@@ -92,7 +92,7 @@ export default function VolunteerProjectsManagement() {
         description: p.description,
         organizationId: p.organization_id,
         organizationName: p.organization_name,
-        location: p.location,
+        location: formatLocation(p.location),
         startDate: p.start_date,
         endDate: p.end_date,
         volunteersRegistered: p.volunteers_registered ?? 0,

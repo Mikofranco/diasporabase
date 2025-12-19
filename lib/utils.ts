@@ -4,6 +4,14 @@ import { createClient } from "./supabase/client";
 import { toast } from "sonner";
 // import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from "./database/types";
+import { Country, State, City } from 'country-state-city';
+import { africanLocations } from "@/data/african-locations";
+
+export type LocationData = {
+  country?: string | null;  // e.g., "NG" (ISO code) or full name "Nigeria"
+  state?: string | null;    // e.g., "LA" (state code) or full "Lagos"
+  lga?: string | null;      // e.g., "Ikeja" (usually full name already)
+};
 
 const supabase = createClient();
 
@@ -354,4 +362,148 @@ export function checkIfAgencyIsActive() {//@ts-ignore
 export async function getPlatformStat  (){
   const { data } = await supabase.rpc('get_platform_stats');
   return data;
+}
+
+export function formatLocation(location: LocationData | null): string {
+  if (!location || !location.country) {
+    return 'Location not specified';
+  }
+
+  const parts: string[] = [];
+
+  // Get full country name (from code or use as-is if already full)
+  const countryName = Country.getCountryByCode(location.country)?.name || location.country;
+  if (!countryName) return 'Unknown location';
+
+  // Handle LGA/City (usually already full name, especially in Nigeria)
+  if (location.lga) {
+    parts.push(location.lga.trim());
+  }
+  // Handle State: convert code to full name if possible
+  else if (location.state) {
+    let stateName: string;
+
+    if (location.country) {
+      // Try to get full state name from code
+      const state = State.getStatesOfCountry(location.country).find(
+        (s) => s.isoCode === location.state || s.name === location.state
+      );
+      stateName = state?.name || location.state; // fallback to raw if not found
+    } else {
+      stateName = location.state;
+    }
+
+    parts.push(stateName.trim());
+  }
+
+  // Always add country at the end
+  parts.push(countryName.trim());
+
+  return parts.join(', ');
+}
+
+export function convertLocationNamesToCodes({
+  selectedCountries = [],
+  selectedStates = [],
+  selectedLgas = [],
+}: {
+  selectedCountries?: string[];
+  selectedStates?: string[];
+  selectedLgas?: string[];
+}): {
+  countryCodes: string[];     // e.g., ["NG"]
+  stateCodes: string[];       // e.g., ["LA", "FC"]
+  lgas: string[];             // unchanged full names
+} {
+  const countryCodes: string[] = [];
+  const stateCodes: string[] = [];
+  const lgas = [...selectedLgas]; // LGAs stay as full names
+
+  // First: Convert countries to codes
+  selectedCountries.forEach((countryName) => {
+    // Try hardcoded Nigerian data first (more reliable for Nigeria)
+    const nigeriaMatch = africanLocations.find((loc) => loc.country === countryName);
+    if (nigeriaMatch) {
+      countryCodes.push(nigeriaMatch.countryCode);
+      return;
+    }
+
+    // Fallback to country-state-city package
+    const countryObj = Country.getAllCountries().find(
+      (c) => c.name.toLowerCase() === countryName.toLowerCase()
+    );
+    if (countryObj) {
+      countryCodes.push(countryObj.isoCode);
+    }
+  });
+
+  // Second: Convert states to codes
+  selectedStates.forEach((stateName) => {
+    let found = false;
+
+    // Prioritize Nigerian states (your accurate hardcoded data)
+    for (const loc of africanLocations) {
+      const stateData = loc.states.find((s) => s.state === stateName);
+      if (stateData) {
+        stateCodes.push(stateData.stateCode);
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      // Fallback: Use country-state-city (useful if you expand beyond Nigeria later)
+      const allStates = State.getAllStates();
+      const stateObj = allStates.find((s) => s.name === stateName);
+      if (stateObj) {
+        stateCodes.push(stateObj.isoCode);
+      }
+    }
+  });
+
+  return {
+    countryCodes,
+    stateCodes,
+    lgas,
+  };
+}
+
+export function convertLocationCodesToNames({
+  countryCodes = [],
+  stateCodes = [],
+  lgas = [],
+}: {
+  countryCodes?: string[];
+  stateCodes?: string[];
+  lgas?: string[];
+}) {
+  const countries: string[] = [];
+  const states: string[] = [];
+
+  countryCodes.forEach((code) => {//@ts-ignore
+    const match = nigerianLocations.find((loc) => loc.countryCode === code);
+    if (match) countries.push(match.country);
+    else {
+      const c = Country.getCountryByCode(code);
+      if (c) countries.push(c.name);
+    }
+  });
+
+  stateCodes.forEach((code) => {
+    let found = false;//@ts-ignore
+    for (const loc of nigerianLocations) {//@ts-ignore
+      const state = loc.states.find((s) => s.stateCode === code);
+      if (state) {
+        states.push(state.state);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      const s = State.getStateByCode(code);
+      if (s) states.push(s.name);
+    }
+  });
+
+  return { countries, states, lgas };
 }

@@ -16,6 +16,7 @@ import VolunteersList from "./volunteer-list";
 import ContactOrganizationModal from "@/components/modals/contact-organizer";
 import { getOrganizationContact } from "@/services/agency/dashboard";
 import { ReviewsList } from "./review-list";
+import ProjectManagementScreen from "../project-management";
 
 export default function ViewProjectDetails() {
   const { id } = useParams<{ id: string }>();
@@ -158,7 +159,10 @@ export default function ViewProjectDetails() {
           ]);
 
           if (requestRes.error) {
-            console.error("Error checking volunteer request:", requestRes.error);
+            console.error(
+              "Error checking volunteer request:",
+              requestRes.error
+            );
           } else {
             setHasRequested(!!requestRes.data && requestRes.data.length > 0);
           }
@@ -221,6 +225,8 @@ export default function ViewProjectDetails() {
           hasRated={hasRated}
         />
       </section>
+
+      <ProjectManagementScreen userId={currentUserId} projectId={project.id} />
 
       <Separator />
 

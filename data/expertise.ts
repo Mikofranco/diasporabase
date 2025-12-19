@@ -81,6 +81,10 @@ export const expertiseData = [
     ]
   },
   {
+    id: "project_manager",
+    label: "Project-Management",
+  },
+  {
     id: "medicine_healthcare",
     label: "Medicine & Healthcare",
     children: [

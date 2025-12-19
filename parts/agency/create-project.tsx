@@ -88,24 +88,23 @@ const baseProjectSchema = z.object({
     .min(10, "Description must be at least 10 characters")
     .max(1000, "Description must be 1000 characters or less"),
   country: z.string().min(1, "Country is required"),
-  state: z.string().optional(),  // ← single string, optional
-  lga: z.string().optional(),    // ← single string, optional
+  state: z.string().optional(), // ← single string, optional
+  lga: z.string().optional(), // ← single string, optional
   start_date: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), "Invalid start date")
-    .refine((val) => new Date(val) >= new Date(), "Start date must be today or later"),
+    .refine(
+      (val) => new Date(val) >= new Date(),
+      "Start date must be today or later"
+    ),
   end_date: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), "Invalid end date"),
   category: z.enum(CATEGORIES, {
     errorMap: () => ({ message: "Please select a valid category" }),
   }),
-  milestones: z
-    .array(milestoneSchema)
-    .min(1, "At least one milestone is required"),
-  deliverables: z
-    .array(deliverableSchema)
-    .min(1, "At least one deliverable is required"),
+  milestones: z.array(milestoneSchema).optional().default([]), // ← Now optional
+  deliverables: z.array(deliverableSchema).optional().default([]),
 });
 
 const projectSchema = baseProjectSchema.refine(
@@ -124,8 +123,8 @@ interface Project {
   organization_id: string;
   organization_name: string;
   country: string;
-  state: string;      // ← single string
-  lga: string;        // ← single string
+  state: string; // ← single string
+  lga: string; // ← single string
   start_date: string;
   end_date: string;
   volunteers_registered: number;
@@ -148,8 +147,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     title: "",
     description: "",
     country: "",
-    state: "",    // ← single
-    lga: "",      // ← single
+    state: "", // ← single
+    lga: "", // ← single
     start_date: "",
     end_date: "",
     category: "" as (typeof CATEGORIES)[number],
@@ -214,9 +213,15 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     field?: string
   ) => {
     const { name, value } = e.target;
-    if (index !== undefined && field && (name.includes("milestones") || name.includes("deliverables"))) {
+    if (
+      index !== undefined &&
+      field &&
+      (name.includes("milestones") || name.includes("deliverables"))
+    ) {
       setFormData((prev) => {
-        const array = name.startsWith("milestones") ? [...prev.milestones] : [...prev.deliverables];
+        const array = name.startsWith("milestones")
+          ? [...prev.milestones]
+          : [...prev.deliverables];
         array[index] = { ...array[index], [field]: value || undefined };
         return { ...prev, [name.split(".")[0]]: array };
       });
@@ -232,9 +237,15 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     index?: number,
     field?: string
   ) => {
-    if (index !== undefined && field && (name.includes("milestones") || name.includes("deliverables"))) {
+    if (
+      index !== undefined &&
+      field &&
+      (name.includes("milestones") || name.includes("deliverables"))
+    ) {
       setFormData((prev) => {
-        const array = name.startsWith("milestones") ? [...prev.milestones] : [...prev.deliverables];
+        const array = name.startsWith("milestones")
+          ? [...prev.milestones]
+          : [...prev.deliverables];
         array[index] = { ...array[index], [field]: value || undefined };
         return { ...prev, [name.split(".")[0]]: array };
       });
@@ -370,11 +381,15 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
           organization_id: organizationId,
           organization_name: organizationName,
           country: formData.country,
-          state: formData.state || null,   // ← single string
-          lga: formData.lga || null,       // ← single string
+          state: formData.state || null, // ← single string
+          lga: formData.lga || null, // ← single string
           start_date: formData.start_date,
           end_date: formData.end_date,
-          location: `${formData.country}, ${formData.lga || formData.state} ` ,
+          location: {
+            country: formData.country,
+            state: formData.state,
+            lga: formData.lga,
+          },
           volunteers_registered: 0,
           status: "pending",
           category: formData.category,
@@ -382,7 +397,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         .select()
         .single();
 
-      if (projectError || !projectData) throw new Error(projectError?.message || "Failed to create project");
+      if (projectError || !projectData)
+        throw new Error(projectError?.message || "Failed to create project");
 
       const milestoneMap = new Map<string, string>();
 
@@ -410,7 +426,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         await supabase.from("deliverables").insert(
           formData.deliverables.map((d) => ({
             project_id: projectData.id,
-            milestone_id: d.milestone_id ? milestoneMap.get(d.milestone_id) : null,
+            milestone_id: d.milestone_id
+              ? milestoneMap.get(d.milestone_id)
+              : null,
             title: d.title,
             description: d.description,
             due_date: d.due_date,
@@ -434,7 +452,12 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     () => (
       <div className="mb-6">
         <div className="flex justify-between mb-2">
-          {["Basic Info", "Location & Dates", "Category", "Milestones & Deliverables"].map((label, i) => (
+          {[
+            "Basic Info",
+            "Location & Dates",
+            "Category",
+            "Milestones & Deliverables",
+          ].map((label, i) => (
             <div key={i} className="flex flex-col items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -487,7 +510,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 className="mt-2 h-32"
               />
               {errors.description?.[0] && (
-                <p className="text-red-500 text-xs mt-1">{errors.description[0]}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.description[0]}
+                </p>
               )}
             </div>
           </div>
@@ -506,7 +531,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
               onChangeLga={(v) => handleSelectChange("lga", v)}
               required={false}
             />
-            {errors.country?.[0] && <p className="text-red-500 text-xs -mt-4">{errors.country[0]}</p>}
+            {errors.country?.[0] && (
+              <p className="text-red-500 text-xs -mt-4">{errors.country[0]}</p>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -521,11 +548,13 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                   className="mt-2"
                 />
                 {errors.start_date?.[0] && (
-                  <p className="text-red-500 text-xs mt-1">{errors.start_date[0]}</p>
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.start_date[0]}
+                  </p>
                 )}
               </div>
               <div>
-                <Label htmlFor="end_date">End Date *</Label>
+                <Label htmlFor="end_date">Target End Date *</Label>
                 <Input
                   id="end_date"
                   name="end_date"
@@ -536,7 +565,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                   className="mt-2"
                 />
                 {errors.end_date?.[0] && (
-                  <p className="text-red-500 text-xs mt-1">{errors.end_date[0]}</p>
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.end_date[0]}
+                  </p>
                 )}
               </div>
             </div>
@@ -558,12 +589,16 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {errors.category?.[0] && (
-                <p className="text-red-500 text-xs mt-1">{errors.category[0]}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.category[0]}
+                </p>
               )}
             </div>
           </div>
@@ -601,7 +636,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       disabled={loading}
                     />
                     {errors.milestones?.[i]?.title?.[0] && (
-                      <p className="text-red-500 text-xs">{errors.milestones[i].title[0]}</p>
+                      <p className="text-red-500 text-xs">
+                        {errors.milestones[i].title[0]}
+                      </p>
                     )}
                     <Textarea
                       name={`milestones.${i}.description`}
@@ -618,26 +655,44 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       disabled={loading}
                     />
                     {errors.milestones?.[i]?.due_date?.[0] && (
-                      <p className="text-red-500 text-xs">{errors.milestones[i].due_date[0]}</p>
+                      <p className="text-red-500 text-xs">
+                        {errors.milestones[i].due_date[0]}
+                      </p>
                     )}
                     <Select
                       value={m.status}
-                      onValueChange={(v) => handleSelectChange(`milestones.${i}.status`, v, i, "status")}
+                      onValueChange={(v) =>
+                        handleSelectChange(
+                          `milestones.${i}.status`,
+                          v,
+                          i,
+                          "status"
+                        )
+                      }
                       disabled={loading}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {["Pending", "In Progress", "Done", "Cancelled"].map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
+                        {["Pending", "In Progress", "Done", "Cancelled"].map(
+                          (s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={addMilestone} disabled={loading}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addMilestone}
+                disabled={loading}
+              >
                 <Plus className="mr-2 h-4 w-4" /> Add Milestone
               </Button>
             </div>
@@ -671,7 +726,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                       disabled={loading}
                     />
                     {errors.deliverables?.[i]?.title?.[0] && (
-                      <p className="text-red-500 text-xs">{errors.deliverables[i].title[0]}</p>
+                      <p className="text-red-500 text-xs">
+                        {errors.deliverables[i].title[0]}
+                      </p>
                     )}
                     <Textarea
                       name={`deliverables.${i}.description`}
@@ -689,22 +746,38 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                     />
                     <Select
                       value={d.status}
-                      onValueChange={(v) => handleSelectChange(`deliverables.${i}.status`, v, i, "status")}
+                      onValueChange={(v) =>
+                        handleSelectChange(
+                          `deliverables.${i}.status`,
+                          v,
+                          i,
+                          "status"
+                        )
+                      }
                       disabled={loading}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {["Pending", "In Progress", "Done", "Cancelled"].map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
+                        {["Pending", "In Progress", "Done", "Cancelled"].map(
+                          (s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                     <Select
                       value={d.milestone_id || "none"}
                       onValueChange={(v) =>
-                        handleSelectChange(`deliverables.${i}.milestone_id`, v === "none" ? "" : v, i, "milestone_id")
+                        handleSelectChange(
+                          `deliverables.${i}.milestone_id`,
+                          v === "none" ? "" : v,
+                          i,
+                          "milestone_id"
+                        )
                       }
                       disabled={loading || formData.milestones.length === 0}
                     >
@@ -715,7 +788,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                         <SelectItem value="none">None</SelectItem>
                         {formData.milestones.map((m) => (
                           <SelectItem key={m.id} value={m.id}>
-                            {m.title || `Milestone ${formData.milestones.indexOf(m) + 1}`}
+                            {m.title ||
+                              `Milestone ${formData.milestones.indexOf(m) + 1}`}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -723,7 +797,12 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                   </div>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={addDeliverable} disabled={loading}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addDeliverable}
+                disabled={loading}
+              >
                 <Plus className="mr-2 h-4 w-4" /> Add Deliverable
               </Button>
             </div>
@@ -739,7 +818,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] max-w-[95vw] p-6 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Create New Project</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">
+            Create New Project
+          </DialogTitle>
         </DialogHeader>
 
         {serverError && (
@@ -756,11 +837,21 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
           <DialogFooter className="flex justify-between mt-8">
             <div className="flex gap-2">
               {currentStep > 1 && (
-                <Button type="button" variant="outline" onClick={handlePrevious} disabled={loading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={loading}
+                >
                   <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                 </Button>
               )}
-              <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={loading}
+              >
                 Cancel
               </Button>
             </div>
@@ -776,7 +867,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                   Next <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={loading} className="bg-[#0284C7] hover:bg-blue-700">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-[#0284C7] hover:bg-blue-700"
+                >
                   {loading ? "Creating..." : "Create Project"}
                 </Button>
               )}

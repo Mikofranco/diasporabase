@@ -22,25 +22,22 @@ const MatchingProjects = () => {
     router.push(`/dashboard/volunteer/matching-projects`);
   };
 
-  // useEffect(() => {
-  //   if (skillMatchedProjectError) {
-  //     router.push(`/onboarding/volunteer`);
-  //   }
-  // }, [skillMatchedProjectError]);
-
   return (
     <div className="flex flex-col gap-2 shadow-sm border rounded-lg p-4 bg-white">
       <div className=" items-center justify-between flex mb-4">
         <h2 className="text-gray-600 font-bold mb-6">Matching Projects</h2>
-        {skillMatchedProjectdata?.length > 0 && (
-          <Button
-            variant={"link"}
-            className="text-[#0ea5e9]"
-            onClick={handleViewAll}
-          >
-            View all <ArrowRight className="h-3 w-3" />
-          </Button>
-        )}
+        {
+          //@ts-ignore
+          skillMatchedProjectdata?.length > 3 && (
+            <Button
+              variant={"link"}
+              className="text-[#0ea5e9]"
+              onClick={handleViewAll}
+            >
+              View all <ArrowRight className="h-3 w-3" />
+            </Button>
+          )
+        }
       </div>
 
       {skillMatchedProjectIsLoading && (

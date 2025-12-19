@@ -361,7 +361,7 @@ const VolunteerSettings: React.FC = () => {
                 />
                 <Button
                   type="submit"
-                  className="w-full action-btn text-lg py-6 rounded-lg transition-colors duration-200"
+                  className=" action-btn text-lg py-6 rounded-lg transition-colors duration-200"
                   disabled={profileForm.formState.isSubmitting}
                 >
                   Save Profile
@@ -446,7 +446,7 @@ const VolunteerSettings: React.FC = () => {
                 />
                 <Button
                   type="submit"
-                  className="w-full action-btn text-lg py-6 rounded-lg transition-colors duration-200"
+                  className="action-btn text-lg py-6 rounded-lg transition-colors duration-200"
                 >
                   Change Password
                 </Button>
@@ -492,7 +492,7 @@ const VolunteerSettings: React.FC = () => {
             <div>
               <Button
                 onClick={handleSignOut}
-                className="w-full bg-gray-600 hover:bg-gray-700 text-white text-lg py-6 rounded-lg transition-colors duration-200"
+                className="bg-gray-600 hover:bg-gray-700 text-white text-lg py-6 rounded-lg transition-colors duration-200"
               >
                 <LogOut className="h-5 w-5 mr-2" />
                 Sign Out

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getUserId } from "@/lib/utils";
+import { formatLocation, getUserId, LocationData } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ interface Project {
   title: string;
   description: string;
   organization_name: string;
-  location: string;
+  location: LocationData;
   start_date: string;
   end_date: string;
   volunteers_needed: number;
@@ -87,7 +87,7 @@ const Opportunities: React.FC = () => {
 
     fetchProjectsAndSkills();
   }, []);
-
+  
   useEffect(() => {
     // Filter projects based on search query, location, and skills
     const filtered = projects.filter((project) => {
@@ -97,7 +97,7 @@ const Opportunities: React.FC = () => {
         project.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesLocation =
         locationFilter === "" ||
-        project.location.toLowerCase().includes(locationFilter.toLowerCase());
+        formatLocation(project.location).toLowerCase().includes(locationFilter.toLowerCase());
       const matchesSkills =
         skillsFilter.length === 0 ||
         (project.required_skills &&//@ts-ignore
@@ -230,7 +230,7 @@ const Opportunities: React.FC = () => {
                 </p>
                 <p className="text-sm text-gray-500">
                   <MapPin className="inline h-4 w-4 mr-1" />
-                  {project.location || "Location not specified"}
+                  {formatLocation(project.location) || "Location not specified"}
                 </p>
                 <p className="text-sm text-gray-500">
                   <Calendar className="inline h-4 w-4 mr-1" />
