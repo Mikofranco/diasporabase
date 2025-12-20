@@ -19,15 +19,21 @@ const AboutUsSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-6">
-            <h2 className="text-4xl font-bold text-[#1E293B]">About DiasporaBase</h2>
+            <h2 className="text-4xl font-bold text-[#1E293B]">
+              About DiasporaBase  
+            </h2>
             <p className="text-lg text-slate-600">
-              We're dedicated to connecting passionate volunteers with meaningful opportunities that
-              create lasting impact in communities worldwide.
+              DiasporaBase is a volunteering and collaboration platform which
+              helps African professionals based in the diaspora to remotely
+              contribute their expertise to nation-building by supporting
+              African public institutions such as ministries, agencies, and
+              public programs.
             </p>
             <p className="text-slate-600">
-              Our platform bridges the gap between individuals who want to make a difference and
-              organizations that need dedicated volunteers. Since our founding, we've facilitated
-              thousands of connections that have transformed communities.
+              From policy and communications to data, design, and systems
+              support, we match skilled volunteers to real institutional needs,
+              enabling diaspora professionals to deliver impact in their home
+              countries without needing to relocate.
             </p>
             <div className="space-y-4">
               {features.map((feature, index) => (
@@ -44,7 +50,9 @@ const AboutUsSection = () => {
             <div className="grid grid-cols-2 gap-8 text-center">
               {stats.map((stat, index) => (
                 <div key={index}>
-                  <div className="text-3xl font-bold text-[#1E293B] mb-2">{stat.value}</div>
+                  <div className="text-3xl font-bold text-[#1E293B] mb-2">
+                    {stat.value}
+                  </div>
                   <div className="text-slate-600">{stat.label}</div>
                 </div>
               ))}

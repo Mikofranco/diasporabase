@@ -62,7 +62,7 @@ export default function LandingPage() {
     `,
             backgroundSize: "cover",
             backgroundPosition: "center",
-            backgroundAttachment: "fixed", 
+            backgroundAttachment: "fixed",
           }}
         >
           {/* Optional subtle animated overlay */}
@@ -135,11 +135,11 @@ export default function LandingPage() {
                 </Link>
 
                 {/* <Link href="/register-volunteer"> */}
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    data-modal-trigger="select-signup-type-modal"
-                    className="
+                <Button
+                  size="lg"
+                  variant="outline"
+                  data-modal-trigger="select-signup-type-modal"
+                  className="
               min-w-[220px] px-3 py-5 text-lg font-bold
               bg-white/20 backdrop-blur-md
               text-white border-2 border-white/40
@@ -147,21 +147,11 @@ export default function LandingPage() {
               shadow-xl hover:shadow-2xl
               transform hover:scale-105 transition-all duration-300
             "
-                  >
-                    Get Started
-                  </Button>
+                >
+                  Get Started
+                </Button>
                 {/* </Link> */}
               </motion.div>
-
-              {/* Optional Trust Indicator */}
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.2, duration: 1 }}
-                className="mt-10 text-sm text-gray-300 font-medium tracking-wider"
-              >
-                Trusted by volunteers in 47+ countries
-              </motion.p>
             </div>
           </motion.div>
 
@@ -194,7 +184,7 @@ export default function LandingPage() {
                   ),
                   title: "For Volunteers",
                   description:
-                    "Discover opportunities that align with your skills and passions. Track your impact and connect with like-minded individuals.",
+                    "Support projects in your home country that align with your skills and passions. Track your impact and connect with like-minded professionals.",
                 },
                 {
                   icon: (
@@ -276,8 +266,8 @@ export default function LandingPage() {
                   Ready to Make a Difference?
                 </h2>
                 <p className="mx-auto max-w-[600px] text-gray-500 md:text-xl dark:text-gray-400">
-                  Join thousands of volunteers and organizations transforming
-                  communities worldwide.
+                  Join thousands of volunteers and government agencies
+                  transforming communities across Africa.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -301,7 +291,7 @@ export default function LandingPage() {
                     variant="outline"
                     className="min-w-[200px] bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800"
                   >
-                    Register Your Organization
+                    Register a Government Agency
                   </Button>
                 </Link>
               </div>
@@ -310,7 +300,7 @@ export default function LandingPage() {
         </motion.section>
       </main>
       <Footer />
-      <SelectSignUpType/>
+      <SelectSignUpType />
     </div>
   );
 }
