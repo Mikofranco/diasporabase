@@ -5,29 +5,53 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Link from "next/link";
-import { Loader2, Eye, EyeOff, Mail, RefreshCw, AlertCircle, Chrome } from "lucide-react";
+import {
+  Loader2,
+  Eye,
+  EyeOff,
+  Mail,
+  RefreshCw,
+  AlertCircle,
+  Chrome,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useSendMail } from "@/services/mail";
 import { welcomeHtml } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
 
-const formSchema = z.object({
-  firstName: z.string().min(2, "First name must be at least 2 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters")
-    .regex(/[A-Za-z]/, "Password must contain at least one letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
-  confirmPassword: z.string(),
-  phone: z.string().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
+const formSchema = z
+  .object({
+    firstName: z.string().min(2, "First name must be at least 2 characters"),
+    lastName: z.string().min(2, "Last name must be at least 2 characters"),
+    email: z.string().email("Please enter a valid email address"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Za-z]/, "Password must contain at least one letter")
+      .regex(/[0-9]/, "Password must contain at least one number"),
+    confirmPassword: z.string(),
+    phone: z.string().optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -45,8 +69,12 @@ export default function VolunteerRegistrationForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const [touched, setTouched] = useState<Partial<Record<keyof FormData, boolean>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>(
+    {}
+  );
+  const [touched, setTouched] = useState<
+    Partial<Record<keyof FormData, boolean>>
+  >({});
 
   // Modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -73,8 +101,8 @@ export default function VolunteerRegistrationForm() {
   }, [formData, touched]);
 
   const handleChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setTouched(prev => ({ ...prev, [field]: true }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
   };
 
   // Reset form completely
@@ -133,7 +161,10 @@ export default function VolunteerRegistrationForm() {
       const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       const origin = window.location.origin;
 
-      const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+      const {
+        data: { user },
+        error: signUpError,
+      } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -149,11 +180,14 @@ export default function VolunteerRegistrationForm() {
       if (signUpError) throw signUpError;
       if (!user) throw new Error("Account creation failed");
 
-      const token = await encryptUserToJWT({
-        userId: user.id,
-        email: user.email!,
-        purpose: "email_confirmation",
-      }, "15m");
+      const token = await encryptUserToJWT(
+        {
+          userId: user.id,
+          email: user.email!,
+          purpose: "email_confirmation",
+        },
+        "15m"
+      );
 
       const confirmationUrl = `${origin}/confirm?token=${token}`;
 
@@ -181,7 +215,6 @@ export default function VolunteerRegistrationForm() {
       setModalOpen(true);
       resetForm(); // ← CLEARS FORM AFTER SUCCESS
       localStorage.setItem("diasporabase-email", formData.email);
-
     } catch (err: any) {
       toast.error(err.message || "Registration failed. Try again.");
     } finally {
@@ -310,14 +343,20 @@ export default function VolunteerRegistrationForm() {
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     disabled={loading}
-                    className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+                    className={
+                      errors.password ? "border-red-500 pr-10" : "pr-10"
+                    }
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-3 text-gray-500"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
                 {errors.password && (
@@ -333,7 +372,9 @@ export default function VolunteerRegistrationForm() {
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={formData.confirmPassword}
-                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("confirmPassword", e.target.value)
+                  }
                   disabled={loading}
                   className={errors.confirmPassword ? "border-red-500" : ""}
                 />
@@ -357,26 +398,33 @@ export default function VolunteerRegistrationForm() {
               />
             </div>
 
-            <Button
-              type="submit"
-              size="lg"
-              disabled={loading || googleLoading || Object.keys(errors).length > 0}
-              className="w-full h-12 text-lg font-semibold action-btn shadow-lg"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Creating Account...
-                </>
-              ) : (
-                "Register with Email"
-              )}
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                type="submit"
+                size="lg"
+                disabled={
+                  loading || googleLoading || Object.keys(errors).length > 0
+                }
+                className="w-fit h-12 text-lg font-semibold action-btn shadow-lg "
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  "Register with Email"
+                )}
+              </Button>
+            </div>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-[#0ea5e9] hover:underline">
+            <Link
+              href="/login"
+              className="font-semibold text-[#0ea5e9] hover:underline"
+            >
               Sign in
             </Link>
           </p>
@@ -392,13 +440,19 @@ export default function VolunteerRegistrationForm() {
             </div>
             <DialogTitle className="text-2xl">Check Your Email</DialogTitle>
             <DialogDescription className="text-base mt-3">
-              Confirmation link sent to<br />
+              Confirmation link sent to
+              <br />
               <strong className="text-foreground">{emailForResend}</strong>
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-6 space-y-3">
-            <Button onClick={handleResend} disabled={resendLoading} variant="outline" className="w-full">
+            <Button
+              onClick={handleResend}
+              disabled={resendLoading}
+              variant="outline"
+              className="w-full"
+            >
               {resendLoading ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -408,7 +462,11 @@ export default function VolunteerRegistrationForm() {
                 "Resend Email"
               )}
             </Button>
-            <Button variant="ghost" onClick={() => setModalOpen(false)} className="w-full">
+            <Button
+              variant="ghost"
+              onClick={() => setModalOpen(false)}
+              className="w-full"
+            >
               Close
             </Button>
           </div>

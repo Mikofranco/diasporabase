@@ -5,30 +5,58 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import Link from "next/link";
-import { Loader2, Eye, EyeOff, Mail, RefreshCw, AlertCircle, Chrome, Building2 } from "lucide-react";
+import {
+  Loader2,
+  Eye,
+  EyeOff,
+  Mail,
+  RefreshCw,
+  AlertCircle,
+  Chrome,
+  Building2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useSendMail } from "@/services/mail";
 import { welcomeHtml } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
 
-const formSchema = z.object({
-  companyName: z.string().min(2, "Company name must be at least 2 characters").trim(),
-  email: z.string().email("Please enter a valid email address"),
-  phone: z.string().regex(/^\+?[\d\s\-\(\)]{10,}$/, "Enter a valid phone number"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Za-z]/, "Must contain at least one letter")
-    .regex(/[0-9]/, "Must contain at least one number"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
+const formSchema = z
+  .object({
+    companyName: z
+      .string()
+      .min(2, "Company name must be at least 2 characters")
+      .trim(),
+    email: z.string().email("Please enter a valid email address"),
+    phone: z
+      .string()
+      .regex(/^\+?[\d\s\-\(\)]{10,}$/, "Enter a valid phone number"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Za-z]/, "Must contain at least one letter")
+      .regex(/[0-9]/, "Must contain at least one number"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -45,8 +73,12 @@ export default function AgencyRegistrationForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const [touched, setTouched] = useState<Partial<Record<keyof FormData, boolean>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>(
+    {}
+  );
+  const [touched, setTouched] = useState<
+    Partial<Record<keyof FormData, boolean>>
+  >({});
 
   // Modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -73,8 +105,8 @@ export default function AgencyRegistrationForm() {
   }, [formData, touched]);
 
   const handleChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setTouched(prev => ({ ...prev, [field]: true }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
   };
 
   const resetForm = () => {
@@ -127,7 +159,10 @@ export default function AgencyRegistrationForm() {
     try {
       const origin = window.location.origin;
 
-      const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+      const {
+        data: { user },
+        error: signUpError,
+      } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -143,11 +178,14 @@ export default function AgencyRegistrationForm() {
       if (signUpError) throw signUpError;
       if (!user) throw new Error("Registration failed");
 
-      const token = await encryptUserToJWT({
-        userId: user.id,
-        email: user.email!,
-        purpose: "email_confirmation",
-      }, "15m");
+      const token = await encryptUserToJWT(
+        {
+          userId: user.id,
+          email: user.email!,
+          purpose: "email_confirmation",
+        },
+        "15m"
+      );
 
       const confirmationUrl = `${origin}/confirm?token=${token}`;
 
@@ -175,7 +213,6 @@ export default function AgencyRegistrationForm() {
       setModalOpen(true);
       resetForm(); // ← CLEARS FORM AFTER SUCCESS
       localStorage.setItem("diasporabase-email", formData.email);
-
     } catch (err: any) {
       console.error("Agency registration error:", err);
       toast.error(err.message || "Registration failed. Please try again.");
@@ -210,7 +247,8 @@ export default function AgencyRegistrationForm() {
             Register Your Agency
           </CardTitle>
           <CardDescription className="text-base mt-3 max-w-md mx-auto">
-            Connect with skilled diaspora volunteers to power your development projects
+            Connect with skilled diaspora volunteers to power your development
+            projects
           </CardDescription>
         </CardHeader>
 
@@ -310,14 +348,20 @@ export default function AgencyRegistrationForm() {
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     disabled={loading}
-                    className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+                    className={
+                      errors.password ? "border-red-500 pr-10" : "pr-10"
+                    }
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
                 {errors.password && (
@@ -334,7 +378,9 @@ export default function AgencyRegistrationForm() {
                   id="confirmPassword"
                   type={showPassword ? "text" : "password"}
                   value={formData.confirmPassword}
-                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("confirmPassword", e.target.value)
+                  }
                   disabled={loading}
                   className={errors.confirmPassword ? "border-red-500" : ""}
                 />
@@ -347,26 +393,33 @@ export default function AgencyRegistrationForm() {
               </div>
             </div>
 
-            <Button
-              type="submit"
-              // size="lg"
-              disabled={loading || googleLoading || Object.keys(errors).length > 0}
-              className="w-full h-12 text-lg font-semibold action-btn shadow-lg"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Creating Agency Account...
-                </>
-              ) : (
-                "Register Agency"
-              )}
-            </Button>
+            <div className="flex items-center ">
+              <Button
+                type="submit"
+                // size="lg"
+                disabled={
+                  loading || googleLoading || Object.keys(errors).length > 0
+                }
+                className="w-full h-12 text-lg font-semibold action-btn shadow-lg"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Creating Agency Account...
+                  </>
+                ) : (
+                  "Register Agency"
+                )}
+              </Button>
+            </div>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
             Already have an agency account?{" "}
-            <Link href="/login" className="font-semibold text-[#0ea5e9] hover:underline">
+            <Link
+              href="/login"
+              className="font-semibold text-[#0ea5e9] hover:underline"
+            >
               Sign in
             </Link>
           </p>
@@ -382,13 +435,19 @@ export default function AgencyRegistrationForm() {
             </div>
             <DialogTitle className="text-2xl">Check Your Email</DialogTitle>
             <DialogDescription className="text-base mt-3">
-              A confirmation link has been sent to<br />
+              A confirmation link has been sent to
+              <br />
               <strong className="text-foreground">{emailForResend}</strong>
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-6 space-y-3">
-            <Button onClick={handleResend} disabled={resendLoading} variant="outline" className="w-full">
+            <Button
+              onClick={handleResend}
+              disabled={resendLoading}
+              variant="outline"
+              className="w-full"
+            >
               {resendLoading ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -398,7 +457,11 @@ export default function AgencyRegistrationForm() {
                 "Resend Confirmation Email"
               )}
             </Button>
-            <Button variant="ghost" onClick={() => setModalOpen(false)} className="w-full">
+            <Button
+              variant="ghost"
+              onClick={() => setModalOpen(false)}
+              className="w-full"
+            >
               Close
             </Button>
           </div>

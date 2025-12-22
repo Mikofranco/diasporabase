@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import NavBar from "@/components/navbar";
 import Footer from "@/parts/landingPage/footer";
 import React from "react";

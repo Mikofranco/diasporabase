@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
+import { formatLocation } from "@/lib/utils";
 
 const supabase = createClient();
 
@@ -159,12 +160,11 @@ export default function ProjectsList({ agencyId }: ProjectsListProps) {
                         {project.end_date && ` – ${format(new Date(project.end_date), "MMM d")}`}
                       </div>
                     )}
-                    {(project.location || project.lga) && (
                       <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {project.lga || project.location}
+                        <MapPin className="h-3 w-3" />{/*@ts-ignore*/}
+                        {formatLocation(project.location)}
                       </div>
-                    )}
+                    {/* )} */}
                   </div>
                 </CardContent>
               </Card>
