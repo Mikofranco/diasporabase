@@ -3,10 +3,23 @@
 import NavBar from "@/components/navbar";
 import Footer from "@/parts/landingPage/footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Calendar, Users, Search, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -22,7 +35,8 @@ export default function OpportunityPage() {
       date: "December 20, 2025",
       spots: "8 spots left",
       category: "Environment",
-      description: "Help us clean up the park and plant new trees for a greener tomorrow.",
+      description:
+        "Help us clean up the park and plant new trees for a greener tomorrow.",
     },
     {
       id: 2,
@@ -32,7 +46,8 @@ export default function OpportunityPage() {
       date: "Every Saturday",
       spots: "Volunteers needed",
       category: "Social Service",
-      description: "Assist in preparing and distributing meals to those in need.",
+      description:
+        "Assist in preparing and distributing meals to those in need.",
     },
     {
       id: 3,
@@ -42,7 +57,8 @@ export default function OpportunityPage() {
       date: "Ongoing",
       spots: "Mentors needed",
       category: "Education",
-      description: "Be a positive role model and guide young students in their studies.",
+      description:
+        "Be a positive role model and guide young students in their studies.",
     },
     {
       id: 4,
@@ -52,7 +68,8 @@ export default function OpportunityPage() {
       date: "Weekends",
       spots: "5 spots available",
       category: "Animals",
-      description: "Help care for rescued animals, walking dogs and socializing cats.",
+      description:
+        "Help care for rescued animals, walking dogs and socializing cats.",
     },
   ];
 
@@ -67,7 +84,8 @@ export default function OpportunityPage() {
             Find Volunteer Opportunities
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-10">
-            Make a difference in your community. Discover meaningful ways to give back and connect with causes you care about.
+            Make a difference in your community. Discover meaningful ways to
+            give back and connect with causes you care about.
           </p>
 
           {/* Search & Filter Bar */}
@@ -119,24 +137,37 @@ export default function OpportunityPage() {
       <section className="py-16 px-4 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-semibold text-gray-900">Available Opportunities</h2>
-            <p className="text-gray-600">Showing {opportunities.length} opportunities</p>
+            <h2 className="text-3xl font-semibold text-gray-900">
+              Available Opportunities
+            </h2>
+            <p className="text-gray-600">
+              Showing {opportunities.length} opportunities
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {opportunities.map((opp) => (
-              <Card key={opp.id} className="hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+              <Card
+                key={opp.id}
+                className="hover:shadow-xl transition-shadow duration-300 overflow-hidden"
+              >
                 <div className="bg-gray-200 border-2 border-dashed rounded-t-xl w-full h-48" />
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <Badge variant="secondary">{opp.category}</Badge>
-                    <span className="text-sm text-green-600 font-medium">{opp.spots}</span>
+                    <span className="text-sm text-green-600 font-medium">
+                      {opp.spots}
+                    </span>
                   </div>
-                  <CardTitle className="text-lg mt-2 line-clamp-2">{opp.title}</CardTitle>
+                  <CardTitle className="text-lg mt-2 line-clamp-2">
+                    {opp.title}
+                  </CardTitle>
                   <CardDescription>{opp.organization}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <p className="text-sm text-gray-600 line-clamp-3">{opp.description}</p>
+                  <p className="text-sm text-gray-600 line-clamp-3">
+                    {opp.description}
+                  </p>
                   <div className="space-y-2 text-sm text-gray-500">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
@@ -162,15 +193,23 @@ export default function OpportunityPage() {
 
           {/* CTA for Non-Logged-In Users */}
           <div className="mt-16 text-center bg-blue-600 rounded-2xl p-10 text-white">
-            <h3 className="text-3xl font-bold mb-4">Ready to Make an Impact?</h3>
+            <h3 className="text-3xl font-bold mb-4">
+              Ready to Make an Impact?
+            </h3>
             <p className="text-xl mb-8 max-w-2xl mx-auto">
-              Sign up today to apply for opportunities, track your hours, and connect with other volunteers.
+              Sign up today to apply for opportunities, track your hours, and
+              connect with other volunteers.
             </p>
             <div className="flex gap-4 justify-center">
               <Button size="lg" variant="secondary" asChild>
                 <Link href="/signup">Create Free Account</Link>
               </Button>
-              <Button size="lg" variant="outline" className="bg-transparent text-white border-white hover:bg-white hover:text-blue-600" asChild>
+              <Button
+                size="lg"
+                variant="outline"
+                className="bg-transparent text-white border-white hover:bg-white hover:text-blue-600"
+                asChild
+              >
                 <Link href="/login">Sign In</Link>
               </Button>
             </div>

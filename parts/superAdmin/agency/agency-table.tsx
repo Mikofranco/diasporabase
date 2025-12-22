@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 // Initialize Supabase client
 const supabase = createClient();
@@ -80,7 +81,7 @@ const AgencyList: React.FC = () => {
 
       const query = supabase
         .from('profiles')
-        .select('id, organization_name, contact_person_email, website, focus_areas, role', {
+        .select('id, organization_name, contact_person_email, website, focus_areas, role, is_active', {
           count: 'exact',
         })
         .eq('role', 'agency')
@@ -188,6 +189,7 @@ const AgencyList: React.FC = () => {
                   <TableHead>Contact Email</TableHead>
                   <TableHead>Website</TableHead>
                   <TableHead>Focus Areas</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -223,6 +225,17 @@ const AgencyList: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       {agency.focus_areas?.join(', ') || 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {agency.is_active ? (
+                        <Badge variant="default" className="bg-green-100 text-green-800">
+                          Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="default" className="bg-red-100 text-red-800">
+                          Inactive
+                        </Badge>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

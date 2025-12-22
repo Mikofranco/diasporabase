@@ -142,8 +142,9 @@ export default function LoginForm() {
               {message.text}
             </p>
           )}
-          <div className="mt-4 text-center text-sm">
+          <div className="mt-4 text-sm">
             Don&apos;t have an account?{" "}
+            <br />
             <Link href="/register-volunteer" className="underline">
               Register as Volunteer
             </Link>{" "}
