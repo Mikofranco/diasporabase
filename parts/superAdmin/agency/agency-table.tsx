@@ -30,6 +30,7 @@ interface AgencyProfile {
   website: string | null;
   focus_areas: string[] | null;
   role: 'agency';
+  is_active: boolean;
 }
 
 const AgencyList: React.FC = () => {
