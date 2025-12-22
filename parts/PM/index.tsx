@@ -36,6 +36,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getProjectManagers } from "@/services/projects";
+import { useSendMail } from "@/services/mail";
 
 const supabase = createClient();
 
@@ -120,6 +121,12 @@ export default function AssignProjectManager({
       .update({ project_manager_id: volunteerId })
       .eq("id", projectId);
 
+    await useSendMail({
+      to: confirmVolunteer?.full_name || "",
+      subject: "You have been assigned as Project Manager",
+      html: `Dear ${confirmVolunteer?.full_name},\n\nYou have been assigned as the Project Manager for project ID: ${projectId}.\n\nBest regards,\nDiasporaBase Team`,
+    })
+
     if (error) {
       toast.error("Assignment failed: " + error.message);
     } else {
@@ -193,7 +200,7 @@ export default function AssignProjectManager({
                   onKeyDown={(e) => e.key === "Enter" && searchVolunteers()}
                   className="flex-1"
                 />
-                <Button onClick={searchVolunteers} disabled={loading}>
+                <Button onClick={searchVolunteers} disabled={loading} className="action-btn">
                   <Search className="h-4 w-4 mr-2" />
                   Search
                 </Button>
