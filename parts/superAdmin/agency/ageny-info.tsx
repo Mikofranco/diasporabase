@@ -135,8 +135,8 @@ const AgencyProfile = () => {
       organization_type: profileData.organization_type || "",
       description: profileData.description || "",
       focus_areas: profileData.focus_areas?.join(", ") || "",
-      // environment_cities: profileData.environment_cities?.join(", ") || "",
-      // environment_states: profileData.environment_states?.join(", ") || "",
+      environment_cities: profileData.environment_cities?.join(", ") || "",
+      environment_states: profileData.environment_states?.join(", ") || "",
       is_active: profileData.is_active ?? true,
     });
     setPreviewUrl(profileData.profile_picture || null);
@@ -442,7 +442,7 @@ const AgencyProfile = () => {
                   Address: profile.address,
                 }}
               />
-              {/* <InfoSection
+              <InfoSection
                 title="Operations"
                 data={{
                   "Focus Areas": profile.focus_areas?.join(", "),
@@ -450,7 +450,7 @@ const AgencyProfile = () => {
                   States: profile.environment_states?.join(", "),
                   Description: profile.description,
                 }}
-              /> */}
+              />
             </CardContent>
 
             <div className="px-6 pb-6">
@@ -465,7 +465,7 @@ const AgencyProfile = () => {
       </div>
 
       {/* Edit Modal */}
-      {/* <EditModal
+      <EditModal
         open={isModalOpen}
         onOpenChange={handleModalClose}
         profile={profile}
@@ -479,7 +479,7 @@ const AgencyProfile = () => {
         handleImageUpload={handleImageUpload}
         currentActiveStatus={currentActiveStatus}
         handleStatusChange={handleStatusChange}
-      /> */}
+      />
 
       {/* Deactivate Confirmation */}
       <AlertDialog
