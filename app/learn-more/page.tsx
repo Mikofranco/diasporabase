@@ -56,7 +56,7 @@ const LearnMore = () => {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-12">
+      {/* <section className="py-12">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-10">
             How DiasporaBase Works
@@ -106,7 +106,7 @@ const LearnMore = () => {
             </Card>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Key Features Section */}
       <section className="bg-white py-12">

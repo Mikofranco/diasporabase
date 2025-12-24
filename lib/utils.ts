@@ -481,7 +481,7 @@ export function convertLocationCodesToNames({
   const states: string[] = [];
 
   countryCodes.forEach((code) => {//@ts-ignore
-    const match = nigerianLocations.find((loc) => loc.countryCode === code);
+    const match = africanLocations.find((loc) => loc.countryCode === code);
     if (match) countries.push(match.country);
     else {
       const c = Country.getCountryByCode(code);

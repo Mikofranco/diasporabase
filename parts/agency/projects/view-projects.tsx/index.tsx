@@ -343,7 +343,7 @@ const ProjectDetails: React.FC = () => {
                 <CardTitle className="text-2xl">{project.title}</CardTitle>
                 <CardDescription>{project.organization_name}</CardDescription>
               </div>
-              <Badge variant={project.status === "active" ? "default" : "secondary"}>
+              <Badge variant={project.status === "active" ? "default" : "secondary"} className={`${project.status === "active" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
                 {project.status}
               </Badge>
             </div>

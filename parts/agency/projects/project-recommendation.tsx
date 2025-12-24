@@ -31,24 +31,13 @@ import { useSendMail } from "@/services/mail";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { match } from "assert";
+import { matchVolunteersToProjectLocation } from "@/lib/utils/matchvolunteersToProject";
+import { Volunteer } from "@/lib/types";
 
 const supabase = createClient();
 
-interface Volunteer {
-  volunteer_id: string;
-  full_name: string;
-  email: string;
-  skills: string[];
-  availability: string;
-  residence_country: string;
-  residence_state: string;
-  volunteer_countries: string[];
-  volunteer_states: string[];
-  volunteer_lgas: string[];
-  average_rating: number;
-  request_status?: string;
-  matched_skills: string[];
-}
+
 
 interface ProjectRecommendationProps {
   projectId: string;
@@ -132,6 +121,8 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
         }));
 
         setVolunteers(recommendedVolunteers);
+        const matchedVolunteers = matchVolunteersToProjectLocation(projectId, recommendedVolunteers);
+        console.log("Matched Volunteers:", matchedVolunteers);
       } catch (err: any) {
         setError(err.message);
         toast.error(err.message);

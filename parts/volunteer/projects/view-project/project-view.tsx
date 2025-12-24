@@ -219,7 +219,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                           className="w-full mb-2 text-base py-6"
                           onClick={() =>
                             router.push(
-                              `/dashboard/volunteer/projects/${project.id}/project_management`
+                              `/dashboard/volunteer/project_management/${project.id}`
                             )
                           }
                         >
@@ -233,8 +233,8 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     </div>
                   ) : (
                     <VolunteerActionButton
-                      hasRequested={hasRequested} //@ts-ignore
-                      isFull={
+                      hasRequested={hasRequested} 
+                      isFull={//@ts-ignore
                         project.volunteersRegistered >= project.volunteersNeeded
                       }
                       onClick={handleVolunteerRequest}
