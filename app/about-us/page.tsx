@@ -12,7 +12,7 @@ const AboutUs = () => {
       <div
         className="relative bg-cover bg-center h-[60vh] flex items-center justify-center"
         style={{
-          backgroundImage: `url('https://diasporabase.com/lifestyle-people-office.jpg')`,
+          backgroundImage: `url('https://jbgnohxjwrvepqnlpccy.supabase.co/storage/v1/object/public/app_images/business-people-collaborating-office-working-project-together_709984-8661.jpg')`,
         }}
       >
         <div className="absolute inset-0 bg-black bg-opacity-50"></div>

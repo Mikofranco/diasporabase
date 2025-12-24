@@ -5,6 +5,12 @@ export type NotificationType = "request_status_change" | "project_approval" | "n
 export type ProfileRole = "super_admin" | "admin" | "volunteer" | "agency";
 export type ProjectStatus = "active" | "completed" | "pending" | "cancelled";
 
+export type location = {
+  country: string;
+  state?: string;
+  lga?: string;
+};
+
 export interface AgencyRequest {
   id: string;
   projectId: string;
@@ -82,6 +88,9 @@ export interface Profile {
   volunteerCountries?: string[];
   volunteerStates?: string[];
   volunteerLgas?: string[];
+  volunteer_countries?: string[] | undefined | null;
+  volunteer_states?: string[] | undefined | null;
+  volunteer_lgas?: string[] | undefined | null;
 }
 
 export interface ProjectLeaveReason {
@@ -116,7 +125,7 @@ export interface Project {
   description?: string;
   // organizationId?: string;
   organizationName?: string;
-  location?: string;
+  location?: string | location;
   startDate?: string;
   endDate?: string;
   volunteersRegistered?: number;
@@ -130,7 +139,6 @@ export interface Project {
   organization_id?: string;
   organization_name?: string;
   project_manager_id?: string;
-
 }
 
 export interface Skillset {
@@ -170,3 +178,19 @@ export type OrganizationContact = {
   organization_type?: string | null;
   profile_picture?: string | null;
 };
+
+export interface Volunteer {
+  volunteer_id: string;
+  full_name: string;
+  email: string;
+  skills: string[];
+  availability: string;
+  residence_country: string;
+  residence_state: string;
+  volunteer_countries: string[];
+  volunteer_states: string[];
+  volunteer_lgas: string[];
+  average_rating: number;
+  request_status?: string;
+  matched_skills: string[];
+}

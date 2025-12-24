@@ -428,3 +428,34 @@ export async function isAProjectManager(userId: string){
   }
   return { data: data && data.length > 0, error: null };
 }
+
+export async function findProjectById(projectId: string) {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, title, location->>lga, location->>state, location->>country')
+    .eq('id', projectId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching project:', error);
+    return { data: null, error };
+  }
+
+  return { data: data as Project, error: null };
+}
+
+export async function checkIfUserIsProjectManager(userId: string, projectId: string) {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('project_manager_id')
+    .eq('id', projectId)
+    .eq('project_manager_id', userId)
+    .single();
+
+  if (error) {
+    console.error('Error checking project manager status:', error);
+    return { isManager: false, error };
+  }
+
+  return { isManager: !!data, error: null };
+}

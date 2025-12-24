@@ -58,7 +58,7 @@ export default function LandingPage() {
           style={{
             backgroundImage: `
       linear-gradient(to bottom, rgba(14, 165, 233, 0.4), rgba(59, 7, 100, 0.8)),
-      url('https://jbgnohxjwrvepqnlpccy.supabase.co/storage/v1/object/public/app_images/disporabase_hero.jpg')
+      url('https://jbgnohxjwrvepqnlpccy.supabase.co/storage/v1/object/public/app_images/group-afro-americans-working-together%20(1).jpg')
     `,
             backgroundSize: "cover",
             backgroundPosition: "center",

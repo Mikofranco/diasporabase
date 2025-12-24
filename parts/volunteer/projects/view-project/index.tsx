@@ -17,6 +17,7 @@ import ContactOrganizationModal from "@/components/modals/contact-organizer";
 import { getOrganizationContact } from "@/services/agency/dashboard";
 import { ReviewsList } from "./review-list";
 import ProjectManagementScreen from "../project-management";
+import { checkIfUserIsProjectManager } from "@/services/projects";
 
 export default function ViewProjectDetails() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +34,7 @@ export default function ViewProjectDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isUserProjectManager, setIsUserProjectManager] = useState(false);
 
   const [organizationDetails, setOrganizationDetails] =
     useState<OrganizationContact>({
@@ -127,6 +129,13 @@ export default function ViewProjectDetails() {
             joined_at: v.created_at,
           }))
         );
+
+        const { isManager, error } = await checkIfUserIsProjectManager(
+          userId as string,
+          id
+        );
+        setIsUserInProject(isManager);
+        console.log("checking if user is a manager", isManager);
 
         // 4. Fetch ratings (public)
         const { data: ratingsData, error: ratingsError } = await supabase
@@ -226,7 +235,7 @@ export default function ViewProjectDetails() {
         />
       </section>
 
-      <ProjectManagementScreen userId={currentUserId} projectId={project.id} />
+      {/* <ProjectManagementScreen userId={currentUserId} projectId={project.id} /> */}
 
       <Separator />
 

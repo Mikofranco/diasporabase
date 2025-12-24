@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { CheckboxReactHookFormMultiple } from '@/components/renderedItems';
 import { Input } from '@/components/ui/input';
@@ -37,12 +36,16 @@ interface FormData {
 const EditProject: React.FC = () => {
   const { projectId } = useParams();
   const router = useRouter();
-  const { control, handleSubmit, setValue, formState: { isSubmitting } } = useForm<FormData>();
+  const { control, handleSubmit, setValue, formState: { isSubmitting } } = useForm<FormData>({
+    defaultValues: {
+      required_skills: [],
+    },
+  });
+
   const [userRole, setUserRole] = useState<string | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [customSkill, setCustomSkill] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-
 
   useEffect(() => {
     const fetchUserAndProject = async () => {
@@ -197,12 +200,12 @@ const EditProject: React.FC = () => {
                 )}
               />
             </div>
+
             <div>
-              <Label className="text-sm font-medium text-gray-600">Required Skills</Label>
+              <Label className="text-sm font-medium text-gray-600">Required Skills (Optional)</Label>
               <Controller
                 name="required_skills"
                 control={control}
-                defaultValue={project.required_skills || []}
                 render={({ field }) => (
                   <CheckboxReactHookFormMultiple
                     items={expertiseData}
@@ -212,6 +215,7 @@ const EditProject: React.FC = () => {
                 )}
               />
             </div>
+
             <div className="flex gap-2">
               <Input
                 value={customSkill}
@@ -231,10 +235,11 @@ const EditProject: React.FC = () => {
                 <Plus className="h-4 w-4" /> Add
               </Button>
             </div>
+
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 transition-all duration-300"
-              disabled={isSubmitting || !control._formValues.required_skills?.length}
+              disabled={isSubmitting}  // Removed the required_skills length check
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
             </Button>
