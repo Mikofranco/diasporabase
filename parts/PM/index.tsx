@@ -323,6 +323,8 @@ export default function AssignProjectManager({
                             size="sm"
                             onClick={() => setConfirmVolunteer(volunteer)}
                             disabled={assigningId === volunteer.id}
+                            variant={"outline"}
+                            className="text-disapora-darkBlue border-disapora-darkBlue"
                           >
                             {assigningId === volunteer.id
                               ? "Assigning..."
