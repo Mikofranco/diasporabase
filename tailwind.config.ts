@@ -64,7 +64,11 @@ const config: Config = {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
-  			}
+  			},
+			disapora: {
+				blue: '#0ea5e9',
+				darkBlue: '#0284c7',
+			}
   		},
   		borderRadius: {
   			lg: 'var(--radius)',

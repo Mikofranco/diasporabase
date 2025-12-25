@@ -1,8 +1,14 @@
 "use client";
 import { createClient } from "@/lib/supabase/client";
-import { getUserId } from "@/lib/utils";
+import { formatLocation, getUserId } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -25,9 +31,9 @@ interface Request {
   end_date: string;
   status: string;
   request_type: "volunteer" | "agency";
-  volunteer_name?: string; 
-  profile_picture?: string; 
-  organization_profile_picture?: string; 
+  volunteer_name?: string;
+  profile_picture?: string;
+  organization_profile_picture?: string;
 }
 
 const VolunteerRequests: React.FC = () => {
@@ -35,7 +41,9 @@ const VolunteerRequests: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"all" | "volunteer" | "agency">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "volunteer" | "agency">(
+    "all"
+  );
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -54,16 +62,21 @@ const VolunteerRequests: React.FC = () => {
           .eq("id", userId)
           .single();
         if (profileError)
-          throw new Error("Error fetching user profile: " + profileError.message);
+          throw new Error(
+            "Error fetching user profile: " + profileError.message
+          );
         setUserRole(userProfile.role);
 
         let volunteerData: any[] = [];
         let agencyData: any[] = [];
 
-        if (userProfile.role === "admin" || userProfile.role === "super_admin") {
-          const { data: vData, error: vError } = await supabase
-            .from("volunteer_requests")
-            .select(`
+        if (
+          userProfile.role === "admin" ||
+          userProfile.role === "super_admin"
+        ) {
+          const { data: vData, error: vError } = await supabase.from(
+            "volunteer_requests"
+          ).select(`
               id, 
               project_id, 
               volunteer_id, 
@@ -80,12 +93,14 @@ const VolunteerRequests: React.FC = () => {
               profiles!volunteer_id (full_name, profile_picture)
             `);
           if (vError)
-            throw new Error("Error fetching volunteer requests: " + vError.message);
+            throw new Error(
+              "Error fetching volunteer requests: " + vError.message
+            );
           volunteerData = vData;
 
-          const { data: aData, error: aError } = await supabase
-            .from("agency_requests")
-            .select(`
+          const { data: aData, error: aError } = await supabase.from(
+            "agency_requests"
+          ).select(`
               id, 
               project_id, 
               volunteer_id, 
@@ -102,13 +117,16 @@ const VolunteerRequests: React.FC = () => {
               profiles!volunteer_id (full_name, profile_picture)
             `);
           if (aError)
-            throw new Error("Error fetching agency requests: " + aError.message);
+            throw new Error(
+              "Error fetching agency requests: " + aError.message
+            );
           agencyData = aData;
         } else {
           // Volunteers see only their requests
           const { data: vData, error: vError } = await supabase
             .from("volunteer_requests")
-            .select(`
+            .select(
+              `
               id, 
               project_id, 
               status, 
@@ -121,15 +139,19 @@ const VolunteerRequests: React.FC = () => {
                 end_date,
                 organization:profiles!organization_id (profile_picture)
               )
-            `)
+            `
+            )
             .eq("volunteer_id", userId);
           if (vError)
-            throw new Error("Error fetching volunteer requests: " + vError.message);
+            throw new Error(
+              "Error fetching volunteer requests: " + vError.message
+            );
           volunteerData = vData;
 
           const { data: aData, error: aError } = await supabase
             .from("agency_requests")
-            .select(`
+            .select(
+              `
               id, 
               project_id, 
               status, 
@@ -142,10 +164,13 @@ const VolunteerRequests: React.FC = () => {
                 end_date,
                 organization:profiles!organization_id (profile_picture)
               )
-            `)
+            `
+            )
             .eq("volunteer_id", userId);
           if (aError)
-            throw new Error("Error fetching agency requests: " + aError.message);
+            throw new Error(
+              "Error fetching agency requests: " + aError.message
+            );
           agencyData = aData;
         }
 
@@ -157,14 +182,15 @@ const VolunteerRequests: React.FC = () => {
             project_title: item.projects.title,
             organization_name: item.projects.organization_name,
             description: item.projects.description,
-            location: item.projects.location,
+            location: formatLocation(item.projects.location),
             start_date: item.projects.start_date,
             end_date: item.projects.end_date,
             status: item.status,
             request_type: "volunteer" as const,
             volunteer_name: item.profiles?.full_name,
             profile_picture: item.profiles?.profile_picture,
-            organization_profile_picture: item.projects.organization?.profile_picture,
+            organization_profile_picture:
+              item.projects.organization?.profile_picture,
           })) || []),
           ...(agencyData?.map((item: any) => ({
             id: item.id,
@@ -172,14 +198,15 @@ const VolunteerRequests: React.FC = () => {
             project_title: item.projects.title,
             organization_name: item.projects.organization_name,
             description: item.projects.description,
-            location: item.projects.location,
+            location: formatLocation(item.projects.location),
             start_date: item.projects.start_date,
             end_date: item.projects.end_date,
             status: item.status,
             request_type: "agency" as const,
             volunteer_name: item.profiles?.full_name,
             profile_picture: item.profiles?.profile_picture,
-            organization_profile_picture: item.projects.organization?.profile_picture,
+            organization_profile_picture:
+              item.projects.organization?.profile_picture,
           })) || []),
         ];
 
@@ -208,15 +235,18 @@ const VolunteerRequests: React.FC = () => {
       if (!userId) throw new Error("Please log in to accept requests.");
 
       // Check if volunteer is already assigned
-      const { data: existingAssignment, error: assignmentError } = await supabase
-        .from("project_volunteers")
-        .select("project_id")
-        .eq("project_id", projectId)
-        .eq("volunteer_id", userId)
-        .single();
+      const { data: existingAssignment, error: assignmentError } =
+        await supabase
+          .from("project_volunteers")
+          .select("project_id")
+          .eq("project_id", projectId)
+          .eq("volunteer_id", userId)
+          .single();
 
       if (assignmentError && assignmentError.code !== "PGRST116")
-        throw new Error("Error checking assignment: " + assignmentError.message);
+        throw new Error(
+          "Error checking assignment: " + assignmentError.message
+        );
       if (existingAssignment) {
         toast.error("You are already assigned to this project.");
         return;
@@ -256,10 +286,13 @@ const VolunteerRequests: React.FC = () => {
         .eq("id", projectId);
 
       if (projectUpdateError)
-        throw new Error("Error updating project: " + projectUpdateError.message);
+        throw new Error(
+          "Error updating project: " + projectUpdateError.message
+        );
 
       // Update request status to accepted
-      const table = requestType === "volunteer" ? "volunteer_requests" : "agency_requests";
+      const table =
+        requestType === "volunteer" ? "volunteer_requests" : "agency_requests";
       const { error: updateError } = await supabase
         .from(table)
         .update({ status: "accepted" })
@@ -267,7 +300,9 @@ const VolunteerRequests: React.FC = () => {
         .eq("volunteer_id", userId);
 
       if (updateError)
-        throw new Error(`Error accepting ${requestType} request: ${updateError.message}`);
+        throw new Error(
+          `Error accepting ${requestType} request: ${updateError.message}`
+        );
 
       setRequests(
         requests.map((r) =>
@@ -293,7 +328,8 @@ const VolunteerRequests: React.FC = () => {
       if (userIdError) throw new Error(userIdError);
       if (!userId) throw new Error("Please log in to reject requests.");
 
-      const table = requestType === "volunteer" ? "volunteer_requests" : "agency_requests";
+      const table =
+        requestType === "volunteer" ? "volunteer_requests" : "agency_requests";
       const { error } = await supabase
         .from(table)
         .update({ status: "rejected" })
@@ -301,7 +337,9 @@ const VolunteerRequests: React.FC = () => {
         .eq("volunteer_id", userId);
 
       if (error)
-        throw new Error(`Error rejecting ${requestType} request: ${error.message}`);
+        throw new Error(
+          `Error rejecting ${requestType} request: ${error.message}`
+        );
 
       setRequests(
         requests.map((r) =>
@@ -320,11 +358,23 @@ const VolunteerRequests: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+        return (
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+            Pending
+          </Badge>
+        );
       case "accepted":
-        return <Badge variant="default" className="bg-green-100 text-green-800">Accepted</Badge>;
+        return (
+          <Badge variant="default" className="bg-green-100 text-green-800">
+            Accepted
+          </Badge>
+        );
       case "rejected":
-        return <Badge variant="destructive" className="bg-red-100 text-red-800">Rejected</Badge>;
+        return (
+          <Badge variant="destructive" className="bg-red-100 text-red-800">
+            Rejected
+          </Badge>
+        );
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -346,7 +396,11 @@ const VolunteerRequests: React.FC = () => {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base md:text-lg font-semibold flex items-center gap-2">
-            {request.request_type === "volunteer" ? <User className="h-4 w-4" /> : <Briefcase className="h-4 w-4" />}
+            {request.request_type === "volunteer" ? (
+              <User className="h-4 w-4" />
+            ) : (
+              <Briefcase className="h-4 w-4" />
+            )}
             {request.project_title}
           </CardTitle>
           {getStatusBadge(request.status)}
@@ -356,7 +410,10 @@ const VolunteerRequests: React.FC = () => {
         {/* Agency/Org Info */}
         <div className="flex items-start gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={request.organization_profile_picture} alt={request.organization_name} />
+            <AvatarImage
+              src={request.organization_profile_picture}
+              alt={request.organization_name}
+            />
             <AvatarFallback className="bg-muted">
               <Briefcase className="h-4 w-4 text-muted-foreground" />
             </AvatarFallback>
@@ -371,7 +428,10 @@ const VolunteerRequests: React.FC = () => {
         {userRole === "admin" || userRole === "super_admin" ? (
           <div className="flex items-start gap-3">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={request.profile_picture} alt={request.volunteer_name} />
+              <AvatarImage
+                src={request.profile_picture}
+                alt={request.volunteer_name}
+              />
               <AvatarFallback className="bg-muted">
                 <User className="h-4 w-4 text-muted-foreground" />
               </AvatarFallback>
@@ -384,7 +444,9 @@ const VolunteerRequests: React.FC = () => {
         ) : null}
 
         {/* Description */}
-        <CardDescription className="text-sm bg-gray-50 rounded-md border p-2">{request.description}</CardDescription>
+        <CardDescription className="text-sm bg-gray-50 rounded-md border p-2">
+          {request.description}
+        </CardDescription>
 
         {/* Meta Info */}
         <div className="grid grid-cols-3 gap-2 text-sm">
@@ -395,12 +457,15 @@ const VolunteerRequests: React.FC = () => {
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0 fill-blue-300" />
             <span className="text-muted-foreground">
-              {new Date(request.start_date).toLocaleDateString()} – {new Date(request.end_date).toLocaleDateString()}
+              {new Date(request.start_date).toLocaleDateString()} –{" "}
+              {new Date(request.end_date).toLocaleDateString()}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground flex-shrink-0 fill-blue-300" />
-            <span className="text-muted-foreground capitalize">{getRequestTypeLabel(request.request_type)}</span>
+            <span className="text-muted-foreground capitalize">
+              {getRequestTypeLabel(request.request_type)}
+            </span>
           </div>
         </div>
 
@@ -425,10 +490,7 @@ const VolunteerRequests: React.FC = () => {
               variant="destructive"
               className="flex-1"
               onClick={() =>
-                handleRejectRequest(
-                  request.id,
-                  request.request_type
-                )
+                handleRejectRequest(request.id, request.request_type)
               }
             >
               Reject
@@ -474,14 +536,18 @@ const VolunteerRequests: React.FC = () => {
         <Card className="border-destructive/50 bg-destructive/5">
           <CardContent className="pt-6">
             <p className="text-destructive">{error}</p>
-            <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Retry
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const volunteerRequests = requests.filter((r) => r.request_type === "volunteer");
+  const volunteerRequests = requests.filter(
+    (r) => r.request_type === "volunteer"
+  );
   const agencyRequests = requests.filter((r) => r.request_type === "agency");
 
   const getFilteredRequests = () => {
@@ -511,8 +577,12 @@ const VolunteerRequests: React.FC = () => {
         <Card className="border-dashed border-2 border-muted">
           <CardContent className="text-center py-12">
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-base sm:text-xs font-semibold mb-2">No requests yet</h3>
-            <p className="text-muted-foreground text-base sm:text-xs mb-4">Get started by applying to a project or waiting for invitations.</p>
+            <h3 className="text-base sm:text-xs font-semibold mb-2">
+              No requests yet
+            </h3>
+            <p className="text-muted-foreground text-base sm:text-xs mb-4">
+              Get started by applying to a project or waiting for invitations.
+            </p>
             <Button variant="outline">Browse Projects</Button>
           </CardContent>
         </Card>
@@ -525,44 +595,66 @@ const VolunteerRequests: React.FC = () => {
           className="w-full text-base sm:text-xs"
         >
           <TabsList className="grid w-full grid-cols-3 h-10 bg-white rounded-t-lg border-b">
-            <TabsTrigger 
-              value="all" 
+            <TabsTrigger
+              value="all"
               className="justify-center gap-2 data-[state=active]:bg-sky-500 data-[state=active]:text-white hover:bg-gray-100 rounded-md h-8 text-sm w-40 p-4"
             >
               All ({requests.length})
             </TabsTrigger>
-            <TabsTrigger 
-              value="volunteer" 
+            <TabsTrigger
+              value="volunteer"
               className="justify-center gap-2 data-[state=active]:bg-sky-500 data-[state=active]:text-white hover:bg-gray-100 rounded-md h-8 text-sm w-40 p-4"
             >
               <User className="h-3 w-3" /> From Me ({volunteerRequests.length})
             </TabsTrigger>
-            <TabsTrigger 
-              value="agency" 
+            <TabsTrigger
+              value="agency"
               className="justify-center gap-2 data-[state=active]:bg-sky-500 data-[state=active]:text-white hover:bg-gray-100 rounded-md h-8 text-sm w-40 p-4"
             >
-              <Briefcase className="h-3 w-3" /> From Organizations ({agencyRequests.length})
+              <Briefcase className="h-3 w-3" /> From Organizations (
+              {agencyRequests.length})
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="all" className="mt-0 bg-white rounded-b-lg p-4 space-y-4">
+          <TabsContent
+            value="all"
+            className="mt-0 bg-white rounded-b-lg p-4 space-y-4"
+          >
             {filteredRequests.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No requests match this filter.</p>
+              <p className="text-muted-foreground text-center py-8">
+                No requests match this filter.
+              </p>
             ) : (
-              filteredRequests.map((request, index) => renderRequestCard(request, index))
+              filteredRequests.map((request, index) =>
+                renderRequestCard(request, index)
+              )
             )}
           </TabsContent>
-          <TabsContent value="volunteer" className="mt-0 bg-white rounded-b-lg p-4 space-y-4">
+          <TabsContent
+            value="volunteer"
+            className="mt-0 bg-white rounded-b-lg p-4 space-y-4"
+          >
             {volunteerRequests.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No requests from you yet.</p>
+              <p className="text-muted-foreground text-center py-8">
+                No requests from you yet.
+              </p>
             ) : (
-              volunteerRequests.map((request, index) => renderRequestCard(request, index))
+              volunteerRequests.map((request, index) =>
+                renderRequestCard(request, index)
+              )
             )}
           </TabsContent>
-          <TabsContent value="agency" className="mt-0 bg-white rounded-b-lg p-4 space-y-4">
+          <TabsContent
+            value="agency"
+            className="mt-0 bg-white rounded-b-lg p-4 space-y-4"
+          >
             {agencyRequests.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No invitations from organizations yet.</p>
+              <p className="text-muted-foreground text-center py-8">
+                No invitations from organizations yet.
+              </p>
             ) : (
-              agencyRequests.map((request, index) => renderRequestCard(request, index))
+              agencyRequests.map((request, index) =>
+                renderRequestCard(request, index)
+              )
             )}
           </TabsContent>
         </Tabs>

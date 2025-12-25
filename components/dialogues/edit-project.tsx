@@ -14,6 +14,7 @@ import { Loader2, PlusCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { Project } from "@/lib/types";
+import { formatLocation } from "@/lib/utils";
 
 // Zod schema for validation
 const projectSchema = z.object({
@@ -125,7 +126,7 @@ const EditProjectDialogue: React.FC<EditProjectDialogueProps> = ({ project, isOp
         .update({
           title: data.title,
           description: data.description,
-          location: data.location,
+          location: formatLocation(data.location),
           start_date: data.start_date,
           end_date: data.end_date,
           category: data.category,

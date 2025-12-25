@@ -29,6 +29,7 @@ export interface Deliverable {
   dueDate: string;
   status: DeliverableStatus;
   createdAt?: string;
+  due_date?: string;
 }
 
 export interface Milestone {
@@ -39,6 +40,7 @@ export interface Milestone {
   dueDate: string;
   status: MilestoneStatus;
   createdAt?: string;
+  due_date?: string;
 }
 
 export interface Notification {
@@ -139,6 +141,8 @@ export interface Project {
   organization_id?: string;
   organization_name?: string;
   project_manager_id?: string;
+  volunteers_needed?: number;
+  volunteers_registered?: number;
 }
 
 export interface Skillset {

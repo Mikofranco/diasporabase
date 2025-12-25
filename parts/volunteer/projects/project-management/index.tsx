@@ -33,42 +33,46 @@ import { toast } from "sonner";
 import { useParams } from "next/navigation";
 import { formatLocation, getUserId } from "@/lib/utils"; // Assuming this returns { data: userId }
 import BackButton from "@/components/back-button";
+import { OverviewTab } from "./overview";
+import { MilestonesTab } from "./milestones";
+import { DeliverablesTab } from "./deliverables";
+import { Deliverable, Milestone, Project } from "@/lib/types";
 
 const supabase = createClient();
 
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  organization_name: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-  volunteers_registered: number;
-  volunteers_needed: number;
-  category: string;
-  country: string;
-  state?: string | null;
-  lga?: string | null; // Local Government Area
-  project_manager_id: string;
-}
+// interface Project {
+//   id: string;
+//   title: string;
+//   description: string;
+//   organization_name: string;
+//   start_date: string;
+//   end_date: string;
+//   status: string;
+//   volunteers_registered: number;
+//   volunteers_needed: number;
+//   category: string;
+//   country: string;
+//   state?: string | null;
+//   lga?: string | null; // Local Government Area
+//   project_manager_id: string;
+// }
 
-interface Milestone {
-  id: string;
-  title: string;
-  description?: string;
-  due_date: string;
-  status: string;
-}
+// interface Milestone {
+//   id: string;
+//   title: string;
+//   description?: string;
+//   due_date: string;
+//   status: string;
+// }
 
-interface Deliverable {
-  id: string;
-  title: string;
-  description?: string;
-  due_date: string;
-  status: string;
-  milestone_id?: string;
-}
+// interface Deliverable {
+//   id: string;
+//   title: string;
+//   description?: string;
+//   due_date: string;
+//   status: string;
+//   milestone_id?: string;
+// }
 
 export default function ProjectManagementScreen() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -112,7 +116,7 @@ export default function ProjectManagementScreen() {
   const getVolunteerProgress = () => {
     if (!project?.volunteers_needed || project.volunteers_needed === 0)
       return 0;
-    return Math.round(
+    return Math.round(//@ts-ignore
       (project.volunteers_registered / project.volunteers_needed) * 100
     );
   };
@@ -239,7 +243,7 @@ export default function ProjectManagementScreen() {
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             <span>{project.organization_name}</span>
-          </div>
+          </div>{/* @ts-ignore */}
           <Badge className={getStatusColor(project.status)}>
             {project.status}
           </Badge>
@@ -255,7 +259,7 @@ export default function ProjectManagementScreen() {
               <div>
                 <p className="text-sm text-muted-foreground">Volunteers</p>
                 <p className="text-3xl font-bold">
-                  {project.volunteers_registered}
+                  {project.volunteers_registered}{/* @ts-ignore */}
                   {project.volunteers_needed > 0 && (
                     <span className="text-lg text-muted-foreground">
                       {" "}
@@ -282,7 +286,7 @@ export default function ProjectManagementScreen() {
           <CardContent className="pt-6 flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Start Date</p>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-semibold">{/* @ts-ignore */}
                 {format(new Date(project.start_date), "MMM d, yyyy")}
               </p>
             </div>
@@ -294,7 +298,7 @@ export default function ProjectManagementScreen() {
           <CardContent className="pt-6 flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">End Date</p>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-semibold">{/* @ts-ignore */}
                 {format(new Date(project.end_date), "MMM d, yyyy")}
               </p>
             </div>
@@ -347,176 +351,9 @@ export default function ProjectManagementScreen() {
   );
 }
 
-interface OverviewTabProps {
-  project: Project;
-}
 
-function OverviewTab({ project }: OverviewTabProps) {
-  return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Description</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-            {project.description || "No description provided."}
-          </p>
-        </CardContent>
-      </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5" /> Location
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700">{formatLocation(project)}</p>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Category</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Badge variant="secondary" className="text-sm px-3 py-1">
-              {project.category}
-            </Badge>
-          </CardContent>
-        </Card>
-      </div>
-    </>
-  );
-}
-
-interface MilestonesTabProps {
-  milestones: Milestone[];
-  setMilestones: React.Dispatch<React.SetStateAction<Milestone[]>>;
-  projectId: string;
-  getStatusColor: (status: string) => string;
-}
-
-function MilestonesTab({
-  milestones,
-  setMilestones,
-  projectId,
-  getStatusColor,
-}: MilestonesTabProps) {
-  // TODO: Add form for adding/editing milestones here
-  // For example, use a dialog or form component to create/edit milestones
-  // On submit, use supabase to insert/update in "milestones" table and update state
-
-  if (milestones.length === 0) {
-    return (
-      <Card>
-        <CardContent className="text-center py-16">
-          <p className="text-gray-500 text-lg">No milestones defined yet.</p>
-          {/* Add button to create new milestone */}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Add button to create new milestone */}
-      {milestones.map((milestone) => (
-        <Card key={milestone.id} className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-xl">{milestone.title}</CardTitle>
-                {milestone.description && (
-                  <CardDescription className="mt-2">
-                    {milestone.description}
-                  </CardDescription>
-                )}
-              </div>
-              <Badge className={getStatusColor(milestone.status)}>
-                {milestone.status}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              Due: {format(new Date(milestone.due_date), "MMMM d, yyyy")}
-            </div>
-            {/* Add edit button for this milestone */}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-interface DeliverablesTabProps {
-  deliverables: Deliverable[];
-  setDeliverables: React.Dispatch<React.SetStateAction<Deliverable[]>>;
-  milestones: Milestone[];
-  projectId: string;
-  getStatusColor: (status: string) => string;
-}
-
-function DeliverablesTab({
-  deliverables,
-  setDeliverables,
-  milestones,
-  projectId,
-  getStatusColor,
-}: DeliverablesTabProps) {
-  // TODO: Add form for adding/editing deliverables here
-  // Allow associating with a milestone_id from milestones list
-  // On submit, use supabase to insert/update in "deliverables" table and update state
-
-  if (deliverables.length === 0) {
-    return (
-      <Card>
-        <CardContent className="text-center py-16">
-          <p className="text-gray-500 text-lg">No deliverables defined yet.</p>
-          {/* Add button to create new deliverable */}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardContent className="p-0">
-        {/* Add button to create new deliverable */}
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead> {/* For edit */}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {deliverables.map((d) => (
-              <TableRow key={d.id}>
-                <TableCell className="font-medium">{d.title}</TableCell>
-                <TableCell>
-                  {format(new Date(d.due_date), "MMM d, yyyy")}
-                </TableCell>
-                <TableCell>
-                  <Badge className={getStatusColor(d.status)}>{d.status}</Badge>
-                </TableCell>
-                <TableCell>
-                  {/* Add edit button for this deliverable */}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-}
 
 interface TeamTabProps {
   project: Project;

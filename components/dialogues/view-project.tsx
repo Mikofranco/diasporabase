@@ -21,6 +21,8 @@ import {
   Clipboard,
   X,
 } from "lucide-react";
+import { format } from "path";
+import { formatLocation } from "@/lib/utils";
 
 // Define status badge variants
 const statusVariants = {
@@ -119,7 +121,7 @@ const ViewProjectDialogue: React.FC<ViewProjectDialogueProps> = ({ project, isOp
                     <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400 mt-1" aria-hidden="true" />
                     <div>
                       <Label className="font-semibold text-gray-700 dark:text-gray-300">Location</Label>
-                      <p className="text-gray-900 dark:text-gray-100">{fullProject?.location || "N/A"}</p>
+                      <p className="text-gray-900 dark:text-gray-100">{formatLocation(fullProject?.location) || "N/A"}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
