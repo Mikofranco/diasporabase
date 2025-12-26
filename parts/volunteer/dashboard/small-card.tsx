@@ -44,7 +44,6 @@ const SmallCard = ({ image, count = 0, title = "Untitled" }: SmallCardProps) => 
                   width={50}
                   height={50}
                   className="object-contain"
-                  onError={(e) => (e.currentTarget.src = "/fallback-icon.png")}
                 />
               ) : (
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full flex items-center justify-center">

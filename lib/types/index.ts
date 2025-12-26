@@ -143,9 +143,12 @@ export interface Project {
   project_manager_id?: string;
   volunteers_needed?: number;
   volunteers_registered?: number;
+  lga?: string | null;
+  country?: string | null;
+  state?: string | null;
 }
 
-export interface Skillset {
+export interface SkillSet {
   id: string;
   label: string;
   parentId?: string;

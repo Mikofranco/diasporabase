@@ -75,7 +75,7 @@ export async function matchVolunteersToProjectLocation(
   const projLga = project.lga?.trim() || null;
   const projState = project.state?.trim().toUpperCase() || null;
   const projCountry = (project.country?.trim() || 'NG') === 'NG' ? 'Nigeria' : location.country?.trim() || '';
-  console.log("Project Location:", { projLga, projState, projCountry });
+  console.log("Project Location:", { projLga, projState, projCountry });//@ts-ignore
   convertLocationCodesToNames([project.country]);
 
   console.log("volunters:", volunteers);

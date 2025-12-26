@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import { Project } from "@/lib/types";
 import { ViewProjectModal } from "./modals/view-project";
 import { EditProjectModal } from "./modals/edit-project";
+import { PendingAgenciesModal } from "@/components/modals/pending-agencies";
 
 export interface AdminProjectProps {
   id: string;
@@ -160,6 +161,7 @@ const AdminDashboard = () => {
           onRefresh={handleRefresh}
         />
       </div>
+      <PendingAgenciesModal/>
 
       <ViewProjectModal project={selectedProject} open={viewOpen} onOpenChange={setViewOpen} />
       <EditProjectModal

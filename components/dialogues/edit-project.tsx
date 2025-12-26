@@ -125,7 +125,7 @@ const EditProjectDialogue: React.FC<EditProjectDialogueProps> = ({ project, isOp
         .from("projects")
         .update({
           title: data.title,
-          description: data.description,
+          description: data.description,//@ts-ignore
           location: formatLocation(data.location),
           start_date: data.start_date,
           end_date: data.end_date,
