@@ -469,43 +469,73 @@ export function convertLocationNamesToCodes({
 }
 
 export function convertLocationCodesToNames({
-  countryCodes = [],
-  stateCodes = [],
-  lgas = [],
+  countryCode,      // single string or undefined
+  stateCode,        // single string or undefined
+  lgaCode,          // single string or undefined
+  countryCodes = [], // array fallback
+  stateCodes = [],   // array fallback
+  lgas = [],         // array of LGA names (or codes if needed)
 }: {
+  countryCode?: string;
+  stateCode?: string;
+  lgaCode?: string;
   countryCodes?: string[];
   stateCodes?: string[];
   lgas?: string[];
 }) {
   const countries: string[] = [];
   const states: string[] = [];
+  const lgaNames: string[] = [];
 
-  countryCodes.forEach((code) => {//@ts-ignore
+  // Handle country (single or array)
+  const allCountryCodes = countryCode ? [countryCode] : countryCodes;
+  allCountryCodes.forEach((code) => {
+    if (!code) return;
+
+    // First try your custom African list
     const match = africanLocations.find((loc) => loc.countryCode === code);
-    if (match) countries.push(match.country);
-    else {
-      const c = Country.getCountryByCode(code);
-      if (c) countries.push(c.name);
+    if (match) {
+      countries.push(match.country);
+      return;
     }
+
+    // Fallback to country-state-city lib
+    const c = Country.getCountryByCode(code);
+    if (c) countries.push(c.name);
   });
 
-  stateCodes.forEach((code) => {
-    let found = false;//@ts-ignore
-    for (const loc of nigerianLocations) {//@ts-ignore
-      const state = loc.states.find((s) => s.stateCode === code);
-      if (state) {
-        states.push(state.state);
+  // Handle state (single or array)
+  const allStateCodes = stateCode ? [stateCode] : stateCodes;
+  allStateCodes.forEach((code) => {
+    if (!code) return;
+
+    let found = false;
+    for (const loc of africanLocations[0].states) {
+      if (loc.stateCode === code) {
+        states.push(loc.state);
         found = true;
         break;
       }
     }
+
     if (!found) {
       const s = State.getStateByCode(code);
       if (s) states.push(s.name);
     }
   });
 
-  return { countries, states, lgas };
+  // Handle LGAs (usually just names, not codes — adjust if you have LGA codes)
+  if (lgas.length > 0) {
+    lgaNames.push(...lgas); // assuming lgas are already names
+  }
+
+  // Optional: if you have LGA codes, add logic here
+
+  return {
+    countries: [...new Set(countries)], // remove duplicates
+    states: [...new Set(states)],
+    lgas: [...new Set(lgaNames)],
+  };
 }
 
 export const getStatusColor = (status: string) => {

@@ -9,29 +9,53 @@ import { ModalSetup } from '@/components/ui/modal';
 
 const poppins = Poppins({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-poppins',
 });
 
 export const metadata: Metadata = {
-  title: 'DiasporaBase',
-  description: 'Connect volunteers with opportunities and manage agencies and projects.',
-  generator: 'Next.js',
-  applicationName: 'DiasporaBase',
-  keywords: ['volunteer', 'community', 'non-profit', 'agency management', 'project management', 'volunteer opportunities'],
+  title: {
+    default: 'DiasporaBase',
+    template: '%s | DiasporaBase',
+  },
+  description: 'Connecting diaspora volunteers with meaningful opportunities, agencies, and impactful projects worldwide.',
+  metadataBase: new URL('https://diasporabase.com'),
+  keywords: [
+    'diaspora volunteers',
+    'volunteer opportunities',
+    'non-profit volunteering',
+    'agency project management',
+    'community impact',
+    'diaspora engagement',
+    'volunteer matching',
+    'project coordination',
+  ],
   authors: [{ name: 'DiasporaBase Team', url: 'https://diasporabase.com' }],
   creator: 'DiasporaBase Team',
   publisher: 'DiasporaBase',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  alternates: {
+    canonical: 'https://diasporabase.com',
+    languages: {
+      'en-US': 'https://diasporabase.com',
+    },
+  },
   openGraph: {
     title: 'DiasporaBase',
-    description: 'Connect volunteers with opportunities and manage agencies and projects.',
+    description: 'Connecting diaspora volunteers with meaningful opportunities, agencies, and impactful projects worldwide.',
     url: 'https://diasporabase.com',
     siteName: 'DiasporaBase',
     images: [
       {
-        url: 'https://diasporabase.com/og-image.png', // Ensure this matches your production domain
+        url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'DiasporaBase Open Graph Image',
+        alt: 'DiasporaBase - Volunteer Opportunities Platform',
       },
     ],
     locale: 'en_US',
@@ -40,19 +64,69 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'DiasporaBase',
-    description: 'Connect volunteers with opportunities and manage agencies and projects.',
-    images: ['https://diasporabase.com/og-image.png'],
+    description: 'Connecting diaspora volunteers with meaningful opportunities, agencies, and impactful projects worldwide.',
+    images: ['/og-image.png'],
+    creator: '@DiasporaBaseHQ', // Add your Twitter handle if available
+  },
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
+  },
+  manifest: '/site.webmanifest',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+  ],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={poppins.className}>
-        <GlobalLoading /> {/* ← INSTANT LOADER */}
-        <ModalSetup/>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Structured Data (Organization) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'DiasporaBase',
+              url: 'https://diasporabase.com',
+              logo: 'https://diasporabase.com/logo.png',
+              description: 'Connecting diaspora volunteers with meaningful opportunities, agencies, and impactful projects worldwide.',
+              sameAs: [
+                'https://twitter.com/DiasporaBaseHQ',
+                'https://linkedin.com/company/diasporabase',
+                'https://facebook.com/diasporabase',
+              ],
+            }),
+          }}
+        />
+      </head>
+      <body className={`${poppins.className} antialiased`}>
+        <GlobalLoading />
+        <LoadingBar />
+        <ModalSetup />
         {children}
-        <Toaster richColors />
+
+        <Toaster
+          position="top-right"
+          richColors
+          duration={6000} 
+          closeButton
+        />
       </body>
     </html>
   );

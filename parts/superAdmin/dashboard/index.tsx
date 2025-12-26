@@ -154,7 +154,7 @@ const AdminDashboard = () => {
         <p className="text-sm text-gray-500 mb-2">
           Total projects loaded: {projects.length} {isLoading && "(loading...)"}
         </p>
-        <RecentApplicationsTable
+        <RecentApplicationsTable //@ts-ignore
           data={projects}
           onEdit={handleEdit}
           onView={handleView}
