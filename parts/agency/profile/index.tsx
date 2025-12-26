@@ -333,7 +333,7 @@ const Profile: React.FC = () => {
 
         <Card className="shadow-xl border-0 bg-white">
           <CardHeader>
-            <CardTitle className="text-2xl text-gray-900">
+            <CardTitle className="text-2xl text-diaspora-darkBlue font-semibold">
               {profile.full_name}
             </CardTitle>
             <CardDescription className="text-gray-600">Agency Profile</CardDescription>

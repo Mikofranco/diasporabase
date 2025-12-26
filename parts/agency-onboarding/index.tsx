@@ -69,7 +69,7 @@ const generalSchema = z.object({
   full_name: z.string().min(1, "Display name is required.").trim(),
   description: z
     .string()
-    .max(500, "Description cannot exceed 500 characters.")
+    .max(5000, "Description cannot exceed 5000 characters.")
     .nullable(),
   organization_type: z.enum(organizationTypes as [string, ...string[]], {
     errorMap: () => ({ message: "Please select a valid organization type." }),

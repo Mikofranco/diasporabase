@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Project } from "@/lib/types";
+import { useRouter } from "next/navigation";
 
 interface TableProps {
   data: Project[];
@@ -143,6 +144,7 @@ export function RecentApplicationsTable({ data, onEdit, onView, onRefresh }: Tab
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
   const [searchTerm, setSearchTerm] = React.useState("");
+  const route = useRouter();
 
   const table = useReactTable({
     data,
@@ -236,7 +238,9 @@ export function RecentApplicationsTable({ data, onEdit, onView, onRefresh }: Tab
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} 
+                // onClick={()=> route.push(`dashboard/super_admin/projects/${row.getValue("id")}`)}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

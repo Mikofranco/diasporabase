@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import { Project } from "@/lib/types";
 import { ViewProjectModal } from "./modals/view-project";
 import { EditProjectModal } from "./modals/edit-project";
+import { PendingAgenciesModal } from "@/components/modals/pending-agencies";
 
 export interface AdminProjectProps {
   id: string;
@@ -153,13 +154,14 @@ const AdminDashboard = () => {
         <p className="text-sm text-gray-500 mb-2">
           Total projects loaded: {projects.length} {isLoading && "(loading...)"}
         </p>
-        <RecentApplicationsTable
+        <RecentApplicationsTable //@ts-ignore
           data={projects}
           onEdit={handleEdit}
           onView={handleView}
           onRefresh={handleRefresh}
         />
       </div>
+      <PendingAgenciesModal/>
 
       <ViewProjectModal project={selectedProject} open={viewOpen} onOpenChange={setViewOpen} />
       <EditProjectModal

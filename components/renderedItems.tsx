@@ -54,7 +54,8 @@ export function CheckboxReactHookFormMultiple({
   React.useEffect(() => {
     const subscription = form.watch((value) => {
       if (onChange && value.items) {
-        console.log("Selected items:", value.items);//@ts-ignore
+        // console.log("Selected items:", value.items);
+        //@ts-ignore
         onChange(value.items);
       }
     });
@@ -163,7 +164,7 @@ export function CheckboxReactHookFormMultiple({
 
   // Handle checkbox selection
   const handleSelect = (item: Item, field: any) => {
-    console.log(`Handling select for: ${item.label} (${item.id})`);
+    // console.log(`Handling select for: ${item.label} (${item.id})`);
     const descendantIds = getDescendantIds(item);
     const isSelected = field.value.includes(item.id);
 

@@ -135,7 +135,6 @@ export default function ViewProjectDetails() {
           id
         );
         setIsUserInProject(isManager);
-        console.log("checking if user is a manager", isManager);
 
         // 4. Fetch ratings (public)
         const { data: ratingsData, error: ratingsError } = await supabase

@@ -7,6 +7,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -40,8 +41,6 @@ import {
   Tag,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSendMail } from "@/services/mail";
-import { getAgencyStatusEmailHtml } from "@/lib/email-templates/agenyStatusEmail";
 
 const supabase = createClient();
 
@@ -64,7 +63,7 @@ export function PendingAgenciesModal() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
-  // Confirmation state
+  // Confirmation dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"approve" | "reject" | null>(null);
   const [selectedAgency, setSelectedAgency] = useState<PendingAgency | null>(null);
@@ -109,62 +108,54 @@ export function PendingAgenciesModal() {
     fetchPendingAgencies();
   }, []);
 
+  const handleConfirmAction = async () => {
+    if (!selectedAgency) return;
+
+    if (confirmAction === "approve") {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_active: true })
+        .eq("id", selectedAgency.id);
+
+      if (error) {
+        toast.error("Failed to approve agency");
+      } else {
+        toast.success(`"${selectedAgency.organization_name}" has been approved and activated!`);
+        setAgencies((prev) => prev.filter((a) => a.id !== selectedAgency.id));
+        if (agencies.length === 1) setOpen(false);
+      }
+    } else if (confirmAction === "reject") {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_active: false })
+        .eq("id", selectedAgency.id);
+
+      if (error) {
+        toast.error("Failed to reject agency");
+      } else {
+        toast.success(`"${selectedAgency.organization_name}" registration has been rejected.`);
+        setAgencies((prev) => prev.filter((a) => a.id !== selectedAgency.id));
+        if (agencies.length === 1) setOpen(false);
+      }
+    }
+
+    setConfirmOpen(false);
+    setConfirmAction(null);
+    setSelectedAgency(null);
+  };
+
   const openConfirmDialog = (action: "approve" | "reject", agency: PendingAgency) => {
     setConfirmAction(action);
     setSelectedAgency(agency);
     setConfirmOpen(true);
   };
 
-  const handleConfirmAction = async () => {
-    if (!selectedAgency || !confirmAction) return;
-
-    const isApproved = confirmAction === "approve";
-
-    try {
-      // Update agency status
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ is_active: isApproved })
-        .eq("id", selectedAgency.id);
-
-      if (updateError) throw updateError;
-
-      // Send status email
-      await useSendMail({
-        to: selectedAgency.contact_person_email,
-        subject: `Your Agency "${selectedAgency.organization_name}" Has Been ${isApproved ? "Approved" : "Rejected"}`,
-        html: getAgencyStatusEmailHtml({
-          organization_name: selectedAgency.organization_name,
-          isApproved,
-          appUrl: process.env.NEXT_PUBLIC_APP_URL || "https://diasporabase.com",
-        }),
-        onSuccess: () => toast.success("Status email sent"),
-        onError: () => toast.error("Status updated, but email failed"),
-      });
-
-      // Success feedback
-      toast.success(
-        `"${selectedAgency.organization_name}" has been ${isApproved ? "approved" : "rejected"}`
-      );
-
-      // Update UI
-      setAgencies((prev) => prev.filter((a) => a.id !== selectedAgency.id));
-      if (agencies.length === 1) setOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || "Action failed");
-    }
-
-    // Reset dialog
-    setConfirmOpen(false);
-    setConfirmAction(null);
-    setSelectedAgency(null);
-  };
-
+  // Don't render if no pending agencies
   if (agencies.length === 0 && !loading) return null;
 
   return (
     <>
-      {/* Main Modal */}
+      {/* Main Modal - Pending Agencies List */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -321,32 +312,46 @@ export function PendingAgenciesModal() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Alert Dialog */}
+      {/* Confirmation Dialog for Approve/Reject */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
               {confirmAction === "approve" ? "Approve Agency?" : "Reject Agency?"}
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <p>
-                You are about to <strong>{confirmAction === "approve" ? "approve and activate" : "reject"}</strong> the agency:
-              </p>
-              <p className="font-semibold text-lg py-2 px-4 bg-muted rounded">
-                {selectedAgency?.organization_name}
-              </p>
-              <p>
-                {confirmAction === "approve"
-                  ? "They will gain full access to create projects and manage volunteers."
-                  : "They will not be able to log in or access the platform."}
-              </p>
+            <AlertDialogDescription>
+              {confirmAction === "approve" ? (
+                <>
+                  You are about to <strong>approve and activate</strong> the agency:
+                  <br />
+                  <span className="font-semibold text-lg mt-2 block">
+                    {selectedAgency?.organization_name}
+                  </span>
+                  <br />
+                  They will immediately gain full access to create projects and manage volunteers.
+                </>
+              ) : (
+                <>
+                  You are about to <strong>reject</strong> the agency registration:
+                  <br />
+                  <span className="font-semibold text-lg mt-2 block">
+                    {selectedAgency?.organization_name}
+                  </span>
+                  <br />
+                  They will not be able to log in or access the platform.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmAction}
-              className={confirmAction === "approve" ? "bg-green-600 hover:bg-green-700" : ""}
+              className={
+                confirmAction === "approve"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-destructive hover:bg-destructive/90"
+              }
             >
               {confirmAction === "approve" ? "Yes, Approve Agency" : "Yes, Reject Agency"}
             </AlertDialogAction>

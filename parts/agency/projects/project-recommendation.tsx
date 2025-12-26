@@ -120,9 +120,8 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
           matched_skills: v.skills.filter((s: string) => requiredSkills.includes(s)),
         }));
 
-        setVolunteers(recommendedVolunteers);
-        const matchedVolunteers = matchVolunteersToProjectLocation(projectId, recommendedVolunteers);
-        console.log("Matched Volunteers:", matchedVolunteers);
+        const matchedVolunteers = await matchVolunteersToProjectLocation(projectId, recommendedVolunteers);
+        setVolunteers(matchedVolunteers);
       } catch (err: any) {
         setError(err.message);
         toast.error(err.message);

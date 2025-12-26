@@ -1,10 +1,9 @@
 import { findProjectById } from "@/services/projects";
-import { Profile, Project, ProjectVolunteer, Volunteer, VolunteerRequest } from "../types";
-import { convertLocationCodesToNames } from "../utils";
+import { Volunteer } from "../types";
 
-const STATE_CODE_TO_NAME: Record<string, string> = {
-  NG: "Nigeria",
-  FC: "Federal Capital Territory",
+// Map Nigerian state codes to the exact names used in volunteer profiles
+const STATE_CODE_TO_FULL_NAME: Record<string, string> = {
+  FC: "Abuja (FCT)",    // Critical: volunteers use "Abuja (FCT)"
   AB: "Abia",
   AD: "Adamawa",
   AK: "Akwa Ibom",
@@ -43,12 +42,6 @@ const STATE_CODE_TO_NAME: Record<string, string> = {
   ZA: "Zamfara",
 };
 
-interface ProjectLocation {
-  lga: string | null;
-  state: string | null;
-  country: string | null;
-}
-
 export async function matchVolunteersToProjectLocation(
   projectId: string,
   volunteers: Volunteer[]
@@ -57,55 +50,53 @@ export async function matchVolunteersToProjectLocation(
 
   const { data: project, error } = await findProjectById(projectId);
   if (error || !project) {
-    console.error('Error fetching project:', error);
-    return [];
-  }
-  // Critical fix: location is stored as a JSON string!
-  let location: ProjectLocation;
-  try {
-    location = typeof project.location === 'string'
-      ? JSON.parse(project.location)
-      : project.location; // fallback if already parsed
-  } catch (parseError) {
-    console.error('Failed to parse project location JSON:', parseError);
+    console.error("Error fetching project:", error);
     return [];
   }
 
-  // Normalize values
+  // Parse location JSON if needed
+  let parsedLocation: { country?: string; state?: string; lga?: string } = {};
+  if (project.location && typeof project.location === "string") {
+    try {
+      parsedLocation = JSON.parse(project.location);
+    } catch (e) {
+      console.error("Failed to parse project.location JSON:", e);
+    }
+  }
+
+  // Normalize project location
   const projLga = project.lga?.trim() || null;
-  const projState = project.state?.trim().toUpperCase() || null;
-  const projCountry = (project.country?.trim() || 'NG') === 'NG' ? 'Nigeria' : location.country?.trim() || '';
-  console.log("Project Location:", { projLga, projState, projCountry });
-  convertLocationCodesToNames([project.country]);
+  const projStateCode = project.state?.trim().toUpperCase() || null;
+  const projCountryCode = project.country?.trim().toUpperCase() || "NG";
 
-  console.log("volunters:", volunteers);
-
+  const projStateName = projStateCode ? STATE_CODE_TO_FULL_NAME[projStateCode] || null : null;
+  const projCountryName = projCountryCode === "NG" ? "Nigeria" : projCountryCode;
 
   for (const volunteer of volunteers) {
     let matched = false;
-    console.log(`Checking volunteer ${volunteer} for project ${project.id}`);
-    // Priority 1: LGA match (most specific)
-    if (projLga && projLga !== '') {
+
+    // Rule 1: If project specifies LGA → volunteer MUST have that exact LGA
+    if (projLga) {
       if (volunteer.volunteer_lgas?.includes(projLga)) {
         matched = true;
       }
     }
-    // Priority 2: State match
-    else if (projState) {
-      const stateFullName = STATE_CODE_TO_NAME[projState];
-      if (stateFullName && volunteer.volunteer_states?.includes(stateFullName)) {
+    // Rule 2: Else if project specifies state → volunteer MUST have that state
+    else if (projStateName) {
+      if (volunteer.volunteer_states?.includes(projStateName)) {
         matched = true;
       }
     }
-    // Priority 3: Country match (fallback)
-    else if (projCountry && volunteer.volunteer_countries?.includes(projCountry)) {
-      matched = true;
+    // Rule 3: Else only country is specified → any volunteer with that country matches
+    else if (projCountryName) {
+      if (volunteer.volunteer_countries?.includes(projCountryName)) {
+        matched = true;
+      }
     }
 
     if (matched) {
       matches.push(volunteer);
     }
   }
-
   return matches;
 }
