@@ -1,6 +1,9 @@
 import { supabase } from "@/lib/supabase/client";
 import { getUserId } from "../../lib/utils";
 import { Project, ProjectStatus } from "@/lib/types";
+import { toast } from "sonner";
+import { useSendMail } from "../mail";
+import { getUserProfileDetails } from "../user";
 
 // Fetch projects by status for a user (corrected from previous)
 export async function getProjectsByStatus(status: ProjectStatus): Promise<{
@@ -361,20 +364,31 @@ export async function getMileStonesAndDeliverablesForProject(
   return { milesRes, delsRes };
 }
 
-
-export async function getProjectManagers(){
-  const { data: eligiblePMs , error: dataError} = await supabase
-  .from('profiles')
-  .select('id, full_name, profile_picture, skills, residence_country, residence_state, experience')
-  .eq('role', 'volunteer')
-  .contains('skills', ['project_management']);
-  if(dataError){
-    return {data: null, error: dataError.message};
+export async function getProjectManagers() {
+  const { data: eligiblePMs, error: dataError } = await supabase
+    .from("profiles")
+    .select(
+      "id, full_name, profile_picture, skills, residence_country, residence_state, experience"
+    )
+    .eq("role", "volunteer")
+    .contains("skills", ["project_management"]);
+  if (dataError) {
+    return { data: null, error: dataError.message };
   }
-  return {data: eligiblePMs as Array<{id: string; full_name: string; skills: string[]}>, error: null};
+  return {
+    data: eligiblePMs as Array<{
+      id: string;
+      full_name: string;
+      skills: string[];
+    }>,
+    error: null,
+  };
 }
 
-export async function notifyProjectManagers(projectId: string, managerIds: string[]){
+export async function notifyProjectManagers(
+  projectId: string,
+  managerIds: string[]
+) {
   const notifications = managerIds.map((managerId) => ({
     user_id: managerId,
     project_id: projectId,
@@ -384,7 +398,7 @@ export async function notifyProjectManagers(projectId: string, managerIds: strin
   }));
 
   const { data, error } = await supabase
-    .from('notifications')
+    .from("notifications")
     .insert(notifications);
 
   if (error) {
@@ -394,19 +408,21 @@ export async function notifyProjectManagers(projectId: string, managerIds: strin
   return { data, error: null };
 }
 
-export async function assignProjectManagersToProject(projectId: string, selectedVolunteerId: string[]){
-const {} =await supabase
-  .from('projects')
-  .update({ project_manager_id: selectedVolunteerId })
-  .eq('id', projectId);
-
+export async function assignProjectManagersToProject(
+  projectId: string,
+  selectedVolunteerId: string[]
+) {
+  const {} = await supabase
+    .from("projects")
+    .update({ project_manager_id: selectedVolunteerId })
+    .eq("id", projectId);
 }
 
-export async function checkIfProjectManagerAssigned(projectId: string){
+export async function checkIfProjectManagerAssigned(projectId: string) {
   const { data, error } = await supabase
-    .from('projects')
-    .select('project_manager_id')
-    .eq('id', projectId)
+    .from("projects")
+    .select("project_manager_id")
+    .eq("id", projectId)
     .single();
 
   if (error) {
@@ -416,12 +432,12 @@ export async function checkIfProjectManagerAssigned(projectId: string){
   return { data: data?.project_manager_id, error: null };
 }
 
-export async function isAProjectManager(userId: string){
+export async function isAProjectManager(userId: string) {
   const { data, error } = await supabase
-    .from('profiles')
-    .select('skills')
-    .eq('id', userId)
-    .contains('skills', ['project_management']);
+    .from("profiles")
+    .select("skills")
+    .eq("id", userId)
+    .contains("skills", ["project_management"]);
 
   if (error) {
     return { data: null, error: error.message };
@@ -431,31 +447,90 @@ export async function isAProjectManager(userId: string){
 
 export async function findProjectById(projectId: string) {
   const { data, error } = await supabase
-    .from('projects')
-    .select('id, title, location->>lga, location->>state, location->>country')
-    .eq('id', projectId)
+    .from("projects")
+    .select("id, title, location->>lga, location->>state, location->>country")
+    .eq("id", projectId)
     .single();
 
   if (error) {
-    console.error('Error fetching project:', error);
+    console.error("Error fetching project:", error);
     return { data: null, error };
   }
 
   return { data: data as Project, error: null };
 }
 
-export async function checkIfUserIsProjectManager(userId: string, projectId: string) {
+export async function checkIfUserIsProjectManager(
+  userId: string,
+  projectId: string
+) {
   const { data, error } = await supabase
-    .from('projects')
-    .select('project_manager_id')
-    .eq('id', projectId)
-    .eq('project_manager_id', userId)
+    .from("projects")
+    .select("project_manager_id")
+    .eq("id", projectId)
+    .eq("project_manager_id", userId)
     .single();
 
   if (error) {
-    console.error('Error checking project manager status:', error);
+    console.error("Error checking project manager status:", error);
     return { isManager: false, error };
   }
 
   return { isManager: !!data, error: null };
 }
+
+export async function getProjectManagerId(projectId: string) {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("project_manager_id")
+    .eq("id", projectId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching project manager ID:", error);
+    return { projectManagerId: null, error };
+  }
+
+  return { projectManagerId: data?.project_manager_id || null, error: null };
+}
+
+export const assignManager = async (volunteerId: string, projectId: string) => {
+  const { data: projectData, error: projectError } = await getProjectById(
+    projectId
+  );
+  if (projectError || !projectData) {
+    toast.error(//@ts-ignore
+      "Failed to fetch project details: " + (projectError?.message || "")
+    );
+    return;
+  }
+  const { data: confirmVolunteer, error: volunteerError } =
+    await getUserProfileDetails(volunteerId, "volunteer");
+  if (volunteerError || !confirmVolunteer) {
+    toast.error(
+      "Failed to fetch volunteer details: " + (volunteerError?.message || "")
+    );
+    return;
+  }
+  const currentManagerId = projectData.project_manager_id;
+  if (currentManagerId === volunteerId) {
+    toast.info("This volunteer is already the project manager.");
+    return;
+  }
+  const { error } = await supabase
+    .from("projects")
+    .update({ project_manager_id: volunteerId })
+    .eq("id", projectId);
+
+  await useSendMail({
+    to: confirmVolunteer?.full_name || "",
+    subject: "You have been assigned as Project Manager",
+    html: `Dear ${confirmVolunteer?.full_name},\n\nYou have been assigned as the Project Manager for project ID: ${projectId}.\n\nBest regards,\nDiasporaBase Team`,
+  });
+
+  if (error) {
+    toast.error("Assignment failed: " + error.message);
+  } else {
+    toast.success("Project manager assigned successfully!");
+  }
+};

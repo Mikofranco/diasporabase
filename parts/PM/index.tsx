@@ -8,6 +8,7 @@ import {
   MapPin,
   BadgeCheck,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import {
   Table,
@@ -36,7 +37,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getProjectManagers } from "@/services/projects";
-import { useSendMail } from "@/services/mail";
+import { createAgencyRequest } from "@/services/requests";
 
 const supabase = createClient();
 
@@ -65,11 +66,16 @@ export default function AssignProjectManager({
   const [searchTerm, setSearchTerm] = useState("");
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState(false);
-  const [assigningId, setAssigningId] = useState<string | null>(null);
-  const [confirmVolunteer, setConfirmVolunteer] = useState<Volunteer | null>(
-    null
-  );
+  const [searching, setSearching] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [confirmVolunteer, setConfirmVolunteer] = useState<Volunteer | null>(null);
   const [currentManager, setCurrentManager] = useState<Volunteer | null>(null);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const userId = localStorage.getItem("diaspobase_userId");
+    setOrganizationId(userId);
+  }, []);
 
   // Fetch current manager when dialog opens
   useEffect(() => {
@@ -77,9 +83,7 @@ export default function AssignProjectManager({
       const fetchCurrent = async () => {
         const { data } = await supabase
           .from("profiles")
-          .select(
-            "id, full_name, profile_picture, residence_country, residence_state"
-          )
+          .select("id, full_name, profile_picture, residence_country, residence_state")
           .eq("id", currentManagerId)
           .single();
 
@@ -90,52 +94,58 @@ export default function AssignProjectManager({
       setCurrentManager(null);
     }
   }, [currentManagerId, open]);
-  useEffect(() => {
-    searchVolunteers();
-  }, [projectId]);
 
   const searchVolunteers = async () => {
-    setLoading(true);
-    const { data, error } = await getProjectManagers();
-    if (error) {
-      toast.error("Error fetching volunteers: " + error.message);
-      setVolunteers([]);
-    } else {
-      console.log("Fetched volunteers:", data);
-      const filtered = data?.filter((v) => v.id !== currentManagerId) || []; //@ts-ignore
-      setVolunteers(filtered);
+    setSearching(true);
+    try {
+      const { data, error } = await getProjectManagers();
+      if (error) {
+        toast.error("Failed to load volunteers");
+        setVolunteers([]);
+      } else {//@ts-ignore
+        const filtered = (data || []).filter((v: Volunteer) => v.id !== currentManagerId);
+        
+        const results = searchTerm //@ts-ignore
+          ? filtered.filter((v: Volunteer) =>
+              v.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+          : filtered;//@ts-ignore
+        setVolunteers(results);
+      }
+    } catch (err) {
+      toast.error("Error searching volunteers");
+    } finally {
+      setSearching(false);
     }
-    setLoading(false);
   };
 
-  const assignManager = async (volunteerId: string) => {
-    setAssigningId(volunteerId);
-    if (currentManagerId === volunteerId) {
-      toast.error("This volunteer is already the project manager.");
-      setAssigningId(null);
-      setConfirmVolunteer(null);
-      return;
+  // Initial load when dialog opens
+  useEffect(() => {
+    if (open && volunteers.length === 0) {
+      searchVolunteers();
     }
-    const { error } = await supabase
-      .from("projects")
-      .update({ project_manager_id: volunteerId })
-      .eq("id", projectId);
+  }, [open]);
 
-    await useSendMail({
-      to: confirmVolunteer?.full_name || "",
-      subject: "You have been assigned as Project Manager",
-      html: `Dear ${confirmVolunteer?.full_name},\n\nYou have been assigned as the Project Manager for project ID: ${projectId}.\n\nBest regards,\nDiasporaBase Team`,
-    })
+  const handleAssign = async () => {
+    if (!confirmVolunteer || !organizationId) return;
 
-    if (error) {
-      toast.error("Assignment failed: " + error.message);
-    } else {
-      toast.success("Project manager assigned successfully!");
+    setAssigning(true);
+    try {
+      await createAgencyRequest({
+        projectId,
+        volunteerId: confirmVolunteer.id,
+        requesterId: organizationId,
+      });
+
+      toast.success(`"${confirmVolunteer.full_name}" has been invited as Project Manager!`);
       setOpen(false);
       setConfirmVolunteer(null);
       onManagerAssigned?.();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send invitation");
+    } finally {
+      setAssigning(false);
     }
-    setAssigningId(null);
   };
 
   return (
@@ -144,191 +154,175 @@ export default function AssignProjectManager({
         <DialogTrigger asChild>
           <Button
             variant={currentManagerId ? "outline" : "default"}
-            className={
-              currentManagerId
-                ? "border-orange-400 text-orange-800 hover:bg-orange-50 hover:border-orange-500"
-                : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+            className={currentManagerId
+              ? "border-orange-500 text-orange-700 hover:bg-orange-50"
+              : "bg-emerald-600 hover:bg-emerald-700"
             }
           >
             <UserCheck className="mr-2 h-4 w-4" />
-            {currentManagerId
-              ? "Change Project Manager"
-              : "Assign Project Manager"}
+            {currentManagerId ? "Change Manager" : "Assign Manager"}
           </Button>
         </DialogTrigger>
 
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl">
+            <DialogTitle className="text-2xl font-bold">
               Assign Project Manager
             </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to assign{" "}
-              <strong>{confirmVolunteer?.full_name}</strong> as the Project
-              Manager?
-              {currentManager && (
-                <span className="block mt-2">
-                  This will replace the current manager:{" "}
-                  <strong>{currentManager.full_name}</strong>.
-                </span>
-              )}
+            <DialogDescription className="text-base">
+              Search and select a qualified volunteer to manage this project.
             </DialogDescription>
 
             {currentManager && (
-              <Alert className="mt-4 border-blue-200 bg-blue-50">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Current Manager:</strong> {currentManager.full_name} (
-                  {currentManager.residence_state ||
-                    currentManager.residence_country}
-                  )
+              <Alert className="mt-4 border-amber-200 bg-amber-50">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800">
+                  <strong>Current Manager:</strong> {currentManager.full_name}
+                  <span className="text-sm block mt-1">
+                    Location: {currentManager.residence_state || currentManager.residence_country}
+                  </span>
                 </AlertDescription>
               </Alert>
             )}
           </DialogHeader>
 
-          <div className="mt-6 space-y-6">
-            {/* Search */}
-            <div>
-              <Label htmlFor="search">Search Available Project Managers</Label>
-              <div className="flex gap-3 mt-2">
+          <div className="mt-8 space-y-6">
+            {/* Search Bar */}
+            <div className="space-y-3">
+              <Label htmlFor="search" className="text-base font-medium">
+                Find Project Managers
+              </Label>
+              <div className="flex gap-3">
                 <Input
                   id="search"
-                  placeholder="Type volunteer name..."
+                  placeholder="Search by name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && searchVolunteers()}
-                  className="flex-1"
+                  className="text-base"
+                  disabled={searching}
                 />
-                <Button onClick={searchVolunteers} disabled={loading} className="action-btn">
-                  <Search className="h-4 w-4 mr-2" />
-                  Search
+                <Button 
+                  onClick={searchVolunteers} 
+                  disabled={searching}
+                  className="px-6 action-btn"
+                >
+                  {searching ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="mr-2 h-4 w-4" />
+                      Search
+                    </>
+                  )}
                 </Button>
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Only volunteers with <strong>project_management</strong> skill
-                are shown.
+              <p className="text-sm text-muted-foreground">
+                Only volunteers with project management skills are shown.
               </p>
             </div>
 
-            {/* Loading */}
-            {loading && (
-              <div className="space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
+            {/* Loading State */}
+            {searching && (
+              <div className="space-y-4 py-8">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-20 w-full rounded-lg" />
                 ))}
               </div>
             )}
 
-            {/* No results */}
-            {!loading && searchTerm && volunteers.length === 0 && (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <p className="text-gray-500 text-lg">
-                    No project managers found for "{searchTerm}"
+            {/* Empty State */}
+            {!searching && volunteers.length === 0 && (
+              <Card className="border-dashed">
+                <CardContent className="text-center py-16">
+                  <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <Search className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <p className="text-lg text-gray-600 font-medium">
+                    {searchTerm ? `No volunteers found for "${searchTerm}"` : "No qualified volunteers available"}
                   </p>
-                  <p className="text-sm text-gray-400 mt-2">
-                    Try a different name or partial match.
+                  <p className="text-sm text-gray-500 mt-2">
+                    Try adjusting your search or check back later.
                   </p>
                 </CardContent>
               </Card>
             )}
 
-            {/* Table Results */}
-            {!loading && volunteers.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
+            {/* Results Table */}
+            {!searching && volunteers.length > 0 && (
+              <div className="border rounded-xl overflow-hidden shadow-sm">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-gray-50">
                       <TableHead>Volunteer</TableHead>
                       <TableHead>Location</TableHead>
-                      <TableHead>Relevant Skills</TableHead>
+                      <TableHead>Key Skills</TableHead>
                       <TableHead>Experience</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {volunteers.map((volunteer) => (
-                      <TableRow key={volunteer.id} className="hover:bg-gray-50">
+                      <TableRow 
+                        key={volunteer.id} 
+                        className="hover:bg-gray-50/70 transition-colors"
+                      >
                         <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage
-                                src={volunteer.profile_picture || undefined}
-                              />
-                              <AvatarFallback>
+                          <div className="flex items-center gap-4">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={volunteer.profile_picture || undefined} />
+                              <AvatarFallback className="bg-blue-100 text-blue-700 text-lg">
                                 {volunteer.full_name.slice(0, 2).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium">
-                                {volunteer.full_name}
-                              </p>
+                              <p className="font-semibold text-base">{volunteer.full_name}</p>
                             </div>
                           </div>
                         </TableCell>
+
                         <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-gray-600">
-                            <MapPin className="h-3 w-3" />
-                            {[
-                              volunteer.residence_state,
-                              volunteer.residence_country,
-                            ]
-                              .filter(Boolean)
-                              .join(", ")}
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="h-4 w-4 text-gray-500" />
+                            <span>
+                              {[volunteer.residence_state, volunteer.residence_country]
+                                .filter(Boolean)
+                                .join(", ") || "Location not specified"}
+                            </span>
                           </div>
                         </TableCell>
+
                         <TableCell>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-2">
                             {volunteer.skills
-                              .filter(
-                                (s) =>
-                                  s.toLowerCase().includes("project") ||
-                                  s.toLowerCase().includes("manage")
-                              )
-                              .slice(0, 3)
-                              .map((skill) => (
-                                <Badge
-                                  key={skill}
-                                  variant="secondary"
-                                  className="text-xs"
-                                >
+                              .filter(s => s.toLowerCase().includes("project") || s.toLowerCase().includes("manage"))
+                              .slice(0, 4)
+                              .map(skill => (
+                                <Badge key={skill} variant="secondary" className="text-xs">
                                   {skill.replace(/_/g, " ")}
                                 </Badge>
                               ))}
-                            {volunteer.skills.filter(
-                              (s) =>
-                                s.toLowerCase().includes("project") ||
-                                s.toLowerCase().includes("manage")
-                            ).length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                + more
-                              </Badge>
-                            )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600 max-w-xs">
-                          {volunteer.experience ? (
-                            <p className="line-clamp-2">
-                              {volunteer.experience}
-                            </p>
-                          ) : (
-                            <span className="text-gray-400 italic">
-                              No experience listed
-                            </span>
-                          )}
+
+                        <TableCell className="max-w-xs">
+                          <p className="text-sm text-gray-600 line-clamp-2">
+                            {volunteer.experience || <em className="text-gray-400">No experience listed</em>}
+                          </p>
                         </TableCell>
+
                         <TableCell className="text-right">
                           <Button
                             size="sm"
                             onClick={() => setConfirmVolunteer(volunteer)}
-                            disabled={assigningId === volunteer.id}
-                            variant={"outline"}
-                            className="text-disapora-darkBlue border-disapora-darkBlue"
+                            variant="outline"
+                            className="text-diaspora-darkBlue hover:bg-diaspora-blue/10 border-diaspora-darkBlue"
                           >
-                            {assigningId === volunteer.id
-                              ? "Assigning..."
-                              : "Assign"}
+                            <UserCheck className="mr-2 h-4 w-4" />
+                            Invite
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -342,36 +336,63 @@ export default function AssignProjectManager({
       </Dialog>
 
       {/* Confirmation Dialog */}
-      <Dialog
-        open={!!confirmVolunteer}
-        onOpenChange={() => setConfirmVolunteer(null)}
-      >
-        <DialogContent>
+      <Dialog open={!!confirmVolunteer} onOpenChange={() => setConfirmVolunteer(null)}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm Assignment</DialogTitle>
+            <DialogTitle className="text-xl">Confirm Invitation</DialogTitle>
+            <DialogDescription className="text-base">
+              Send a project manager invitation to:
+            </DialogDescription>
           </DialogHeader>
-          <DialogDescription>
-            Are you sure you want to assign{" "}
-            <strong>{confirmVolunteer?.full_name}</strong> as the Project
-            Manager for this project?
+
+          {confirmVolunteer && (
+            <div className="flex items-center gap-4 py-4 px-6 bg-gray-50 rounded-lg">
+              <Avatar className="h-14 w-14">
+                <AvatarImage src={confirmVolunteer.profile_picture || undefined} />
+                <AvatarFallback className="text-lg">
+                  {confirmVolunteer.full_name.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold text-lg">{confirmVolunteer.full_name}</p>
+                <p className="text-sm text-gray-600">
+                  {confirmVolunteer.residence_state && `${confirmVolunteer.residence_state}, `}
+                  {confirmVolunteer.residence_country}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogDescription className="pt-2">
+            This will send an official invitation. They can accept or decline from their dashboard.
             {currentManager && (
-              <span className="block mt-2 text-sm">
-                This will replace the current manager:{" "}
-                <strong>{currentManager.full_name}</strong>.
+              <span className="block mt-3 text-amber-700 font-medium">
+                Note: This will replace the current manager ({currentManager.full_name}).
               </span>
             )}
           </DialogDescription>
+
           <DialogFooter className="mt-6">
-            <Button variant="outline" onClick={() => setConfirmVolunteer(null)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setConfirmVolunteer(null)}
+              disabled={assigning}
+            >
               Cancel
             </Button>
-            <Button
-              onClick={() =>
-                confirmVolunteer && assignManager(confirmVolunteer.id)
-              }
-              disabled={assigningId !== null}
+            <Button 
+              onClick={handleAssign}
+              disabled={assigning}
+              className="bg-emerald-600 hover:bg-emerald-700"
             >
-              {assigningId ? "Assigning..." : "Yes, Assign Manager"}
+              {assigning ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending Invitation...
+                </>
+              ) : (
+                "Send Invitation"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

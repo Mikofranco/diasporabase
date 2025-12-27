@@ -65,7 +65,7 @@ const config: Config = {
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
   			},
-			disapora: {
+			diaspora: {
 				blue: '#0ea5e9',
 				darkBlue: '#0284c7',
 			}
