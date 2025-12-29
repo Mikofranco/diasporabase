@@ -153,3 +153,50 @@ export async function createAgencyRequest({
 
   return { data: request, error: null };
 }
+
+export async function checkIfVolunteerHasRequested({
+  projectId,
+  volunteerId,
+}: {
+  projectId: string;
+  volunteerId: string;
+}) {
+  const { data, error } = await supabase
+    .from("volunteer_requests")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("volunteer_id", volunteerId)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    console.error("Error checking volunteer request:", error);
+    throw error;
+  }
+
+  return { hasRequested: !!data };
+}
+
+export async function checkIfAgencyHasRequested({
+  projectId,
+  volunteerId,
+  requesterId,
+}: {
+  projectId: string;
+  volunteerId: string;
+  requesterId: string;
+}) {
+  const { data, error } = await supabase
+    .from("agency_requests")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("volunteer_id", volunteerId)
+    .eq("requester_id", requesterId)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    console.error("Error checking agency request:", error);
+    throw error;
+  }
+
+  return { hasRequested: !!data };
+}
