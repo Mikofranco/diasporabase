@@ -1,0 +1,39 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ main ]  # Or 'master' if that's your default
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'  # Or your version
+
+      - name: Install dependencies
+        run: npm ci  # Or yarn/pnpm
+
+      - name: Build app
+        run: npm run build
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ~/diasporabase
+            git pull origin main
+            npm ci
+            npm run build
+            pm2 restart diasporabase  # Your PM2 process name
+            # Optional: pm2 reload diasporabase --update-env (if env changes)
