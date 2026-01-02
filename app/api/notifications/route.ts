@@ -1,9 +1,14 @@
 import { createClient } from '@/lib/supabase/client';
 import { NextResponse } from 'next/server';
 
-const supabase = createClient();
+// ADD THESE TWO LINES — this is the key fix
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; // Optional: disables any caching
 
 export async function GET(request: Request) {
+
+    // MOVE CLIENT CREATION INSIDE THE HANDLER
+  const supabase = createClient();
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
   const isAdmin = searchParams.get('isAdmin') === 'true';
