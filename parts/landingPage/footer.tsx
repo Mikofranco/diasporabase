@@ -6,8 +6,8 @@ import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
 const Footer = () => {
   const footerLinks = {
     Platform: [
-      { label: "Find Opportunities", href: "/opportunities" },
-      { label: "Post Projects", href: "/post-projects" },
+      // { label: "Find Opportunities", href: "/opportunities" },
+      // { label: "Post Projects", href: "/post-projects" },
       // { label: "Join Community", href: "/community" },
       { label: "Success Stories", href: "/success-stories" },
     ],
