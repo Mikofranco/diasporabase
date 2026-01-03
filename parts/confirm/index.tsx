@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { decryptJWT } from "@/lib/jwt";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, AlertCircle, LogIn } from "lucide-react";
 import { toast } from "sonner";
 
 type Status = "loading" | "success" | "invalid" | "expired" | "used" | "error";
@@ -41,12 +41,12 @@ export default function ConfirmEmailPage() {
         return;
       }
 
-      const { userId, email } = payload;
+      const { userId } = payload;
 
-      // 2. Check if already used or expired
+      // 2. Fetch the confirmation link record
       const { data: link, error: fetchError } = await supabase
         .from("confirmation_links")
-        .select("used, expires_at")
+        .select("id, used, clicked_at, expires_at")
         .eq("token_hash", token)
         .single();
 
@@ -56,6 +56,17 @@ export default function ConfirmEmailPage() {
         return;
       }
 
+      // 3. Record the click
+      if (!link.clicked_at) {
+        const { error: clickError } = await supabase
+          .from("confirmation_links")
+          .update({ clicked_at: new Date().toISOString() })
+          .eq("id", link.id);
+
+        if (clickError) console.error("Failed to record click:", clickError);
+      }
+
+      // 4. Check status
       if (link.used) {
         setStatus("used");
         setMessage("This link has already been used.");
@@ -70,15 +81,18 @@ export default function ConfirmEmailPage() {
         return;
       }
 
-      // 3. Mark as used
+      // 5. Mark as used
       const { error: updateError } = await supabase
         .from("confirmation_links")
-        .update({ used: true })
-        .eq("token_hash", token);
+        .update({
+          used: true,
+          clicked_at: new Date().toISOString(),
+        })
+        .eq("id", link.id);
 
       if (updateError) throw updateError;
 
-      // 4. Update profile: email confirmed
+      // 6. Confirm email + get role
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .update({ email_confirmed: true })
@@ -88,14 +102,14 @@ export default function ConfirmEmailPage() {
 
       if (profileError) throw profileError;
 
-      // 5. Success + Role-Based Redirect
+      // Success
       setStatus("success");
       setMessage("Email confirmed successfully!");
       toast.success("Welcome! Your email is verified.");
 
-      // Determine redirect based on role
-      const role = profile?.role?.toLowerCase();
-      let redirectPath = "/dashboard"; // fallback
+      // Role-based redirect
+      const role = profile.role?.toLowerCase();
+      let redirectPath = "/dashboard";
 
       if (role === "agency") {
         redirectPath = "/onboarding";
@@ -103,10 +117,11 @@ export default function ConfirmEmailPage() {
         redirectPath = "/dashboard/volunteer";
       }
 
-      // Redirect after 2 seconds
+      // Auto-redirect after 3 seconds
       setTimeout(() => {
         router.push(redirectPath);
-      }, 2000);
+      }, 3000);
+
     } catch (err: any) {
       console.error("Verification failed:", err);
       setStatus("error");
@@ -127,12 +142,18 @@ export default function ConfirmEmailPage() {
 
       case "success":
         return (
-          <div className="flex flex-col items-center space-y-4 text-green-600">
+          <div className="flex flex-col items-center space-y-6 text-green-600">
             <CheckCircle className="h-16 w-16" />
-            <p className="text-xl font-semibold">{message}</p>
-            <p className="text-sm text-muted-foreground">
-              Redirecting to your dashboard...
-            </p>
+            <div className="text-center">
+              <p className="text-xl font-semibold">{message}</p>
+              <p className="text-sm text-muted-foreground mt-3">
+                Redirecting to your dashboard in 3 seconds...
+              </p>
+            </div>
+            {/* <Button onClick={() => router.push("/login")} size="lg" className="w-full max-w-xs">
+              <LogIn className="mr-2 h-5 w-5" />
+              Go to Login Now
+            </Button> */}
           </div>
         );
 
@@ -140,28 +161,54 @@ export default function ConfirmEmailPage() {
       case "expired":
       case "used":
         return (
-          <div className="flex flex-col items-center space-y-4 text-amber-600">
+          <div className="flex flex-col items-center space-y-6 text-amber-600">
             <AlertCircle className="h-16 w-16" />
-            <p className="text-xl font-semibold">{message}</p>
-            <Button
-              onClick={() => router.push("/resend-confirmation")}
-              variant="outline"
-            >
-              Resend Confirmation Email
-            </Button>
+            <div className="text-center">
+              <p className="text-xl font-semibold">{message}</p>
+              <p className="text-sm text-muted-foreground mt-3">
+                You may need a new confirmation link.
+              </p>
+            </div>
+            <div className="space-y-3 w-full max-w-xs">
+              <Button
+                onClick={() => router.push("/resend-confirmation")}
+                variant="outline"
+                className="w-full"
+              >
+                Resend Confirmation Email
+              </Button>
+              <Button onClick={() => router.push("/login")} className="w-full">
+                <LogIn className="mr-2 h-4 w-4" />
+                Go to Login
+              </Button>
+            </div>
           </div>
         );
 
       case "error":
         return (
-          <div className="flex flex-col items-center space-y-4 text-red-600">
+          <div className="flex flex-col items-center space-y-6 text-red-600">
             <XCircle className="h-16 w-16" />
-            <p className="text-xl font-semibold">{message}</p>
-            <Button onClick={() => router.push("/support")} variant="outline">
-              Contact Support
-            </Button>
+            <div className="text-center">
+              <p className="text-xl font-semibold">{message}</p>
+              <p className="text-sm text-muted-foreground mt-3">
+                Something went wrong.
+              </p>
+            </div>
+            <div className="space-y-3 w-full max-w-xs">
+              <Button onClick={() => router.push("/support")} variant="outline" className="w-full">
+                Contact Support
+              </Button>
+              <Button onClick={() => router.push("/login")} className="w-full">
+                <LogIn className="mr-2 h-4 w-4" />
+                Go to Login
+              </Button>
+            </div>
           </div>
         );
+
+      default:
+        return null;
     }
   };
 

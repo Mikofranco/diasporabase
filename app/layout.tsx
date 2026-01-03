@@ -104,7 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               '@type': 'Organization',
               name: 'DiasporaBase',
               url: 'https://diasporabase.com',
-              logo: 'https://diasporabase.com/logo.png',
+              logo: 'https://jbgnohxjwrvepqnlpccy.supabase.co/storage/v1/object/public/app_images/logo.svg',
               description: 'Connecting diaspora volunteers with meaningful opportunities, agencies, and impactful projects worldwide.',
               sameAs: [
                 'https://twitter.com/DiasporaBaseHQ',
