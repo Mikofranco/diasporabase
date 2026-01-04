@@ -2,6 +2,10 @@ import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { createServerActionClient } from "@/lib/supabase/server"
 
+// ADD THESE TWO LINES
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
@@ -15,7 +19,7 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies()
-    const supabase = createServerActionClient(cookieStore)
+    const supabase = createServerActionClient(cookieStore)  // ← This is fine here — inside handler
 
     try {
       // Exchange the code for a session
@@ -39,15 +43,12 @@ export async function GET(request: Request) {
 
         if (profileError) {
           console.error("Profile fetch error:", profileError)
-          // If profile doesn't exist yet, redirect to login to try again
           return NextResponse.redirect(requestUrl.origin + "/login?error=profile_not_found")
         }
 
         if (profile?.role) {
-          // Redirect to the appropriate dashboard based on role
           return NextResponse.redirect(requestUrl.origin + `/dashboard/${profile.role}`)
         } else {
-          // Profile exists but no role set
           return NextResponse.redirect(requestUrl.origin + "/login?error=no_role_assigned")
         }
       }
