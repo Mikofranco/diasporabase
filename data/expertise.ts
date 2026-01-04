@@ -1,5 +1,27 @@
 export const expertiseData = [
   {
+    id: "project_manager",
+    label: "Project-Management",
+     children: [
+      {
+        id: "traditional",
+        label: "Traditional",
+        subChildren: [
+          { id: "waterfall", label: "Waterfall" },
+        ]
+      },
+      {
+        id: "agile program",
+        label: "Agile Program",
+        subChildren: [
+          { id: "portfolio_manager", label: "Portfolio Manager" },
+          { id: "scrum_master", label: "Scrum Master" },
+          { id: "business_analyst", label: "Business Analyst" },
+        ]
+      },
+    ]
+  },
+  {
     id: "information_technology",
     label: "Information Technology",
     children: [
@@ -79,10 +101,6 @@ export const expertiseData = [
         ]
       }
     ]
-  },
-  {
-    id: "project_manager",
-    label: "Project-Management",
   },
   {
     id: "medicine_healthcare",

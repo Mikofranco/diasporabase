@@ -33,7 +33,7 @@ import {
 import { toast } from "sonner";
 import { z } from "zod";
 import { useSendMail } from "@/services/mail";
-import { welcomeHtml } from "@/lib/email-templates/welcome";
+import { welcomeHtmlAgency } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
 
 const formSchema = z
@@ -200,7 +200,7 @@ export default function AgencyRegistrationForm() {
       await useSendMail({
         to: formData.email,
         subject: "Welcome to DiasporaBase – Confirm Your Agency",
-        html: welcomeHtml(formData.companyName, confirmationUrl),
+        html: welcomeHtmlAgency(formData.companyName, confirmationUrl),
         onSuccess: () => {
           toast.success("Agency registered! Check your email to confirm.");
         },
