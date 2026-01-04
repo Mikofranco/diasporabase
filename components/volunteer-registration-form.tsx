@@ -160,6 +160,7 @@ export default function VolunteerRegistrationForm() {
     try {
       const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       const origin = window.location.origin;
+      const enteredFirstName = formData.firstName.trim();
 
       const {
         data: { user },
@@ -202,7 +203,7 @@ export default function VolunteerRegistrationForm() {
       await useSendMail({
         to: formData.email,
         subject: "Welcome to DiasporaBase – Confirm Your Email",
-        html: welcomeHtml(fullName, confirmationUrl),
+        html: welcomeHtml(enteredFirstName as string, confirmationUrl),
         onSuccess: () => {
           toast.success("Account created! Check your email to confirm.");
         },

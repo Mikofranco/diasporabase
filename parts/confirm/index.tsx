@@ -34,6 +34,7 @@ export default function ConfirmEmailPage() {
     try {
       // 1. Decrypt & validate JWT
       const payload = await decryptJWT(token);
+      console.log("Decrypted payload:", payload);
 
       if (payload.purpose !== "email_confirmation") {
         setStatus("invalid");
