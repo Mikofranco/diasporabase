@@ -1,7 +1,3 @@
-
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 import AgencyProfile from '@/parts/superAdmin/agency/ageny-info'
 import React from 'react'
 
