@@ -169,10 +169,10 @@ export default function ConfirmEmailPage() {
           <div className="flex flex-col items-center space-y-6 text-green-600">
             <CheckCircle className="h-16 w-16" />
             <div className="text-center">
-              <p className="text-xl font-semibold">{message}</p>
-              <p className="text-sm text-muted-foreground mt-3">
+              <p className="text-xl font-semibold">Account confirmed please login to continue.</p>
+              {/* <p className="text-sm text-muted-foreground mt-3">
                 Account confirmed please login to continue.
-              </p>
+              </p> */}
             </div>
             <div className="space-y-3 w-full max-w-xs">
               {/* <Button
