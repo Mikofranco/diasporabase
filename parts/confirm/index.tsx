@@ -6,7 +6,13 @@ import { createClient } from "@/lib/supabase/client";
 import { decryptJWT } from "@/lib/jwt";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle, XCircle, AlertCircle, LogIn } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  LogIn,
+} from "lucide-react";
 import { toast } from "sonner";
 
 type Status = "loading" | "success" | "invalid" | "expired" | "used" | "error";
@@ -34,7 +40,6 @@ export default function ConfirmEmailPage() {
     try {
       // 1. Decrypt & validate JWT
       const payload = await decryptJWT(token);
-      console.log("Decrypted payload:", payload);
 
       if (payload.purpose !== "email_confirmation") {
         setStatus("invalid");
@@ -122,7 +127,6 @@ export default function ConfirmEmailPage() {
       setTimeout(() => {
         router.push(redirectPath);
       }, 3000);
-
     } catch (err: any) {
       console.error("Verification failed:", err);
       setStatus("error");
@@ -162,24 +166,24 @@ export default function ConfirmEmailPage() {
       case "expired":
       case "used":
         return (
-          <div className="flex flex-col items-center space-y-6 text-amber-600">
-            <AlertCircle className="h-16 w-16" />
+          <div className="flex flex-col items-center space-y-6 text-green-600">
+            <CheckCircle className="h-16 w-16" />
             <div className="text-center">
               <p className="text-xl font-semibold">{message}</p>
               <p className="text-sm text-muted-foreground mt-3">
-                You may need a new confirmation link.
+                Account confirmed please login to continue.
               </p>
             </div>
             <div className="space-y-3 w-full max-w-xs">
-              <Button
+              {/* <Button
                 onClick={() => router.push("/resend-confirmation")}
                 variant="outline"
                 className="w-full"
               >
                 Resend Confirmation Email
-              </Button>
-              <Button onClick={() => router.push("/login")} className="w-full">
-                <LogIn className="mr-2 h-4 w-4" />
+              </Button> */}
+              <Button onClick={() => router.push("/login")} className="w-full action-btn">
+                <LogIn className="mr-2 h-4 w-4 " />
                 Go to Login
               </Button>
             </div>
@@ -188,15 +192,20 @@ export default function ConfirmEmailPage() {
 
       case "error":
         return (
-          <div className="flex flex-col items-center space-y-6 text-red-600">
-            <XCircle className="h-16 w-16" />
+          <div className="flex flex-col items-center space-y-6 text-green-600">
+            <CheckCircle className="h-16 w-16" />
             <div className="text-center">
               <p className="text-xl font-semibold">{message}</p>
               <p className="text-sm text-muted-foreground mt-3">
                 Something went wrong.
               </p>
             </div>
-            <div className="space-y-3 w-full max-w-xs">
+
+            <Button onClick={() => router.push("/login")} className="w-full">
+              <LogIn className="mr-2 h-4 w-4 action-btn" />
+              Go to Login
+            </Button>
+            {/* <div className="space-y-3 w-full max-w-xs">
               <Button onClick={() => router.push("/support")} variant="outline" className="w-full">
                 Contact Support
               </Button>
@@ -204,7 +213,7 @@ export default function ConfirmEmailPage() {
                 <LogIn className="mr-2 h-4 w-4" />
                 Go to Login
               </Button>
-            </div>
+            </div> */}
           </div>
         );
 
