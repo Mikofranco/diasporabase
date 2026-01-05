@@ -190,7 +190,7 @@ export default function VolunteerRegistrationForm() {
         "15m"
       );
 
-       const confirmationUrl = `${origin}/api/confirm-email?token=${token}`;
+      const confirmationUrl = `${origin}/confirm?token=${token}`;
 
       await supabase.from("confirmation_links").insert({
         user_id: user.id,
