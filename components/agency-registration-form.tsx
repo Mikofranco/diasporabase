@@ -187,7 +187,7 @@ export default function AgencyRegistrationForm() {
         "15m"
       );
 
-      const confirmationUrl = `${origin}/confirm?token=${token}`;
+      const confirmationUrl = `${origin}/api/confirm-email?token=${token}`;
 
       await supabase.from("confirmation_links").insert({
         user_id: user.id,
