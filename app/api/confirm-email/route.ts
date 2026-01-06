@@ -1,8 +1,10 @@
 // app/api/confirm-email/route.ts
+// app/api/confirm-email/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { decryptJWT, encryptUserToJWT } from "@/lib/jwt";
 import { createServerActionClient } from "@/lib/supabase/server";
+import { supabase } from "@/lib/supabase/client";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,19 @@ export async function GET(request: NextRequest) {
   if (!token) {
     return NextResponse.redirect(new URL("/confirm?status=invalid", request.url));
   }
+  
+
+  const { data, error } = await supabase.rpc('verify_confirmation_token', { p_token: token });
+  
+
+if (error) {
+  console.error('Error:', error);
+} else if (data.valid) {
+  console.log('Token valid! User:', data.user_id);
+  // Proceed (e.g., log in user, redirect)
+} else {
+  console.log('Invalid token:', data.message);
+}
 
   try {
     const payload = await decryptJWT(token);
