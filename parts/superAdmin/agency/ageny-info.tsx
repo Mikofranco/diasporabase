@@ -393,6 +393,18 @@ const AgencyProfile = () => {
     <>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-4 max-w-5xl">
+         {
+          profile.contact_person_email === null ? (
+            <Alert className="mb-6 bg-red-50 border-red-200 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              <AlertTitle>Incomplete Profile</AlertTitle>
+              <AlertDescription>
+                This agency has not completed the onboarding process. Please
+                contact the agency to provide the necessary information.
+              </AlertDescription>
+            </Alert>
+          ) : null
+         }
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="flex items-center gap-4">

@@ -1,4 +1,5 @@
 // app/api/confirm-email/route.ts
+// app/api/confirm-email/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { decryptJWT, encryptUserToJWT } from "@/lib/jwt";

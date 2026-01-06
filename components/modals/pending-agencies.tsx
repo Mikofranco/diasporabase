@@ -98,8 +98,9 @@ export function PendingAgenciesModal() {
         toast.error("Failed to load pending agencies");
       } else {
         const pending = data || [];
-        setAgencies(pending);
-        setOpen(pending.length > 0);
+        const onboardingPending = pending.filter((agency:PendingAgency) => agency.contact_person_email != null);
+        setAgencies(onboardingPending);
+        setOpen(onboardingPending.length > 0);
       }
 
       setLoading(false);
