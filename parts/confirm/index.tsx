@@ -3,8 +3,12 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { decryptJWT } from "@/lib/jwt";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Loader2,
@@ -24,12 +28,15 @@ export default function ConfirmEmailPage() {
 
   const [status, setStatus] = useState<Status>("loading");
   const [message, setMessage] = useState("");
+  const [tokenUserId, setTokenUserId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showLoginButton, setShowLoginButton] = useState(false);
 
   useEffect(() => {
     const token = searchParams.get("token");
     if (!token) {
       setStatus("invalid");
-      setMessage("No confirmation token found.");
+      setMessage("No confirmation token provided.");
       return;
     }
 
@@ -38,188 +45,182 @@ export default function ConfirmEmailPage() {
 
   const verifyToken = async (token: string) => {
     try {
-      // 1. Decrypt & validate JWT
-      const payload = await decryptJWT(token);
+      const { data, error } = await supabase
+        .rpc("verify_confirmation_token", { p_token: token });
 
-      if (payload.purpose !== "email_confirmation") {
-        setStatus("invalid");
-        setMessage("Invalid token purpose.");
+      if (error) {
+        console.error("RPC Error:", error);
+        setStatus("error");
+        setMessage("Something went wrong. Please try again later.");
+        toast.error("Verification failed.");
         return;
       }
 
-      const { userId } = payload;
+      if (!data?.valid) {
+        const msg = data?.message || "invalid_token";
 
-      // 2. Fetch the confirmation link record
-      const { data: link, error: fetchError } = await supabase
-        .from("confirmation_links")
-        .select("id, used, clicked_at, expires_at")
-        .eq("token_hash", token)
-        .single();
+        if (msg === "link_expired") {
+          setStatus("expired");
+          setMessage("This confirmation link has expired.");
+        } else if (msg === "already_used") {
+          setStatus("used");
+          setMessage("This confirmation link has already been used.");
+        } else {
+          setStatus("invalid");
+          setMessage("Invalid or unknown confirmation link.");
+        }
 
-      if (fetchError || !link) {
-        setStatus("invalid");
-        setMessage("Invalid or unknown confirmation link.");
+        // toast.error("Email confirmation failed.");
         return;
       }
 
-      // 3. Record the click
-      if (!link.clicked_at) {
-        const { error: clickError } = await supabase
-          .from("confirmation_links")
-          .update({ clicked_at: new Date().toISOString() })
-          .eq("id", link.id);
+      // SUCCESS: Email confirmed successfully
+      const confirmedUserId = data.user_id;
+      setTokenUserId(confirmedUserId);
 
-        if (clickError) console.error("Failed to record click:", clickError);
-      }
-
-      // 4. Check status
-      if (link.used) {
-        setStatus("used");
-        setMessage("This link has already been used.");
-        return;
-      }
-
-      const now = new Date();
-      const expires = new Date(link.expires_at);
-      if (now > expires) {
-        setStatus("expired");
-        setMessage("This confirmation link has expired.");
-        return;
-      }
-
-      // 5. Mark as used
-      const { error: updateError } = await supabase
-        .from("confirmation_links")
-        .update({
-          used: true,
-          clicked_at: new Date().toISOString(),
-        })
-        .eq("id", link.id);
-
-      if (updateError) throw updateError;
-
-      // 6. Confirm email + get role
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .update({ email_confirmed: true })
-        .eq("id", userId)
-        .select("role")
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Success
       setStatus("success");
       setMessage("Email confirmed successfully!");
-      toast.success("Welcome! Your email is verified.");
+      toast.success("Your email is now verified.");
 
-      // Role-based redirect
-      const role = profile.role?.toLowerCase();
-      let redirectPath = "/dashboard";
+      // Check current session
+      const { data: sessionData } = await supabase.auth.getSession();
 
-      if (role === "agency") {
-        redirectPath = "/onboarding";
-      } else if (role === "volunteer") {
-        redirectPath = "/dashboard/volunteer";
+      if (!sessionData.session) {
+        // No one logged in → show login button
+        setCurrentUserId(null);
+        setShowLoginButton(true);
+        return;
       }
 
-      // Auto-redirect after 3 seconds
-      setTimeout(() => {
-        router.push(redirectPath);
-      }, 3000);
+      const currentId = sessionData.session.user.id;
+      setCurrentUserId(currentId);
+
+      if (currentId === confirmedUserId) {
+        // Correct user is logged in → redirect to dashboard
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", currentId)
+          .single();
+
+        let redirectPath = "/dashboard";
+        const role = profile?.role?.toLowerCase();
+        if (role === "agency") redirectPath = "/onboarding";
+        else if (role === "volunteer") redirectPath = "/dashboard/volunteer";
+
+        toast.success("Welcome back! Redirecting to your dashboard...");
+        setTimeout(() => router.push(redirectPath), 3000);
+      } else {
+        // Wrong user logged in → silently sign out
+        await supabase.auth.signOut();
+        setCurrentUserId(null);
+        setShowLoginButton(true);
+        // No toast or message about logout — user doesn't need to know
+      }
     } catch (err: any) {
-      console.error("Verification failed:", err);
+      console.error("Unexpected error:", err);
       setStatus("error");
-      setMessage(err.message || "Verification failed. Please try again.");
+      setMessage("An unexpected error occurred.");
       toast.error("Could not verify email.");
     }
   };
 
-  const getContent = () => {
+  const getIcon = () => {
     switch (status) {
       case "loading":
-        return (
-          <div className="flex flex-col items-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-lg">Verifying your email...</p>
-          </div>
-        );
-
+        return <Loader2 className="h-16 w-16 animate-spin text-primary" />;
       case "success":
-        return (
-          <div className="flex flex-col items-center space-y-6 text-green-600">
-            <CheckCircle className="h-16 w-16" />
-            <div className="text-center">
-              <p className="text-xl font-semibold">{message}</p>
-              <p className="text-sm text-muted-foreground mt-3">
-                Redirecting to your dashboard in 3 seconds...
-              </p>
-            </div>
-            {/* <Button onClick={() => router.push("/login")} size="lg" className="w-full max-w-xs">
-              <LogIn className="mr-2 h-5 w-5" />
-              Go to Login Now
-            </Button> */}
-          </div>
-        );
-
+        return <CheckCircle className="h-16 w-16 text-green-600" />;
       case "invalid":
       case "expired":
       case "used":
-        return (
-          <div className="flex flex-col items-center space-y-6 text-green-600">
-            <CheckCircle className="h-16 w-16" />
-            <div className="text-center">
-              <p className="text-xl font-semibold">Account confirmed please login to continue.</p>
-              {/* <p className="text-sm text-muted-foreground mt-3">
-                Account confirmed please login to continue.
-              </p> */}
-            </div>
-            <div className="space-y-3 w-full max-w-xs">
-              {/* <Button
-                onClick={() => router.push("/resend-confirmation")}
-                variant="outline"
-                className="w-full"
-              >
-                Resend Confirmation Email
-              </Button> */}
-              <Button onClick={() => router.push("/login")} className="w-full action-btn">
-                <LogIn className="mr-2 h-4 w-4 " />
-                Go to Login
-              </Button>
-            </div>
-          </div>
-        );
-
+        return <CheckCircle className="h-16 w-16 text-green-600" />;
       case "error":
-        return (
-          <div className="flex flex-col items-center space-y-6 text-green-600">
-            <CheckCircle className="h-16 w-16" />
-            <div className="text-center">
-              <p className="text-xl font-semibold">{message}</p>
-              <p className="text-sm text-muted-foreground mt-3">
-                Something went wrong.
-              </p>
-            </div>
-
-            <Button onClick={() => router.push("/login")} className="w-full">
-              <LogIn className="mr-2 h-4 w-4 action-btn" />
-              Go to Login
-            </Button>
-            {/* <div className="space-y-3 w-full max-w-xs">
-              <Button onClick={() => router.push("/support")} variant="outline" className="w-full">
-                Contact Support
-              </Button>
-              <Button onClick={() => router.push("/login")} className="w-full">
-                <LogIn className="mr-2 h-4 w-4" />
-                Go to Login
-              </Button>
-            </div> */}
-          </div>
-        );
-
+        return <XCircle className="h-16 w-16 text-red-600" />;
       default:
         return null;
     }
+  };
+
+  const getTitle = () => {
+    if (status === "success") {
+      if (currentUserId && currentUserId === tokenUserId) return "Welcome Back!";
+      return "Email Verified Successfully!";
+    }
+    if (status === "used") return "Already Confirmed";
+    if (status === "expired") return "Link Expired";
+    if (status === "invalid") return "Invalid Link";
+    if (status === "error") return "Verification Failed";
+    return "Confirming Your Email";
+  };
+
+  const getContent = () => {
+    if (status === "loading") {
+      return <p className="text-lg">Verifying your email address...</p>;
+    }
+
+    return (
+      <>
+        <div className="text-center space-y-4">
+          <p className="text-xl font-semibold">{getTitle()}</p>
+          <p className="text-muted-foreground max-w-sm mx-auto">{message}</p>
+        </div>
+
+        {/* Auto-redirect only when correct user is logged in */}
+        {status === "success" && currentUserId && currentUserId === tokenUserId && (
+          <p className="text-sm text-muted-foreground mt-4">
+            Redirecting you to your dashboard in 3 seconds...
+          </p>
+        )}
+
+        {/* Show login button when needed (not logged in OR silently logged out) */}
+        {status === "success" && showLoginButton && (
+          <div className="space-y-4 mt-6 w-full max-w-xs">
+            <p className="text-sm text-muted-foreground">
+              Log in to access your account.
+            </p>
+            <Button
+              onClick={() => router.push("/login")}
+              className="w-full action-btn"
+              size="lg"
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              Log In Now
+            </Button>
+          </div>
+        )}
+
+        {/* Invalid / Expired / Used */}
+        {(status === "invalid" || status === "expired" || status === "used") && (
+          <div className="space-y-4 mt-6 w-full max-w-xs">
+            {status === "expired" && (
+              <p className="text-sm text-muted-foreground">
+                You can request a new link from the login page.
+              </p>
+            )}
+            <Button
+              onClick={() => router.push("/login")}
+              className="w-full action-btn"
+              size="lg"
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              Go to Login
+            </Button>
+          </div>
+        )}
+
+        {/* Error */}
+        {status === "error" && (
+          <Button
+            onClick={() => router.push("/login")}
+            variant="outline"
+            className="mt-6 action-btn"
+          >
+            Back to Login
+          </Button>
+        )}
+      </>
+    );
   };
 
   return (
@@ -227,11 +228,14 @@ export default function ConfirmEmailPage() {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">
-            {status === "loading" ? "Confirming Email" : "Email Confirmation"}
+            Email Confirmation
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
-          <div className="text-center">{getContent()}</div>
+          <div className="flex flex-col items-center space-y-8 text-center">
+            {getIcon()}
+            {getContent()}
+          </div>
         </CardContent>
       </Card>
     </div>
