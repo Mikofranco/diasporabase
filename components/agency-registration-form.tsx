@@ -27,7 +27,6 @@ import {
   Mail,
   RefreshCw,
   AlertCircle,
-  Chrome,
   Building2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -40,7 +39,7 @@ const formSchema = z
   .object({
     companyName: z
       .string()
-      .min(2, "Company name must be at least 2 characters")
+      .min(2, "Organization name must be at least 2 characters")
       .trim(),
     email: z.string().email("Please enter a valid email address"),
     phone: z
@@ -72,22 +71,25 @@ export default function AgencyRegistrationForm() {
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>(
-    {}
-  );
-  const [touched, setTouched] = useState<
-    Partial<Record<keyof FormData, boolean>>
-  >({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof FormData, boolean>>>({});
 
-  // Modal
+  // Modal & Resend
   const [modalOpen, setModalOpen] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [emailForResend, setEmailForResend] = useState("");
+  const [canResend, setCanResend] = useState(true);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  // Store these for reliable resend
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    email: string;
+    companyName: string;
+    confirmationUrl: string;
+  } | null>(null);
 
   const supabase = createClient();
 
-  // Real-time validation (only show errors after user types)
+  // Real-time validation
   useEffect(() => {
     const result = formSchema.safeParse(formData);
     if (!result.success) {
@@ -116,30 +118,10 @@ export default function AgencyRegistrationForm() {
     setShowPassword(false);
   };
 
-  // Google Sign-Up
-  const handleGoogleSignUp = async () => {
-    setGoogleLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/confirm`,
-          queryParams: { prompt: "consent" },
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      toast.error(err.message || "Google sign-up failed");
-      setGoogleLoading(false);
-    }
-  };
-
-  // Email/Password Registration
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
 
-    // Mark all fields as touched
     setTouched({
       companyName: true,
       email: true,
@@ -166,9 +148,8 @@ export default function AgencyRegistrationForm() {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${origin}/confirm`,
           data: {
-            full_name: formData.companyName,
+            full_name: formData.companyName.trim(),
             role: "agency",
             phone: formData.phone,
           },
@@ -178,40 +159,47 @@ export default function AgencyRegistrationForm() {
       if (signUpError) throw signUpError;
       if (!user) throw new Error("Registration failed");
 
+      // Generate 24-hour token
       const token = await encryptUserToJWT(
         {
           userId: user.id,
           email: user.email!,
           purpose: "email_confirmation",
         },
-        "15m"
+        "24h" // ← Now 24 hours
       );
 
       const confirmationUrl = `${origin}/confirm?token=${token}`;
 
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      // Save confirmation link
       await supabase.from("confirmation_links").insert({
         user_id: user.id,
         email: user.email!,
         confirmation_url: confirmationUrl,
         token_hash: token,
-        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        expires_at: expiresAt.toISOString(),
+        is_resent: false,
       });
 
+      // Send welcome email
       await useSendMail({
         to: formData.email,
-        subject: "Welcome to DiasporaBase – Confirm Your Agency",
-        html: welcomeHtmlAgency(formData.companyName, confirmationUrl),
-        onSuccess: () => {
-          toast.success("Agency registered! Check your email to confirm.");
-        },
-        onError: () => {
-          toast.warning("Registered, but email failed. Check spam folder.");
-        },
+        subject: "Welcome to DiasporaBase – Confirm Your Agency Account",
+        html: welcomeHtmlAgency(formData.companyName.trim(), confirmationUrl),
       });
 
-      setEmailForResend(formData.email);
+      // Store for resend
+      setPendingConfirmation({
+        email: formData.email,
+        companyName: formData.companyName.trim(),
+        confirmationUrl,
+      });
+
+      toast.success("Agency registered! Please check your email to confirm.");
       setModalOpen(true);
-      resetForm(); // ← CLEARS FORM AFTER SUCCESS
+      resetForm();
       localStorage.setItem("diasporabase-email", formData.email);
     } catch (err: any) {
       console.error("Agency registration error:", err);
@@ -221,19 +209,44 @@ export default function AgencyRegistrationForm() {
     }
   };
 
+  // Improved resend with cooldown
   const handleResend = async () => {
-    if (!emailForResend || resendLoading) return;
+    if (!pendingConfirmation || resendLoading || !canResend) return;
+
     setResendLoading(true);
+    setCanResend(false);
+
     try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: emailForResend,
-        options: { emailRedirectTo: `${window.location.origin}/confirm` },
+      await useSendMail({
+        to: pendingConfirmation.email,
+        subject: "Confirm Your DiasporaBase Agency Account (Resent)",
+        html: welcomeHtmlAgency(pendingConfirmation.companyName, pendingConfirmation.confirmationUrl),
       });
-      if (error) throw error;
-      toast.success("Confirmation email resent!");
+
+      // Optional: mark as resent
+      const token = pendingConfirmation.confirmationUrl.split("token=")[1];
+      await supabase
+        .from("confirmation_links")
+        .update({ is_resent: true })
+        .eq("token_hash", token);
+
+      toast.success("Confirmation email resent successfully!");
+
+      // 30-second cooldown
+      setResendCountdown(30);
+      const interval = setInterval(() => {
+        setResendCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } catch (err: any) {
-      toast.error(err.message || "Failed to resend");
+      toast.error("Failed to resend email. Please try again.");
+      setCanResend(true);
     } finally {
       setResendLoading(false);
     }
@@ -243,47 +256,23 @@ export default function AgencyRegistrationForm() {
     <>
       <Card className="w-full max-w-2xl mx-auto shadow-xl border-0 my-20">
         <CardHeader className="text-center pb-8">
-          <CardTitle className="text-3xl font-bold text-[#1E293B]">
+          <CardTitle className="text-3xl font-bold text-[#1E293B] flex items-center justify-center gap-3">
+            <Building2 className="h-10 w-10 text-primary" />
             Register Your Agency
           </CardTitle>
           <CardDescription className="text-base mt-3 max-w-md mx-auto">
-            Connect with skilled diaspora volunteers to power your development
-            projects
+            Connect with skilled diaspora volunteers to power your development projects
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Google Sign-Up */}
-          {/* <Button
-            onClick={handleGoogleSignUp}
-            disabled={googleLoading || loading}
-            variant="outline"
-            className="w-full h-12 text-base font-medium border-2 hover:border-blue-500"
-          >
-            {googleLoading ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <Chrome className="mr-2 h-5 w-5" />
-            )}
-            {googleLoading ? "Connecting..." : "Continue with Google"}
-          </Button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-3 text-muted-foreground">Or register with email</span>
-            </div>
-          </div> */}
-
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Company Name */}
+            {/* Organization Name */}
             <div className="space-y-2">
               <Label htmlFor="companyName">Organization Name</Label>
               <Input
                 id="companyName"
-                placeholder="Enter Organization name"
+                placeholder="e.g. Hope Foundation Nigeria"
                 value={formData.companyName}
                 onChange={(e) => handleChange("companyName", e.target.value)}
                 disabled={loading}
@@ -299,7 +288,7 @@ export default function AgencyRegistrationForm() {
 
             {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email">Contact Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -323,7 +312,7 @@ export default function AgencyRegistrationForm() {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="Enter phone number"
+                placeholder="+234 800 000 0000"
                 value={formData.phone}
                 onChange={(e) => handleChange("phone", e.target.value)}
                 disabled={loading}
@@ -348,20 +337,14 @@ export default function AgencyRegistrationForm() {
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     disabled={loading}
-                    className={
-                      errors.password ? "border-red-500 pr-10" : "pr-10"
-                    }
+                    className={errors.password ? "border-red-500 pr-10" : "pr-10"}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {errors.password && (
@@ -378,9 +361,7 @@ export default function AgencyRegistrationForm() {
                   id="confirmPassword"
                   type={showPassword ? "text" : "password"}
                   value={formData.confirmPassword}
-                  onChange={(e) =>
-                    handleChange("confirmPassword", e.target.value)
-                  }
+                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
                   disabled={loading}
                   className={errors.confirmPassword ? "border-red-500" : ""}
                 />
@@ -393,40 +374,32 @@ export default function AgencyRegistrationForm() {
               </div>
             </div>
 
-            <div className="flex items-center ">
-              <Button
-                type="submit"
-                // size="lg"
-                disabled={
-                  loading || googleLoading || Object.keys(errors).length > 0
-                }
-                className="w-full h-12 text-lg font-semibold action-btn shadow-lg"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Creating Agency Account...
-                  </>
-                ) : (
-                  "Register Agency"
-                )}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              disabled={loading || Object.keys(errors).length > 0}
+              className="w-full h-12 text-lg font-semibold action-btn shadow-lg"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Creating Agency Account...
+                </>
+              ) : (
+                "Register Agency"
+              )}
+            </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-center text-sm text-muted-foreground pt-4">
             Already have an agency account?{" "}
-            <Link
-              href="/login"
-              className="font-semibold text-[#0ea5e9] hover:underline"
-            >
+            <Link href="/login" className="font-semibold text-[#0ea5e9] hover:underline">
               Sign in
             </Link>
           </p>
         </CardContent>
       </Card>
 
-      {/* Success Modal */}
+      {/* Success Modal with Resend */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="text-center">
@@ -437,14 +410,16 @@ export default function AgencyRegistrationForm() {
             <DialogDescription className="text-base mt-3">
               A confirmation link has been sent to
               <br />
-              <strong className="text-foreground">{emailForResend}</strong>
+              <strong className="text-foreground break-all">
+                {pendingConfirmation?.email || "your email"}
+              </strong>
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-6 space-y-3">
             <Button
               onClick={handleResend}
-              disabled={resendLoading}
+              disabled={resendLoading || !canResend}
               variant="outline"
               className="w-full"
             >
@@ -453,18 +428,24 @@ export default function AgencyRegistrationForm() {
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Resending...
                 </>
-              ) : (
+              ) : canResend ? (
                 "Resend Confirmation Email"
+              ) : (
+                <>Resend in {resendCountdown}s</>
               )}
             </Button>
-            <Button
-              variant="ghost"
+
+            {/* <Button
               onClick={() => setModalOpen(false)}
               className="w-full"
             >
-              Close
-            </Button>
+              OK, I'll check my email
+            </Button> */}
           </div>
+
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            The confirmation link is valid for 24 hours.
+          </p>
         </DialogContent>
       </Dialog>
     </>
