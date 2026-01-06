@@ -27,7 +27,6 @@ import {
   Mail,
   RefreshCw,
   AlertCircle,
-  Chrome,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -68,18 +67,21 @@ export default function VolunteerRegistrationForm() {
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>(
-    {}
-  );
-  const [touched, setTouched] = useState<
-    Partial<Record<keyof FormData, boolean>>
-  >({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof FormData, boolean>>>({});
 
-  // Modal
+  // Modal & Resend state
   const [modalOpen, setModalOpen] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [emailForResend, setEmailForResend] = useState("");
+  const [canResend, setCanResend] = useState(true);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  // Store confirmation details after successful signup
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    email: string;
+    firstName: string;
+    confirmationUrl: string;
+  } | null>(null);
 
   const supabase = createClient();
 
@@ -105,7 +107,6 @@ export default function VolunteerRegistrationForm() {
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
 
-  // Reset form completely
   const resetForm = () => {
     setFormData(DEFAULT_FORM);
     setTouched({});
@@ -113,33 +114,11 @@ export default function VolunteerRegistrationForm() {
     setShowPassword(false);
   };
 
-  // Google Sign-Up
-  const handleGoogleSignUp = async () => {
-    setGoogleLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/confirm`, // or /dashboard/volunteer
-          queryParams: {
-            prompt: "consent",
-          },
-        },
-      });
-
-      if (error) throw error;
-      // Redirect happens automatically
-    } catch (err: any) {
-      toast.error(err.message || "Google sign-up failed");
-      setGoogleLoading(false);
-    }
-  };
-
-  // Email/Password Sign-Up
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
 
+    // Mark all fields as touched to show errors
     setTouched({
       firstName: true,
       lastName: true,
@@ -160,7 +139,6 @@ export default function VolunteerRegistrationForm() {
     try {
       const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       const origin = window.location.origin;
-      const enteredFirstName = formData.firstName.trim();
 
       const {
         data: { user },
@@ -169,7 +147,6 @@ export default function VolunteerRegistrationForm() {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${origin}/confirm`,
           data: {
             full_name: fullName,
             role: "volunteer",
@@ -181,61 +158,93 @@ export default function VolunteerRegistrationForm() {
       if (signUpError) throw signUpError;
       if (!user) throw new Error("Account creation failed");
 
+      // Generate token valid for 24 hours
       const token = await encryptUserToJWT(
         {
           userId: user.id,
           email: user.email!,
           purpose: "email_confirmation",
         },
-        "15m"
+        "24h" // ← Now 24 hours
       );
 
       const confirmationUrl = `${origin}/confirm?token=${token}`;
 
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+
+      // Insert confirmation link record
       await supabase.from("confirmation_links").insert({
         user_id: user.id,
         email: user.email!,
         confirmation_url: confirmationUrl,
         token_hash: token,
-        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        expires_at: expiresAt.toISOString(),
+        is_resent: false,
       });
 
+      // Send welcome confirmation email
       await useSendMail({
         to: formData.email,
         subject: "Welcome to DiasporaBase – Confirm Your Email",
-        html: welcomeHtml(enteredFirstName as string, confirmationUrl),
-        onSuccess: () => {
-          toast.success("Account created! Check your email to confirm.");
-        },
-        onError: () => {
-          toast.warning("Account created, but email failed. Check spam.");
-        },
+        html: welcomeHtml(formData.firstName.trim(), confirmationUrl),
       });
 
-      setEmailForResend(formData.email);
+      // Save for resend functionality
+      setPendingConfirmation({
+        email: formData.email,
+        firstName: formData.firstName.trim(),
+        confirmationUrl,
+      });
+
+      toast.success("Account created! Please check your email to confirm.");
       setModalOpen(true);
-      resetForm(); // ← CLEARS FORM AFTER SUCCESS
+      resetForm();
       localStorage.setItem("diasporabase-email", formData.email);
     } catch (err: any) {
-      toast.error(err.message || "Registration failed. Try again.");
+      toast.error(err.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Resend confirmation email
   const handleResend = async () => {
-    if (!emailForResend || resendLoading) return;
+    if (!pendingConfirmation || resendLoading || !canResend) return;
+
     setResendLoading(true);
+    setCanResend(false);
+
     try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: emailForResend,
-        options: { emailRedirectTo: `${window.location.origin}/confirm` },
+      await useSendMail({
+        to: pendingConfirmation.email,
+        subject: "Confirm your DiasporaBase account (Resent)",
+        html: welcomeHtml(pendingConfirmation.firstName, pendingConfirmation.confirmationUrl),
       });
-      if (error) throw error;
-      toast.success("Confirmation email resent!");
+
+      // Optional: mark as resent in DB
+      const token = pendingConfirmation.confirmationUrl.split("token=")[1];
+      await supabase
+        .from("confirmation_links")
+        .update({ is_resent: true })
+        .eq("token_hash", token);
+
+      toast.success("Confirmation email resent successfully!");
+
+      // Start 30-second cooldown
+      setResendCountdown(30);
+      const interval = setInterval(() => {
+        setResendCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } catch (err: any) {
-      toast.error(err.message || "Failed to resend");
+      toast.error("Failed to resend email. Please try again.");
+      setCanResend(true); // Allow retry on failure
     } finally {
       setResendLoading(false);
     }
@@ -253,33 +262,8 @@ export default function VolunteerRegistrationForm() {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-2 sm:space-y-6">
-          {/* Google Sign-Up */}
-          {/* <Button
-            onClick={handleGoogleSignUp}
-            disabled={googleLoading || loading}
-            variant="outline"
-            className="w-full h-12 text-base font-medium border-2 hover:border-blue-500"
-          >
-            {googleLoading ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <Chrome className="mr-2 h-5 w-5" />
-            )}
-            {googleLoading ? "Connecting..." : "Continue with Google"}
-          </Button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or register with email</span>
-            </div>
-          </div> */}
-
+        <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Form Fields */}
             <div className="grid md:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <Label>First Name</Label>
@@ -316,7 +300,6 @@ export default function VolunteerRegistrationForm() {
               </div>
             </div>
 
-            {/* Email, Password, etc. (same as before) */}
             <div className="space-y-2">
               <Label>Email Address</Label>
               <Input
@@ -344,20 +327,14 @@ export default function VolunteerRegistrationForm() {
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     disabled={loading}
-                    className={
-                      errors.password ? "border-red-500 pr-10" : "pr-10"
-                    }
+                    className={errors.password ? "border-red-500 pr-10" : "pr-10"}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-500"
+                    className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {errors.password && (
@@ -373,9 +350,7 @@ export default function VolunteerRegistrationForm() {
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={formData.confirmPassword}
-                  onChange={(e) =>
-                    handleChange("confirmPassword", e.target.value)
-                  }
+                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
                   disabled={loading}
                   className={errors.confirmPassword ? "border-red-500" : ""}
                 />
@@ -399,14 +374,12 @@ export default function VolunteerRegistrationForm() {
               />
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex justify-center pt-4">
               <Button
                 type="submit"
                 size="lg"
-                disabled={
-                  loading || googleLoading || Object.keys(errors).length > 0
-                }
-                className="w-fit h-12 text-lg font-semibold action-btn shadow-lg "
+                disabled={loading || Object.keys(errors).length > 0}
+                className="w-fit h-12 px-10 text-lg font-semibold action-btn shadow-lg"
               >
                 {loading ? (
                   <>
@@ -420,7 +393,7 @@ export default function VolunteerRegistrationForm() {
             </div>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-center text-sm text-muted-foreground pt-4">
             Already have an account?{" "}
             <Link
               href="/login"
@@ -432,7 +405,7 @@ export default function VolunteerRegistrationForm() {
         </CardContent>
       </Card>
 
-      {/* Success Modal */}
+      {/* Success Modal with Resend */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="text-center">
@@ -441,16 +414,18 @@ export default function VolunteerRegistrationForm() {
             </div>
             <DialogTitle className="text-2xl">Check Your Email</DialogTitle>
             <DialogDescription className="text-base mt-3">
-              Confirmation link sent to
+              We sent a confirmation link to
               <br />
-              <strong className="text-foreground">{emailForResend}</strong>
+              <strong className="text-foreground break-all">
+                {pendingConfirmation?.email || "your email"}
+              </strong>
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-6 space-y-3">
             <Button
               onClick={handleResend}
-              disabled={resendLoading}
+              disabled={resendLoading || !canResend}
               variant="outline"
               className="w-full"
             >
@@ -459,18 +434,24 @@ export default function VolunteerRegistrationForm() {
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Resending...
                 </>
+              ) : canResend ? (
+                "Resend Confirmation Email"
               ) : (
-                "Resend Email"
+                <>Resend in {resendCountdown}s</>
               )}
             </Button>
-            <Button
-              variant="ghost"
+
+            {/* <Button
               onClick={() => setModalOpen(false)}
               className="w-full"
             >
-              Close
-            </Button>
+              OK, I'll check my email
+            </Button> */}
           </div>
+
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            The confirmation link is valid for 24 hours.
+          </p>
         </DialogContent>
       </Dialog>
     </>
