@@ -15,13 +15,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'  # Or whatever version you use
+          node-version: '20'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: latest  # Or specific like 9
-          run_install: false  # We'll install manually
+          version: latest
+          run_install: false
 
       - name: Get pnpm store directory
         id: pnpm-cache
@@ -37,11 +37,17 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile  # Like npm ci – fast & exact
+        run: pnpm install --frozen-lockfile
 
+      # ADD ENVIRONMENT VARIABLES HERE FOR BUILD
       - name: Build app
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: pnpm run build
 
+      # DEPLOY TO VPS
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -53,5 +59,12 @@ jobs:
             cd ~/diasporabase
             git pull origin main
             pnpm install --frozen-lockfile
+            
+            # ALSO PASS ENV VARS TO BUILD ON SERVER (important!)
+            export NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}"
+            export NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
+            # Add more if needed
+            
             pnpm run build
-            pm2 restart diasporabase  # Or pm2 reload for zero-downtimei
+            
+            pm2 restart diasporabase  # Or pm2 reload diasporabase --update-env for zero-downtime
