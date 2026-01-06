@@ -54,4 +54,4 @@ jobs:
             git pull origin main
             pnpm install --frozen-lockfile
             pnpm run build
-            pm2 restart diasporabase  # Or pm2 reload for zero-downtime
+            pm2 restart diasporabase  # Or pm2 reload for zero-downtimei
