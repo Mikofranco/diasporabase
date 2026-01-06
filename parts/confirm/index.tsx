@@ -134,7 +134,7 @@ export default function ConfirmEmailPage() {
       case "invalid":
       case "expired":
       case "used":
-        return <AlertCircle className="h-16 w-16 text-amber-600" />;
+        return <CheckCircle className="h-16 w-16 text-green-600" />;
       case "error":
         return <XCircle className="h-16 w-16 text-red-600" />;
       default:
