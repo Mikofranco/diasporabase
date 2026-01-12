@@ -216,7 +216,7 @@ const AgencyOnboarding: React.FC = () => {
           full_name: profileData.full_name || "",
           description: profileData.description || null,
           address: profileData.address || "",
-          organization_name: profileData.organization_name || "",
+          organization_name: profileData.full_name || "",
           first_name: profileData.contact_person_first_name || "",
           surname: profileData.contact_person_last_name || "",
           contact_person_email: profileData.contact_person_email || "",
