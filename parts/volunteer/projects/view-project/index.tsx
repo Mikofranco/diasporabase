@@ -17,7 +17,9 @@ import ContactOrganizationModal from "@/components/modals/contact-organizer";
 import { getOrganizationContact } from "@/services/agency/dashboard";
 import { ReviewsList } from "./review-list";
 import ProjectManagementScreen from "../project-management";
-import { checkIfUserIsProjectManager } from "@/services/projects";
+import { checkIfUserIsProjectManager, checkUserInProject } from "@/services/projects";
+import Comments from "../comments";
+import { MilestonesSection } from "@/parts/agency/projects/view-projects.tsx/milestone-section";
 
 export default function ViewProjectDetails() {
   const { id } = useParams<{ id: string }>();
@@ -75,6 +77,7 @@ export default function ViewProjectDetails() {
 
     return { isMember: !!data, userId: user.id };
   };
+  
 
   useEffect(() => {
     if (!id) {
@@ -134,8 +137,11 @@ export default function ViewProjectDetails() {
           userId as string,
           id
         );
-        setIsUserInProject(isManager);
-
+        const { isUserInProject, error: volunteerError } = await checkUserInProject(
+          userId as string,
+          id
+        );
+        setIsUserInProject(isUserInProject);
         // 4. Fetch ratings (public)
         const { data: ratingsData, error: ratingsError } = await supabase
           .from("project_ratings")
@@ -231,6 +237,7 @@ export default function ViewProjectDetails() {
           userID={currentUserId} //@ts-ignore
           contactEmail={organizationDetails.contact_person_email}
           hasRated={hasRated}
+          volunteersRegistered={volunteers.length}
         />
       </section>
 
@@ -238,15 +245,8 @@ export default function ViewProjectDetails() {
 
       <Separator />
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <section className="lg:col-span-2 space-y-8">
-          <h2 className="text-3xl font-bold">
-            Volunteers ({volunteers.length})
-          </h2>
-          <VolunteersList volunteers={volunteers} />
-        </section>
-
-        <aside className="space-y-8 bg-gray-50 p-6 rounded-lg">
+      {/* <div className="grid gap-8 lg:grid-cols-3">
+        <div>
           <section>
             <h2 className="text-xl font-bold mb-4">Milestones</h2>
             <MilestonesView milestones={milestones} />
@@ -258,11 +258,30 @@ export default function ViewProjectDetails() {
             <h2 className="text-xl font-bold mb-4">Deliverables</h2>
             <DeliverablesView deliverables={deliverables} />
           </section>
+        </div>
+
+        <aside className="space-y-8 bg-gray-50 p-6 rounded-lg">
+        <section className="lg:col-span-2 space-y-8">
+          <h2 className="text-3xl font-bold">
+            Volunteers ({volunteers.length})
+          </h2>
+          <VolunteersList volunteers={volunteers} />
+        </section>
         </aside>
+      </div> */}
+      <div>
+        <MilestonesSection projectId={project.id} canEdit={false} />
+
+        <section className="lg:col-span-2 space-y-8">
+          <h2 className="text-3xl font-bold">
+            Volunteers ({volunteers.length})
+          </h2>
+          <VolunteersList volunteers={volunteers} />
+        </section>
       </div>
 
-      <Separator />
       {/* <ReviewsList reviews={}/> */}
+      <Comments projectId={project.id} volunteers={volunteers} />
 
       <ContactOrganizationModal
         project={{ id: project.id, title: project.title }}

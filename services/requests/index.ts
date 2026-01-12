@@ -172,6 +172,7 @@ export async function checkIfVolunteerHasRequested({
     console.error("Error checking volunteer request:", error);
     throw error;
   }
+  console.log("volunteer id ", volunteerId, "data", !!data);
 
   return { hasRequested: !!data };
 }
