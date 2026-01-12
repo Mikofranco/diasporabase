@@ -534,3 +534,19 @@ export const assignManager = async (volunteerId: string, projectId: string) => {
     toast.success("Project manager assigned successfully!");
   }
 };
+
+export const checkUserInProject = async (userId: string, projectId: string) => {
+  const { data, error } = await supabase
+    .from("project_volunteers")
+    .select("volunteer_id")
+    .eq("project_id", projectId)
+    .eq("volunteer_id", userId)
+    .single();
+
+  if (error) {
+    console.error("Error checking user in project:", error);
+    return { isUserInProject: false, error };
+  }
+
+  return { isUserInProject: !!data, error: null };
+};

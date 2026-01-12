@@ -42,6 +42,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CommentsModal } from "@/components/modals/comment";
 
 const supabase = createClient();
 
@@ -406,6 +407,7 @@ export function MilestonesSection({
                           {del.status}
                         </Badge>
                       </div>
+                      <CommentsModal deliverableId={del.id || ""} />
                     </div>
                     {canEdit && (
                       <div className="flex gap-2">

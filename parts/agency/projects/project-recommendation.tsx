@@ -3,10 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +14,15 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { MapPin, Star, Send, CheckCircle, XCircle, Clock, UserCheck } from "lucide-react";
+import {
+  MapPin,
+  Star,
+  Send,
+  CheckCircle,
+  XCircle,
+  Clock,
+  UserCheck,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,10 +39,9 @@ import { cn } from "@/lib/utils";
 import { match } from "assert";
 import { matchVolunteersToProjectLocation } from "@/lib/utils/matchvolunteersToProject";
 import { Volunteer } from "@/lib/types";
+import { checkIfVolunteerHasRequested } from "@/services/requests";
 
 const supabase = createClient();
-
-
 
 interface ProjectRecommendationProps {
   projectId: string;
@@ -53,8 +57,11 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState<boolean>(false);
-  const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
+  const [isRequestDialogOpen, setIsRequestDialogOpen] =
+    useState<boolean>(false);
+  const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchRecommendations = async () => {
@@ -67,10 +74,14 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
         if (userIdError) throw new Error(userIdError);
         if (!userId) throw new Error("Please log in");
 
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(projectId)) throw new Error("Invalid project ID format.");
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(projectId))
+          throw new Error("Invalid project ID format.");
 
-        const { data: isAdminData, error: isAdminError } = await supabase.rpc("is_admin");
+        const { data: isAdminData, error: isAdminError } = await supabase.rpc(
+          "is_admin"
+        );
         if (isAdminError) throw new Error(isAdminError.message);
         const isAdmin = isAdminData || false;
 
@@ -83,15 +94,19 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
         const { data: projectData, error: projectError } = await query;
         if (projectError) throw new Error(projectError.message);
-        if (!projectData?.length) throw new Error("Project not found or access denied.");
+        if (!projectData?.length)
+          throw new Error("Project not found or access denied.");
 
         const project = projectData[0];
-        const requiredSkills = project.required_skills?.length ? project.required_skills : ["general"];
+        const requiredSkills = project.required_skills?.length
+          ? project.required_skills
+          : ["general"];
 
-        const { data: volunteerData, error: volunteerError } = await supabase.rpc(
-          "select_volunteers_for_project",
-          { p_project_id: projectId, p_required_skills: requiredSkills }
-        );
+        const { data: volunteerData, error: volunteerError } =
+          await supabase.rpc("select_volunteers_for_project", {
+            p_project_id: projectId,
+            p_required_skills: requiredSkills,
+          });
         if (volunteerError) throw new Error(volunteerError.message);
 
         let requestQuery = supabase
@@ -104,24 +119,52 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
         const { data: requestData, error: requestError } = await requestQuery;
         if (requestError) throw new Error(requestError.message);
 
-        const recommendedVolunteers: Volunteer[] = (volunteerData ?? []).map((v: any) => ({
-          volunteer_id: v.volunteer_id,
-          full_name: v.full_name,
-          email: v.email,
-          skills: v.skills,
-          availability: v.availability,
-          residence_country: v.residence_country,
-          residence_state: v.residence_state,
-          volunteer_countries: v.volunteer_countries ?? [],
-          volunteer_states: v.volunteer_states ?? [],
-          volunteer_lgas: v.volunteer_lgas ?? [],
-          average_rating: v.average_rating ?? 0,
-          request_status: requestData?.find((r: any) => r.volunteer_id === v.volunteer_id)?.status ?? null,
-          matched_skills: v.skills.filter((s: string) => requiredSkills.includes(s)),
-        }));
+        const recommendedVolunteers: Volunteer[] = (volunteerData ?? []).map(
+          (v: any) => ({
+            volunteer_id: v.volunteer_id,
+            full_name: v.full_name,
+            email: v.email,
+            skills: v.skills,
+            availability: v.availability,
+            residence_country: v.residence_country,
+            residence_state: v.residence_state,
+            volunteer_countries: v.volunteer_countries ?? [],
+            volunteer_states: v.volunteer_states ?? [],
+            volunteer_lgas: v.volunteer_lgas ?? [],
+            average_rating: v.average_rating ?? 0,
+            request_status:
+              requestData?.find((r: any) => r.volunteer_id === v.volunteer_id)
+                ?.status ?? null,
+            matched_skills: v.skills.filter((s: string) =>
+              requiredSkills.includes(s)
+            ),
+          })
+        );
 
-        const matchedVolunteers = await matchVolunteersToProjectLocation(projectId, recommendedVolunteers);
-        setVolunteers(matchedVolunteers);
+        const matchedVolunteers = await matchVolunteersToProjectLocation(
+          projectId,
+          recommendedVolunteers
+        );
+
+        const volunteersWithRequestStatus = await Promise.all(
+          matchedVolunteers.map(async (volunteer) => {
+            const hasRequested = await checkIfVolunteerHasRequested({
+              projectId,
+              volunteerId: volunteer.volunteer_id,
+            });
+
+            return {
+              ...volunteer,
+              hasRequested, // true or false
+            };
+          })
+        );
+        console.log(
+          "Volunteers with request status:",
+          volunteersWithRequestStatus
+        );
+
+        setVolunteers(volunteersWithRequestStatus);
       } catch (err: any) {
         setError(err.message);
         toast.error(err.message);
@@ -142,7 +185,9 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
       if (userIdError) throw new Error(userIdError);
       if (!userId) throw new Error("Please log in to send requests.");
 
-      const { data: isAdminData, error: isAdminError } = await supabase.rpc("is_admin");
+      const { data: isAdminData, error: isAdminError } = await supabase.rpc(
+        "is_admin"
+      );
       if (isAdminError) throw new Error(isAdminError.message);
       const isAdmin = isAdminData || false;
 
@@ -164,15 +209,18 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
       const { data: existingRequest, error: requestCheckError } = await query;
       if (requestCheckError) throw new Error(requestCheckError.message);
       if (existingRequest?.length) {
-        toast.error(`Request already sent (Status: ${existingRequest[0].status})`);
+        toast.error(
+          `Request already sent (Status: ${existingRequest[0].status})`
+        );
         return;
       }
 
-      const { data: existingAssignment, error: assignmentError } = await supabase
-        .from("project_volunteers")
-        .select("volunteer_id")
-        .eq("project_id", projectId)
-        .eq("volunteer_id", volunteer.volunteer_id);
+      const { data: existingAssignment, error: assignmentError } =
+        await supabase
+          .from("project_volunteers")
+          .select("volunteer_id")
+          .eq("project_id", projectId)
+          .eq("volunteer_id", volunteer.volunteer_id);
       if (assignmentError) throw new Error(assignmentError.message);
       if (existingAssignment?.length) {
         toast.error("Volunteer is already assigned to this project.");
@@ -202,7 +250,8 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
         });
       if (requestError) throw new Error(requestError.message);
 
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
       const volunteerDashboardUrl = `${origin}/dashboard/volunteer`;
 
       const html = `
@@ -215,7 +264,9 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
             Hi <strong>${volunteer.full_name}</strong>,
           </p>
           <p style="color: #374151; margin: 16px 0;">
-            <strong>${requesterData.full_name || "An agency"}</strong> has invited you to join:
+            <strong>${
+              requesterData.full_name || "An agency"
+            }</strong> has invited you to join:
           </p>
           <div style="background: #eff6ff; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #1a73e8;">
             <strong style="color: #1a73e8;">"${projectTitle}"</strong>
@@ -231,7 +282,6 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
           </p>
         </div>
       `;
-      
 
       await useSendMail({
         to: volunteer.email,
@@ -248,7 +298,9 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
       setVolunteers((prev) =>
         prev.map((v) =>
-          v.volunteer_id === volunteer.volunteer_id ? { ...v, request_status: "pending" } : v
+          v.volunteer_id === volunteer.volunteer_id
+            ? { ...v, request_status: "pending" }
+            : v
         )
       );
 
@@ -263,19 +315,27 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "pending": return <Clock className="h-3.5 w-3.5" />;
-      case "accepted": return <CheckCircle className="h-3.5 w-3.5" />;
-      case "rejected": return <XCircle className="h-3.5 w-3.5" />;
-      default: return null;
+      case "pending":
+        return <Clock className="h-3.5 w-3.5" />;
+      case "accepted":
+        return <CheckCircle className="h-3.5 w-3.5" />;
+      case "rejected":
+        return <XCircle className="h-3.5 w-3.5" />;
+      default:
+        return null;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending": return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "accepted": return "bg-green-100 text-green-800 border-green-200";
-      case "rejected": return "bg-red-100 text-red-800 border-red-200";
-      default: return "";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "accepted":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "rejected":
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "";
     }
   };
 
@@ -337,7 +397,9 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
           <Card className="border-dashed border-2">
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mb-4" />
-              <p className="text-lg font-medium text-gray-900 dark:text-gray-100">No matches found</p>
+              <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                No matches found
+              </p>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Try adjusting project skills or location filters.
               </p>
@@ -374,7 +436,9 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                           <p className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
                             {volunteer.full_name}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{volunteer.email}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {volunteer.email}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -383,10 +447,13 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
                     {/* Skills */}
                     <div className="mb-3">
-                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Skills</p>
+                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Skills
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
                         {volunteer.skills.slice(0, 4).map((skill) => {
-                          const isMatched = volunteer.matched_skills.includes(skill);
+                          const isMatched =
+                            volunteer.matched_skills.includes(skill);
                           return (
                             <Tooltip key={skill}>
                               <TooltipTrigger asChild>
@@ -403,7 +470,9 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                                 </Badge>
                               </TooltipTrigger>
                               <TooltipContent>
-                                {isMatched ? "Matches project requirement" : "Additional skill"}
+                                {isMatched
+                                  ? "Matches project requirement"
+                                  : "Additional skill"}
                               </TooltipContent>
                             </Tooltip>
                           );
@@ -420,8 +489,13 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
                       <MapPin className="h-4 w-4 text-gray-500" />
                       <span className="line-clamp-1">
-                        {volunteer.residence_state || volunteer.volunteer_states[0] || "Anywhere"},{" "}
-                        {volunteer.residence_country || volunteer.volunteer_countries[0] || "Global"}
+                        {volunteer.residence_state ||
+                          volunteer.volunteer_states[0] ||
+                          "Anywhere"}
+                        ,{" "}
+                        {volunteer.residence_country ||
+                          volunteer.volunteer_countries[0] ||
+                          "Global"}
                       </span>
                     </div>
 
@@ -431,7 +505,9 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {volunteer.average_rating.toFixed(1)}
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">/ 5.0</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        / 5.0
+                      </span>
                     </div>
 
                     {/* Request Status or Button */}
@@ -450,23 +526,35 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                       </div>
                     ) : (
                       <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            className={cn(
-                              "w-full transition-all",
-                              volunteersRegistered >= volunteersNeeded
-                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                : "action-btn text-white shadow-sm"
-                            )}
-                            onClick={() => {
-                              setSelectedVolunteer(volunteer);
-                              setIsRequestDialogOpen(true);
-                            }}
-                            disabled={volunteersRegistered >= volunteersNeeded}
-                          >
-                            <Send className="h-4 w-4 mr-2" />
-                            Send Request
-                          </Button>
+                        <TooltipTrigger asChild>{/*@ts-ignore*/}
+                          {volunteer.hasRequested.hasRequested ? (
+                           <Button
+                                disabled
+                                className="w-full bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                              >
+                                <Clock className="h-4 w-4 mr-2" />
+                                Awaiting Approval
+                              </Button>
+                          ) : (
+                            <Button
+                              className={cn(
+                                "w-full transition-all",
+                                volunteersRegistered >= volunteersNeeded
+                                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                  : "action-btn text-white shadow-sm"
+                              )}
+                              onClick={() => {
+                                setSelectedVolunteer(volunteer);
+                                setIsRequestDialogOpen(true);
+                              }}
+                              disabled={
+                                volunteersRegistered >= volunteersNeeded
+                              }
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Send Request
+                            </Button>
+                          )}
                         </TooltipTrigger>
                         <TooltipContent>
                           {volunteersRegistered >= volunteersNeeded
@@ -483,7 +571,10 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
         )}
 
         {/* Confirmation Dialog */}
-        <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+        <Dialog
+          open={isRequestDialogOpen}
+          onOpenChange={setIsRequestDialogOpen}
+        >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -507,7 +598,9 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                 Cancel
               </Button>
               <Button
-                onClick={() => selectedVolunteer && handleSendRequest(selectedVolunteer)}
+                onClick={() =>
+                  selectedVolunteer && handleSendRequest(selectedVolunteer)
+                }
                 className="w-full sm:w-auto action-btn"
               >
                 <Send className="h-4 w-4 mr-2" />
