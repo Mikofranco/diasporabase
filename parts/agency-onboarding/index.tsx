@@ -22,7 +22,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { MapPin, User, Globe, Phone, Mail, Building } from "lucide-react";
+import { MapPin, User, Globe, Phone, Mail, Building, Loader2 } from "lucide-react";
 import {
   Form,
   FormField,
@@ -142,6 +142,7 @@ const AgencyOnboarding: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCompleting, setIsCompleting] = useState<boolean>(false);
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
     null
   );
@@ -216,7 +217,7 @@ const AgencyOnboarding: React.FC = () => {
           full_name: profileData.full_name || "",
           description: profileData.description || null,
           address: profileData.address || "",
-          organization_name: profileData.organization_name || "",
+          organization_name: profileData.full_name || "",
           first_name: profileData.contact_person_first_name || "",
           surname: profileData.contact_person_last_name || "",
           contact_person_email: profileData.contact_person_email || "",
@@ -331,6 +332,7 @@ const AgencyOnboarding: React.FC = () => {
   };
 
   const handleSubmit = async (data: z.infer<typeof formSchema>) => {
+    setIsCompleting(true);
     try {
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
@@ -407,6 +409,7 @@ const AgencyOnboarding: React.FC = () => {
       toast.success("Onboarding completed successfully!");
       router.push("/dashboard/agency");
     } catch (err: any) {
+      setIsCompleting(false);
       setError(err.message);
       toast.error(err.message);
     }
@@ -823,10 +826,19 @@ const AgencyOnboarding: React.FC = () => {
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 py-2"
+                        className="w-full action-btn text-white font-semibold rounded-lg transition-colors duration-200 py-2"
                         disabled={loading}
                       >
-                        {step === 4 ? "Complete Onboarding" : "Next"}
+                       {isCompleting || loading ? (
+                          <>
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            {step === 4 ? "Completing..." : "Processing..."}
+                          </>
+                        ) : step === 4 ? (
+                          "Complete Onboarding"
+                        ) : (
+                          "Next"
+                        )}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="text-sm">

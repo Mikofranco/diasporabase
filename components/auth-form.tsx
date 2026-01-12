@@ -81,8 +81,6 @@ export default function LoginForm() {
       setLoading(false);
       return;
     }
-
-    setLoading(false);
   };
 
   return (
