@@ -187,17 +187,21 @@ export type OrganizationContact = {
 };
 
 export interface Volunteer {
+  id?: string;
   volunteer_id: string;
   full_name: string;
   email: string;
   skills: string[];
-  availability: string;
-  residence_country: string;
-  residence_state: string;
-  volunteer_countries: string[];
-  volunteer_states: string[];
-  volunteer_lgas: string[];
-  average_rating: number;
+  availability?: string;
+  residence_country?: string;
+  residence_state?: string;
+  volunteer_countries?: string[];
+  volunteer_states?: string[];
+  volunteer_lgas?: string[];
+  average_rating?: number;
   request_status?: string;
-  matched_skills: string[];
+  matched_skills?: string[];
+  joined_at: string;
+  avatar_url?: string;
+  profile?: Profile;
 }

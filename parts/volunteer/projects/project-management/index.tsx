@@ -37,42 +37,9 @@ import { OverviewTab } from "./overview";
 import { MilestonesTab } from "./milestones";
 import { DeliverablesTab } from "./deliverables";
 import { Deliverable, Milestone, Project } from "@/lib/types";
+import { TeamTab } from "./team-tab";
 
 const supabase = createClient();
-
-// interface Project {
-//   id: string;
-//   title: string;
-//   description: string;
-//   organization_name: string;
-//   start_date: string;
-//   end_date: string;
-//   status: string;
-//   volunteers_registered: number;
-//   volunteers_needed: number;
-//   category: string;
-//   country: string;
-//   state?: string | null;
-//   lga?: string | null; // Local Government Area
-//   project_manager_id: string;
-// }
-
-// interface Milestone {
-//   id: string;
-//   title: string;
-//   description?: string;
-//   due_date: string;
-//   status: string;
-// }
-
-// interface Deliverable {
-//   id: string;
-//   title: string;
-//   description?: string;
-//   due_date: string;
-//   status: string;
-//   milestone_id?: string;
-// }
 
 export default function ProjectManagementScreen() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -151,7 +118,7 @@ export default function ProjectManagementScreen() {
             id, title, description, organization_name,
             start_date, end_date, status,
             volunteers_registered, volunteers_needed,
-            category, country, state, lga,
+            category, country, state, lga, closing_remarks,
             project_manager_id
           `
           )
@@ -352,33 +319,3 @@ export default function ProjectManagementScreen() {
 }
 
 
-
-
-
-interface TeamTabProps {
-  project: Project;
-  projectId: string;
-}
-
-function TeamTab({ project, projectId }: TeamTabProps) {
-  // TODO: Fetch and display volunteers from "project_volunteers" and "profiles" tables
-  // Add features like approve/reject requests from "volunteer_requests" or "agency_requests"
-  // Track hours from "volunteer_hours", add messaging, etc.
-
-  return (
-    <Card>
-      <CardContent className="py-16 text-center">
-        <Users className="h-20 w-20 text-gray-400 mx-auto mb-6" />
-        <h3 className="text-2xl font-semibold mb-3">
-          {project.volunteers_registered} Volunteer
-          {project.volunteers_registered !== 1 ? "s" : ""} Registered
-        </h3>
-        <p className="text-gray-600 max-w-md mx-auto">
-          View volunteer profiles, approve requests, track hours, and
-          communicate with your team.
-        </p>
-        {/* Future: Add volunteer list, requests, messaging */}
-      </CardContent>
-    </Card>
-  );
-}

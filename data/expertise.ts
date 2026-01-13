@@ -1,7 +1,7 @@
 export const expertiseData = [
   {
-    id: "project_manager",
-    label: "Project-Management",
+    id: "project_management",
+    label: "Project Management",
      children: [
       {
         id: "traditional",
