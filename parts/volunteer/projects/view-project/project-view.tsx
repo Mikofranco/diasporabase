@@ -72,6 +72,7 @@ interface ProjectViewProps {
   setHasRated?: (rated: boolean) => void;
   onLeaveSuccess?: () => void;
   volunteersRegistered?: number;
+  agencyHasSentRequest?: boolean;
 }
 
 const ProjectView: React.FC<ProjectViewProps> = ({
@@ -85,6 +86,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   setHasRated,
   onLeaveSuccess,
   volunteersRegistered,
+  agencyHasSentRequest
 }) => {
   const router = useRouter();
   const [isRequesting, setIsRequesting] = useState(false); // ← NEW: loading state for request
@@ -112,7 +114,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   const status = statusConfig[project.status ?? "pending"];
 
   const handleVolunteerRequest = async () => {
-    if (isRequesting) return; // Prevent double-click
+    if (isRequesting) return; 
 
     setIsRequesting(true);
 
@@ -231,6 +233,15 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                         onSuccess={handleLeaveSuccess}
                       />
                     </div>
+                  ) : agencyHasSentRequest ? (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full text-base py-6 cursor-not-allowed bg-yellow-200 border-yellow-300 text-yellow-900"
+                      disabled
+                    >
+                      Agency request Pending
+                    </Button>
                   ) : (
                     <VolunteerActionButton
                       hasRequested={hasRequested} //@ts-ignore

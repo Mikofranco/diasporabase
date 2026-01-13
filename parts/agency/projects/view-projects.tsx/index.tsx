@@ -56,6 +56,8 @@ import { Textarea } from "@/components/ui/textarea";
 import AssignProjectManager from "@/parts/PM";
 import { MilestonesSection } from "./milestone-section";
 import { AssignedVolunteersTable } from "./assigned-volunteer";
+import { ClosingRemarksModal } from "@/components/closing-remarks";
+import { ProjectStatus } from "@/lib/types";
 
 const supabase = createClient();
 
@@ -175,8 +177,9 @@ const ProjectDetails: React.FC = () => {
           .from("milestones")
           .select("*")
           .eq("project_id", projectId)
-          .order("due_date"); //@ts-ignore
+          .order("due_date");
         setMilestones(
+          //@ts-ignore
           (miles || []).map((m) => ({ ...m, status: m.status || "Pending" }))
         );
 
@@ -184,8 +187,9 @@ const ProjectDetails: React.FC = () => {
           .from("deliverables")
           .select("*")
           .eq("project_id", projectId)
-          .order("due_date"); //@ts-ignore
+          .order("due_date");
         setDeliverables(
+          //@ts-ignore
           (dels || []).map((d) => ({ ...d, status: d.status || "Pending" }))
         );
 
@@ -477,6 +481,7 @@ const ProjectDetails: React.FC = () => {
               {/*@ts-ignore */}
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
+                {/*@ts-ignore*/}
                 <span>{formatLocation(project.location)}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -497,164 +502,25 @@ const ProjectDetails: React.FC = () => {
               <h2 className="text-2xl font-bold mb-6">
                 Assigned Volunteers ({assignedVolunteers.length})
               </h2>
+              {/*@ts-ignore*/}
               <AssignedVolunteersTable volunteers={assignedVolunteers} />
             </section>
-
-            {/* MILESTONES */}
-            {/* <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Milestones</h2>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEditingMilestone(null);
-                    setNewMilestone({ title: "", description: "", due_date: "", status: "Pending" });
-                    setIsMilestoneModalOpen(true);
-                  }}
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                >
-                  {milestones.length === 0 ? "Add Milestone" : "Add Another"}
-                </Button>
-              </div>
-
-              {milestones.length === 0 ? (
-                <Card className="border-dashed"><CardContent className="py-12 text-center text-muted-foreground  h-80 scroll-y-auto">No milestones yet. Click "Add Milestone" to create one.</CardContent></Card>
-              ) : (
-                <div className="space-y-4">
-                  {milestones.map((m) => (
-                    <Card key={m.id} className="bg-gray-50 border-0">
-                      <CardContent className="pt-5 pb-4 flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-lg">{m.title}</h4>
-                          {m.description && <p className="text-sm text-muted-foreground mt-1">{m.description}</p>}
-                          <p className="text-sm mt-2"><strong>Due:</strong> {new Date(m.due_date).toLocaleDateString()}</p>
-                          <Badge variant={m.status === "Completed" ? "default" : m.status === "In Progress" ? "secondary" : "outline"} className="mt-2">
-                            {m.status}
-                          </Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditingMilestone(m);
-                              setNewMilestone({
-                                title: m.title,
-                                description: m.description || "",
-                                due_date: m.due_date.split("T")[0],
-                                status: m.status,
-                              });
-                              setIsMilestoneModalOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-600 hover:bg-red-50"
-                            onClick={() => setDeleteMilestoneId(m.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </section> */}
-
-            {/* DELIVERABLES */}
-            {/* <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Deliverables</h2>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEditingDeliverable(null);
-                    setNewDeliverable({ title: "", description: "", due_date: "", status: "Pending" });
-                    setIsDeliverableModalOpen(true);
-                  }}
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                >
-                  {deliverables.length === 0 ? "Add Deliverable" : "Add Another"}
-                </Button>
-              </div>
-
-              {deliverables.length === 0 ? (
-                <Card className="border-dashed"><CardContent className="py-12 text-center text-muted-foreground">No deliverables yet. Click "Add Deliverable" to create one.</CardContent></Card>
-              ) : (
-                <div className="space-y-4">
-                  {deliverables.map((d) => (
-                    <Card key={d.id} className="bg-gray-50 border-0">
-                      <CardContent className="pt-5 pb-4 flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-lg">{d.title}</h4>
-                          {d.description && <p className="text-sm text-muted-foreground mt-1">{d.description}</p>}
-                          <p className="text-sm mt-2"><strong>Due:</strong> {new Date(d.due_date).toLocaleDateString()}</p>
-                          <Badge variant={d.status === "Done" ? "default" : d.status === "In Progress" ? "secondary" : "outline"} className="mt-2">
-                            {d.status}
-                          </Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditingDeliverable(d);
-                              setNewDeliverable({
-                                title: d.title,
-                                description: d.description || "",
-                                due_date: d.due_date.split("T")[0],
-                                status: d.status,
-                              });
-                              setIsDeliverableModalOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-600 hover:bg-red-50"
-                            onClick={() => setDeleteDeliverableId(d.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </section> */}
-
-            {/* Assigned Volunteers & Recommendation */}
-            {/* <section>
-              <h2 className="text-2xl font-bold mb-6">Assigned Volunteers ({assignedVolunteers.length})</h2>
-              {assignedVolunteers.length === 0 ? (
-                <p className="text-muted-foreground">No volunteers assigned yet.</p>
-              ) : (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {assignedVolunteers.map(v => (
-                    <Card key={v.volunteer_id}>
-                      <CardContent className="pt-6">
-                        <h4 className="font-semibold">{v.full_name}</h4>
-                        <p className="text-sm text-muted-foreground">{v.email}</p>
-                        <p className="text-sm mt-2"><strong>Skills:</strong> {v.skills.join(", ")}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </section> */}
 
             <ProjectRecommendation
               projectId={projectId as string}
               volunteersNeeded={project.volunteers_needed}
               volunteersRegistered={project.volunteers_registered}
             />
+
+            <section className="flex justify-center items-center gap-4 flex-col p-8 border shadow-md bg-diaspora-blue/5 rounded-md">
+              <h3  className="text-diaspora-blue">Add closing remark and mark project has completed </h3>
+              <ClosingRemarksModal
+                projectId={project.id}
+                currentStatus={project.status as ProjectStatus}
+                isAuthorized={true}
+                onProjectClosed={() => router.refresh()}
+              />
+            </section>
           </CardContent>
         </Card>
 

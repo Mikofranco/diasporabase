@@ -248,7 +248,7 @@ const VolunteerRequests: React.FC = () => {
           "Error checking assignment: " + assignmentError.message
         );
       if (existingAssignment) {
-        toast.error("You are already assigned to this project.");
+        toast.info("You are already assigned to this project.");
         return;
       }
 
@@ -262,7 +262,7 @@ const VolunteerRequests: React.FC = () => {
       if (projectError)
         throw new Error("Error fetching project: " + projectError.message);
       if (project.volunteers_registered >= project.volunteers_needed) {
-        toast.error("Volunteer limit reached for this project.");
+        toast.info("Volunteer limit reached for this project.");
         return;
       }
 
@@ -378,7 +378,7 @@ const VolunteerRequests: React.FC = () => {
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
-  };
+  };``
 
   const getRequestTypeLabel = (type: "volunteer" | "agency") => {
     return type === "volunteer" ? "Volunteer-Initiated" : "Agency-Initiated";
@@ -474,7 +474,7 @@ const VolunteerRequests: React.FC = () => {
           <div className="flex gap-2 pt-4 border-t">
             <Button
               size="sm"
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 w-fit"
               onClick={() =>
                 handleAcceptRequest(
                   request.id,
@@ -488,7 +488,7 @@ const VolunteerRequests: React.FC = () => {
             <Button
               size="sm"
               variant="destructive"
-              className="flex-1"
+              className="w-fit"
               onClick={() =>
                 handleRejectRequest(request.id, request.request_type)
               }

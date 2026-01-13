@@ -11,14 +11,9 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, CalendarDays, Mail } from "lucide-react";
+import { Volunteer } from "@/lib/types";
 
-interface Volunteer {
-  id: string;
-  full_name: string;
-  email: string;
-  avatar_url?: string;
-  joined_at: string;
-}
+
 
 interface VolunteersListProps {
   volunteers: Volunteer[];
@@ -76,7 +71,7 @@ export default function VolunteersList({ volunteers }: VolunteersListProps) {
                 <TableCell className="text-right text-sm text-muted-foreground">
                   <div className="flex items-center justify-end gap-1">
                     <CalendarDays className="h-4 w-4" />
-                    {format(new Date(v.joined_at), "MMM d, yyyy")}
+                    {format(new Date(v.joined_at), "MMM d, yyyy") || "N/A"}
                   </div>
                 </TableCell>
               </TableRow>

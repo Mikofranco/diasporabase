@@ -100,8 +100,10 @@ export async function getVolunteerProjects(): Promise<{
   }
 }
 
-// Fetch a single project by ID
-export async function getProjectById(projectId: string): Promise<{
+// Fetch a single project by ID and also the Organization ID of the user
+export async function getProjectByIdForOrganization(
+  projectId: string
+): Promise<{
   data: Project | null;
   error: string | null;
 }> {
@@ -116,6 +118,32 @@ export async function getProjectById(projectId: string): Promise<{
       .select("*")
       .eq("id", projectId)
       .eq("organization_id", userData)
+      .single();
+
+    if (error) {
+      return { data: null, error: error.message };
+    }
+
+    return { data: project as Project, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err.message : "An unexpected error occurred",
+    };
+  }
+}
+
+// Fetch a single project by ID
+export async function getProjectById(projectId: string): Promise<{
+  data: Project | null;
+  error: string | null;
+}> {
+  try {
+    const { data: project, error } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("id", projectId)
       .single();
 
     if (error) {
@@ -495,11 +523,11 @@ export async function getProjectManagerId(projectId: string) {
 }
 
 export const assignManager = async (volunteerId: string, projectId: string) => {
-  const { data: projectData, error: projectError } = await getProjectById(
-    projectId
-  );
+  const { data: projectData, error: projectError } =
+    await getProjectByIdForOrganization(projectId);
   if (projectError || !projectData) {
-    toast.error(//@ts-ignore
+    toast.error(
+      //@ts-ignore
       "Failed to fetch project details: " + (projectError?.message || "")
     );
     return;
@@ -550,3 +578,135 @@ export const checkUserInProject = async (userId: string, projectId: string) => {
 
   return { isUserInProject: !!data, error: null };
 };
+
+export const fetchClosingRemarks = async (projectId: string) => {
+  // Logic to fetch closing remarks based on projectId
+  const { data, error } = await supabase
+    .from("projects")
+    .select("closing_remarks")
+    .eq("id", projectId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching closing remarks:", error);
+    return null;
+  }
+
+  return data?.closing_remarks || null;
+};
+
+export const updateClosingRemarks = async (
+  projectId: string,
+  closingRemarks: string
+) => {
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ closing_remarks: closingRemarks })
+    .eq("id", projectId);
+
+  if (error) {
+    console.error("Error updating closing remarks:", error);
+    return { success: false, error };
+  }
+
+  return { success: true, data };
+};
+
+export const getProjectStatus = async (projectId: string) => {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("status")
+    .eq("id", projectId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching project status:", error);
+    return { status: null, error };
+  }
+
+  return { status: data?.status || null, error: null };
+};
+
+export const updateProjectStatusClosing = async (
+  projectId: string,
+  status: ProjectStatus
+) => {
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ status })
+    .eq("id", projectId);
+
+  if (error) {
+    console.error("Error updating project status:", error);
+    return { success: false, error };
+  }
+
+  return { success: true, data };
+};
+
+type ProjectVolunteer = {
+  volunteer_id: string;
+  created_at: string;
+  profiles: {
+    full_name: string | null;
+    profile_picture: string | null;
+    email: string | null;
+  } | null;
+};
+
+export async function getProjectVolunteers(projectId: string): Promise<{
+  volunteers: ProjectVolunteer[] | null;
+  error: string | null;
+}> {
+  const { data, error } = await supabase
+    .from("project_volunteers")
+    .select(`
+      volunteer_id,
+      created_at,
+      profiles!project_volunteers_volunteer_id_fkey (
+        full_name,
+        profile_picture,
+        email
+      )
+    `)
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Failed to fetch project volunteers:", error);
+    return {
+      volunteers: null,
+      error: error.message || "Failed to load volunteers",
+    };
+  }
+
+  // Optional: filter out null profiles (rare edge case)
+  const validVolunteers = data?.filter(
+    (item): item is ProjectVolunteer => item.profiles !== null
+  ) ?? null;
+
+  return {
+    volunteers: validVolunteers,
+    error: null,
+  };
+}
+
+export const checkAgencyRequestsToVolunteer = async (
+  volunteerId: string,
+  projectId: string
+) => {
+  const { data, error } = await supabase
+    .from("agency_requests")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("volunteer_id", volunteerId)
+    .eq("status", "pending")
+    .single();
+
+  if (error) {
+    console.error("Error checking agency requests:", error);
+    return { hasPendingRequest: false, error };
+  }
+
+  return { hasPendingRequest: !!data, error: null };
+}
