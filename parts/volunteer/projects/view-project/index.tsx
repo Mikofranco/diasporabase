@@ -17,7 +17,7 @@ import ContactOrganizationModal from "@/components/modals/contact-organizer";
 import { getOrganizationContact } from "@/services/agency/dashboard";
 import { ReviewsList } from "./review-list";
 import ProjectManagementScreen from "../project-management";
-import { checkIfUserIsProjectManager, checkUserInProject } from "@/services/projects";
+import { checkAgencyRequestsToVolunteer, checkIfUserIsProjectManager, checkUserInProject } from "@/services/projects";
 import Comments from "../comments";
 import { MilestonesSection } from "@/parts/agency/projects/view-projects.tsx/milestone-section";
 
@@ -37,6 +37,7 @@ export default function ViewProjectDetails() {
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isUserProjectManager, setIsUserProjectManager] = useState(false);
+  const [agencyHasSentRequest, setAgencyHasSentRequest] = useState(false);
 
   const [organizationDetails, setOrganizationDetails] =
     useState<OrganizationContact>({
@@ -101,6 +102,9 @@ export default function ViewProjectDetails() {
         // 2. Check membership and get user ID
         const { isMember, userId } = await checkUserMembership();
         setIsUserInProject(isMember);
+
+        const { hasPendingRequest } = await checkAgencyRequestsToVolunteer(userId as string, id);
+        setAgencyHasSentRequest(hasPendingRequest);
 
         // Fetch organization contact
         const organizationContactInfo = await getOrganizationContact(
@@ -238,37 +242,13 @@ export default function ViewProjectDetails() {
           contactEmail={organizationDetails.contact_person_email}
           hasRated={hasRated}
           volunteersRegistered={volunteers.length}
+          agencyHasSentRequest={agencyHasSentRequest}
+          setHasRated={setHasRated}
+          // onLeaveSuccess={handleLeaveSuccess}
         />
       </section>
 
-      {/* <ProjectManagementScreen userId={currentUserId} projectId={project.id} /> */}
-
       <Separator />
-
-      {/* <div className="grid gap-8 lg:grid-cols-3">
-        <div>
-          <section>
-            <h2 className="text-xl font-bold mb-4">Milestones</h2>
-            <MilestonesView milestones={milestones} />
-          </section>
-
-          <Separator />
-
-          <section>
-            <h2 className="text-xl font-bold mb-4">Deliverables</h2>
-            <DeliverablesView deliverables={deliverables} />
-          </section>
-        </div>
-
-        <aside className="space-y-8 bg-gray-50 p-6 rounded-lg">
-        <section className="lg:col-span-2 space-y-8">
-          <h2 className="text-3xl font-bold">
-            Volunteers ({volunteers.length})
-          </h2>
-          <VolunteersList volunteers={volunteers} />
-        </section>
-        </aside>
-      </div> */}
       <div>
         <MilestonesSection projectId={project.id} canEdit={false} />
 
