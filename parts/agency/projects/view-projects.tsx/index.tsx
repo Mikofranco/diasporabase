@@ -57,6 +57,7 @@ import AssignProjectManager from "@/parts/PM";
 import { MilestonesSection } from "./milestone-section";
 import { AssignedVolunteersTable } from "./assigned-volunteer";
 import { ClosingRemarksModal } from "@/components/closing-remarks";
+import { ProjectStatus } from "@/lib/types";
 
 const supabase = createClient();
 
@@ -176,8 +177,9 @@ const ProjectDetails: React.FC = () => {
           .from("milestones")
           .select("*")
           .eq("project_id", projectId)
-          .order("due_date"); 
-        setMilestones(//@ts-ignore
+          .order("due_date");
+        setMilestones(
+          //@ts-ignore
           (miles || []).map((m) => ({ ...m, status: m.status || "Pending" }))
         );
 
@@ -185,8 +187,9 @@ const ProjectDetails: React.FC = () => {
           .from("deliverables")
           .select("*")
           .eq("project_id", projectId)
-          .order("due_date"); 
-        setDeliverables(//@ts-ignore
+          .order("due_date");
+        setDeliverables(
+          //@ts-ignore
           (dels || []).map((d) => ({ ...d, status: d.status || "Pending" }))
         );
 
@@ -477,7 +480,8 @@ const ProjectDetails: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
               {/*@ts-ignore */}
               <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />{/*@ts-ignore*/}
+                <MapPin className="h-5 w-5" />
+                {/*@ts-ignore*/}
                 <span>{formatLocation(project.location)}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -497,21 +501,26 @@ const ProjectDetails: React.FC = () => {
             <section>
               <h2 className="text-2xl font-bold mb-6">
                 Assigned Volunteers ({assignedVolunteers.length})
-              </h2>{/*@ts-ignore*/}
+              </h2>
+              {/*@ts-ignore*/}
               <AssignedVolunteersTable volunteers={assignedVolunteers} />
             </section>
-             <h3>closing remark</h3>   
-            <ClosingRemarksModal
-              projectId={project.id}
-              currentStatus={project.status}
-              isAuthorized={true}
-              onProjectClosed={() => router.refresh()}
-            />
+
             <ProjectRecommendation
               projectId={projectId as string}
               volunteersNeeded={project.volunteers_needed}
               volunteersRegistered={project.volunteers_registered}
             />
+
+            <section className="flex justify-center items-center gap-4 flex-col p-8 border shadow-md bg-diaspora-blue/5 rounded-md">
+              <h3  className="text-diaspora-blue">Add closing remark and mark project has completed </h3>
+              <ClosingRemarksModal
+                projectId={project.id}
+                currentStatus={project.status as ProjectStatus}
+                isAuthorized={true}
+                onProjectClosed={() => router.refresh()}
+              />
+            </section>
           </CardContent>
         </Card>
 

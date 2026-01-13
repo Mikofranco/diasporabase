@@ -138,7 +138,7 @@ export function ClosingRemarksModal({
               <Button
                 onClick={handleCloseProject}
                 disabled={loading || !remarks.trim()}
-                className="gap-2  bg-green-200 hover:bg-green-300 text-green-900 hover:text-green-950"
+                className="gap-2  bg-diaspora-blue hover:bg-diaspora-blue/90 text-white"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 Mark as Completed
