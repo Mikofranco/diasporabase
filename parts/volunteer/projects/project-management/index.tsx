@@ -119,7 +119,7 @@ export default function ProjectManagementScreen() {
             start_date, end_date, status,
             volunteers_registered, volunteers_needed,
             category, country, state, lga, closing_remarks,
-            project_manager_id
+            project_manager_id,required_skills
           `
           )
           .eq("id", projectId)
