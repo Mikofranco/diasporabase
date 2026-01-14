@@ -86,7 +86,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   setHasRated,
   onLeaveSuccess,
   volunteersRegistered,
-  agencyHasSentRequest
+  agencyHasSentRequest,
 }) => {
   const router = useRouter();
   const [isRequesting, setIsRequesting] = useState(false); // ← NEW: loading state for request
@@ -95,7 +95,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   const isFull = spotsLeft === 0;
   const formatDate = (date?: string) =>
     date ? format(new Date(date), "EEEE, MMMM d, yyyy") : "Date not set";
-
+  const [showAllSkills, setShowAllSkills] = useState(false);
   const formatDateRange = () => {
     if (!project.startDate && !project.endDate) return "Dates not set";
     if (!project.startDate) return formatDate(project.endDate);
@@ -114,7 +114,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   const status = statusConfig[project.status ?? "pending"];
 
   const handleVolunteerRequest = async () => {
-    if (isRequesting) return; 
+    if (isRequesting) return;
 
     setIsRequesting(true);
 
@@ -244,8 +244,10 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     </Button>
                   ) : (
                     <VolunteerActionButton
-                      hasRequested={hasRequested} //@ts-ignore
-                      isFull={project.volunteersRegistered >= project.volunteersNeeded}
+                      hasRequested={hasRequested} 
+                      isFull={//@ts-ignore
+                        project.volunteersRegistered >= project.volunteersNeeded
+                      }
                       isRequesting={isRequesting}
                       onClick={handleVolunteerRequest}
                     />
@@ -262,7 +264,9 @@ const ProjectView: React.FC<ProjectViewProps> = ({
           {project.description && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl text-diaspora-darkBlue">About This Project</CardTitle>
+                <CardTitle className="text-2xl text-diaspora-darkBlue">
+                  About This Project
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <p className="text-base leading-relaxed text-foreground/80 whitespace-pre-wrap">
@@ -275,7 +279,9 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     <div>
                       <p className="text-sm font-medium">Start Date</p>
                       <p className="text-sm text-muted-foreground">
-                        {project.start_date ? formatDate(project.start_date) : "Not set"}
+                        {project.start_date
+                          ? formatDate(project.start_date)
+                          : "Not set"}
                       </p>
                     </div>
                   </div>
@@ -284,7 +290,8 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Location</p>
-                      <p className="text-sm text-muted-foreground">{/*@ts-ignore*/}
+                      <p className="text-sm text-muted-foreground">
+                        {/*@ts-ignore*/}
                         {formatLocation(project.location) || "Not specified"}
                       </p>
                     </div>
@@ -299,7 +306,8 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                           isFull ? "text-destructive" : "text-green-600"
                         }`}
                       >
-                        {spotsLeft} of {project.volunteers_needed || "?"} available
+                        {spotsLeft} of {project.volunteers_needed || "?"}{" "}
+                        available
                       </p>
                     </div>
                   </div>
@@ -326,12 +334,35 @@ const ProjectView: React.FC<ProjectViewProps> = ({
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {project.required_skills.map((skill: string) => (
-                    <Badge key={skill} variant="secondary" className="py-1.5 px-3">
-                      {skill}
-                    </Badge>
-                  ))}
+                  {project.required_skills
+                    .slice(
+                      0,
+                      showAllSkills ? project.required_skills.length : 15
+                    )
+                    .map((skill: string) => (
+                      <Badge
+                        key={skill}
+                        variant="secondary"
+                        className="py-1.5 px-3 text-sm font-medium"
+                      >
+                        {skill}
+                      </Badge>
+                    ))}
                 </div>
+
+                {project.required_skills.length > 10 && (
+                  <div className="mt-4">
+                    <Button
+                      variant="link"
+                      className="text-diaspora-blue hover:text-diaspora-blue/90 px-0 h-auto font-medium"
+                      onClick={() => setShowAllSkills(!showAllSkills)}
+                    >
+                      {showAllSkills
+                        ? "Show less"
+                        : `Show all (${project.required_skills.length})`}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

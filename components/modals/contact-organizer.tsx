@@ -25,6 +25,7 @@ import {
 import { sendEmail } from "@/lib/email";
 import { OrganizationContact } from "@/lib/types";
 import Modal from "../ui/modal";
+import { useSendMail } from "@/services/mail";
 
 interface ContactOrganizationModalProps {
   project: {
@@ -65,41 +66,41 @@ export default function ContactOrganizationModal({
 
     setSending(true);
 
-    //     try {
-    //       // Use your existing sendEmail function
-    //       await sendEmail({
-    //         to: organization.contact_person_email || "no-reply@yourapp.com",
-    //         subject: `New message from volunteer about "${project.title}"`,
-    //         text: `
-    // Volunteer Message:
-    // "${message.trim()}"
+        try {
+          // Use your existing sendEmail function
+          await useSendMail({
+            to: organization.contact_person_email || "no-reply@yourapp.com",
+            subject: `New message from volunteer about "${project.title}"`,
+            text: `
+    Volunteer Message:
+    "${message.trim()}"
 
-    // Project: ${project.title}
-    // Volunteer: ${fullName} (you will see their email in your inbox)
-    //         `.trim(),
-    //         html: `
-    //           <div style="font-family: system-ui, sans-serif; padding: 20px; background: #f9f9f9; border-radius: 12px;">
-    //             <h2>New Message About Your Project</h2>
-    //             <p><strong>Project:</strong> ${project.title}</p>
-    //             <p><strong>From volunteer:</strong> ${fullName}</p>
-    //             <hr style="margin: 20px 0; border: 1px solid #eee;" />
-    //             <blockquote style="background: white; padding: 16px; border-left: 4px solid #3b82f6; margin: 16px 0;">
-    //               ${message.trim().replace(/\n/g, "<br>")}
-    //             </blockquote>
-    //             <p>You can reply directly to this email to respond.</p>
-    //           </div>
-    //         `.trim(),
-    //       });
+    Project: ${project.title}
+    Volunteer: ${fullName} (you will see their email in your inbox)
+            `.trim(),
+            html: `
+              <div style="font-family: system-ui, sans-serif; padding: 20px; background: #f9f9f9; border-radius: 12px;">
+                <h2>New Message About Your Project</h2>
+                <p><strong>Project:</strong> ${project.title}</p>
+                <p><strong>From volunteer:</strong> ${fullName}</p>
+                <hr style="margin: 20px 0; border: 1px solid #eee;" />
+                <blockquote style="background: white; padding: 16px; border-left: 4px solid #3b82f6; margin: 16px 0;">
+                  ${message.trim().replace(/\n/g, "<br>")}
+                </blockquote>
+                <p>You can reply directly to this email to respond.</p>
+              </div>
+            `.trim(),
+          });
 
-    //       toast.success("Message sent successfully! The organization will reply soon.");
-    //       setMessage("");
-    //       setOpen(false);
-    //     } catch (err: any) {
-    //       console.error("Failed to send email:", err);
-    //       toast.error(err.message || "Failed to send message. Try again later.");
-    //     } finally {
-    //       setSending(false);
-    //     }
+          toast.success("Message sent successfully! The organization will reply soon.");
+          setMessage("");
+          setOpen(false);
+        } catch (err: any) {
+          console.error("Failed to send email:", err);
+          toast.error(err.message || "Failed to send message. Try again later.");
+        } finally {
+          setSending(false);
+        }
   };
 
   const defaultTrigger = (
@@ -123,16 +124,16 @@ export default function ContactOrganizationModal({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Contact Organization</DialogTitle>
+            <DialogTitle className="text-2xl text-diaspora-darkBlue">Contact Organization</DialogTitle>
             <DialogDescription>
               Send a message to the organizers of{" "}
-              <strong>{project.title}</strong>
+              <strong className="text-diaspora-blue">{project.title}</strong>
             </DialogDescription>
           </DialogHeader>
 
           {/* Organization Details */}
           <div className="space-y-6 py-4 border-b pb-6">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 text-gray-400">
               <Building2 className="h-10 w-10 text-primary" />
               <div>
                 <h3 className="text-xl font-semibold">
@@ -234,7 +235,7 @@ export default function ContactOrganizationModal({
             <Button
               onClick={handleSend}
               disabled={sending || !message.trim()}
-              className="gap-2"
+              className="gap-2 action-btn"
             >
               {sending ? (
                 "Sending..."

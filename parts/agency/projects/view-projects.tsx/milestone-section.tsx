@@ -259,7 +259,7 @@ export function MilestonesSection({
       <Card className="border-dashed">
         <CardContent className="text-center py-16">
           <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No Milestones Defined</h3>
+          <h3 className="text-xl font-semibold mb-2 text-diaspora-darkBlue">No Milestones Defined</h3>
           <p className="text-gray-600">
             Start by adding your first milestone and its deliverables.
           </p>
