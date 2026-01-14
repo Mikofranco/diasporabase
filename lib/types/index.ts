@@ -56,6 +56,7 @@ export interface Notification {
 export interface Profile {
   id: string;
   fullName?: string;
+  full_name?: string;
   email?: string;
   role?: ProfileRole;
   phone?: string;
@@ -146,6 +147,8 @@ export interface Project {
   lga?: string | null;
   country?: string | null;
   state?: string | null;
+  end_date?: string;
+  closing_remarks?:string;
 }
 
 export interface SkillSet {
