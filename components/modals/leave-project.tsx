@@ -118,9 +118,9 @@ export default function LeaveProjectModal({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Leave Project</DialogTitle>
+            <DialogTitle className="text-2xl text-diaspora-darkBlue">Leave Project</DialogTitle>
             <DialogDescription className="text-base">
-              You're about to leave <strong>{project.title}</strong>.
+              You're about to leave <strong className="text-diaspora-darkBlue">{project.title}</strong>.
             </DialogDescription>
           </DialogHeader>
 

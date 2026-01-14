@@ -252,7 +252,7 @@ export function CommentsModal({ deliverableId, volunteers, projectId }: Comments
 
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-diaspora-darkBlue">
             <MessageSquare className="h-5 w-5" />
             Deliverable Comments
           </DialogTitle>
@@ -303,7 +303,7 @@ export function CommentsModal({ deliverableId, volunteers, projectId }: Comments
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="mt-3 h-8 px-3 text-xs gap-1.5 text-primary hover:bg-primary/10"
+                      className="mt-3 h-8 px-3 text-xs gap-1.5 text-diaspora-blue "
                       onClick={() => startReply(comment.id)}
                     >
                       <Reply className="h-3.5 w-3.5" />
@@ -314,7 +314,7 @@ export function CommentsModal({ deliverableId, volunteers, projectId }: Comments
 
                 {/* Replies */}
                 {repliesMap.get(comment.id)?.map((reply) => (
-                  <div key={reply.id} className="ml-12 flex gap-3 p-4 rounded-xl bg-muted/20 border">
+                  <div key={reply.id} className="ml-12 flex gap-3 p-4 rounded-xl bg-blue-50 border">
                     <Avatar className="h-8 w-8 mt-1">
                       <AvatarFallback>{getInitials(reply.profiles.full_name)}</AvatarFallback>
                     </Avatar>
@@ -368,7 +368,7 @@ export function CommentsModal({ deliverableId, volunteers, projectId }: Comments
                 <Badge
                   key={vol.volunteer_id}
                   variant="secondary"
-                  className="pl-3 pr-1.5 py-1 gap-1 text-sm"
+                  className="pl-3 pr-1.5 py-1 gap-1 text-sm text-diaspora-blue"
                 >
                   @{vol.full_name}
                   <button
@@ -396,7 +396,7 @@ export function CommentsModal({ deliverableId, volunteers, projectId }: Comments
               <Button
                 onClick={handlePostComment}
                 disabled={loading || !newComment.trim()}
-                className="self-end min-w-[88px] h-[48px]"
+                className="self-end min-w-[88px] h-[48px] action-btn"
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

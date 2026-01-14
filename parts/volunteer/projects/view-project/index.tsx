@@ -261,7 +261,7 @@ export default function ViewProjectDetails() {
       </div>
 
       {/* <ReviewsList reviews={}/> */}
-      <Comments projectId={project.id} volunteers={volunteers} projectTitle={project.title} />
+      {isUserInProject && <Comments projectId={project.id} volunteers={volunteers} projectTitle={project.title} />}
 
       <ContactOrganizationModal
         project={{ id: project.id, title: project.title }}
