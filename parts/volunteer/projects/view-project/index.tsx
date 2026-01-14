@@ -249,11 +249,11 @@ export default function ViewProjectDetails() {
       </section>
 
       <Separator />
-      <div>
+      <div className="space-y-6">
         <MilestonesSection projectId={project.id} canEdit={false} />
 
         <section className="lg:col-span-2 space-y-8">
-          <h2 className="text-3xl font-bold">
+          <h2 className="text-2xl text-diaspora-darkBlue font-bold">
             Volunteers ({volunteers.length})
           </h2>
           <VolunteersList volunteers={volunteers} />
@@ -261,7 +261,7 @@ export default function ViewProjectDetails() {
       </div>
 
       {/* <ReviewsList reviews={}/> */}
-      <Comments projectId={project.id} volunteers={volunteers} />
+      <Comments projectId={project.id} volunteers={volunteers} projectTitle={project.title} />
 
       <ContactOrganizationModal
         project={{ id: project.id, title: project.title }}

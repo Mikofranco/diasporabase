@@ -12,6 +12,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, CalendarDays, Mail } from "lucide-react";
 import { Volunteer } from "@/lib/types";
+import VolunteerInfoModal from "@/components/modals/voulunteer-modal";
+import { useState } from "react";
 
 
 
@@ -20,6 +22,7 @@ interface VolunteersListProps {
 }
 
 export default function VolunteersList({ volunteers }: VolunteersListProps) {
+  const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
   if (volunteers.length === 0) {
     return (
       <Card>
@@ -47,7 +50,7 @@ export default function VolunteersList({ volunteers }: VolunteersListProps) {
           </TableHeader>
           <TableBody>
             {volunteers.map((v) => (
-              <TableRow key={v.id}>
+              <TableRow key={v.id} data-modal-trigger="volunteer-info-modal" onClick={()=> setSelectedVolunteer(v)}>
                 <TableCell>
                   <div className="bg-muted rounded-full w-10 h-10 flex items-center justify-center shrink-0">
                     {v.avatar_url ? (
@@ -79,6 +82,14 @@ export default function VolunteersList({ volunteers }: VolunteersListProps) {
           </TableBody>
         </Table>
       </CardContent>
+
+      {/* Volunteer Info Modal */}
+      {selectedVolunteer && (
+        <VolunteerInfoModal
+          showAll={true}
+          volunteer={selectedVolunteer}
+        />
+      ) }
     </Card>
   );
 }

@@ -66,7 +66,7 @@ interface Milestone {
 
 interface MilestonesSectionProps {
   projectId: string;
-  canEdit?: boolean; // Optional: control edit permission
+  canEdit?: boolean; 
 }
 
 export function MilestonesSection({
@@ -99,19 +99,19 @@ export function MilestonesSection({
       .order("due_date");
 
     if (milestonesData) {
-      const milestoneIds = milestonesData.map((m) => m.id);
+      const milestoneIds = milestonesData.map((m:any) => m.id);
       const { data: deliverablesData } = await supabase
         .from("deliverables")
         .select("*")
         .in("milestone_id", milestoneIds);
 
-      const deliverablesMap = (deliverablesData || []).reduce((acc, d) => {
+      const deliverablesMap = (deliverablesData || []).reduce((acc:any, d:any) => {
         if (!acc[d.milestone_id]) acc[d.milestone_id] = [];
         acc[d.milestone_id].push(d);
         return acc;
       }, {} as Record<string, Deliverable[]>);
 
-      const fullMilestones = milestonesData.map((m) => ({
+      const fullMilestones = milestonesData.map((m:any) => ({
         ...m,
         deliverables: deliverablesMap[m.id] || [],
       }));
@@ -285,7 +285,7 @@ export function MilestonesSection({
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold">
+        <h2 className="text-2xl text-diaspora-darkBlue font-bold">
           Project Milestones & Deliverables
         </h2>
         {canEdit && (
