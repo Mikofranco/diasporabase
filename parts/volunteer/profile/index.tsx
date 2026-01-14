@@ -37,7 +37,7 @@ import LocationSelector from "@/components/location-selector";
 import BackButton from "@/components/back-button";
 import { expertiseData } from "@/data/expertise";
 
-interface ProfileData {
+export interface ProfileData {
   full_name: string | null;
   email: string | null;
   phone: string | null;
