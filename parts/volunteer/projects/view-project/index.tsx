@@ -250,7 +250,7 @@ export default function ViewProjectDetails() {
 
       <Separator />
       <div className="space-y-6">
-        <MilestonesSection projectId={project.id} canEdit={false} />
+        <MilestonesSection projectId={project.id} canEdit={false} volunteers={volunteers}/>
 
         <section className="lg:col-span-2 space-y-8">
           <h2 className="text-2xl text-diaspora-darkBlue font-bold">

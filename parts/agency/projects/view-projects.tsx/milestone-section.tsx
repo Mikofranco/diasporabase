@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CommentsModal } from "@/components/modals/comment";
+import { Volunteer } from "@/lib/types";
 
 const supabase = createClient();
 
@@ -67,11 +68,13 @@ interface Milestone {
 interface MilestonesSectionProps {
   projectId: string;
   canEdit?: boolean; 
+  volunteers: Volunteer[]
 }
 
 export function MilestonesSection({
   projectId,
   canEdit = true,
+  volunteers
 }: MilestonesSectionProps) {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
@@ -407,7 +410,7 @@ export function MilestonesSection({
                           {del.status}
                         </Badge>
                       </div>
-                      <CommentsModal deliverableId={del.id || ""} />
+                      <CommentsModal deliverableId={del.id || ""} volunteers={volunteers} projectId={projectId} />
                     </div>
                     {canEdit && (
                       <div className="flex gap-2">
