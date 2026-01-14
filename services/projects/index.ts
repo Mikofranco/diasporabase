@@ -321,6 +321,7 @@ export async function getProjectsByUserSkills(): Promise<{
     }
 
     // Fetch projects where required_skills overlap with user skills
+    console.log("user skill", profile.skills)
     const { data: projects, error } = await supabase
       .from("projects")
       .select("*")
@@ -682,7 +683,7 @@ export async function getProjectVolunteers(projectId: string): Promise<{
 
   // Optional: filter out null profiles (rare edge case)
   const validVolunteers = data?.filter(
-    (item): item is ProjectVolunteer => item.profiles !== null
+    (item: any): item is ProjectVolunteer => item.profiles !== null
   ) ?? null;
 
   return {
