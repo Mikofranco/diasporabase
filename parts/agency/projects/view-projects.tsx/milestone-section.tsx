@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CommentsModal } from "@/components/modals/comment";
+import { Volunteer } from "@/lib/types";
 
 const supabase = createClient();
 
@@ -66,12 +67,14 @@ interface Milestone {
 
 interface MilestonesSectionProps {
   projectId: string;
-  canEdit?: boolean; // Optional: control edit permission
+  canEdit?: boolean; 
+  volunteers: Volunteer[]
 }
 
 export function MilestonesSection({
   projectId,
   canEdit = true,
+  volunteers
 }: MilestonesSectionProps) {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,19 +102,19 @@ export function MilestonesSection({
       .order("due_date");
 
     if (milestonesData) {
-      const milestoneIds = milestonesData.map((m) => m.id);
+      const milestoneIds = milestonesData.map((m:any) => m.id);
       const { data: deliverablesData } = await supabase
         .from("deliverables")
         .select("*")
         .in("milestone_id", milestoneIds);
 
-      const deliverablesMap = (deliverablesData || []).reduce((acc, d) => {
+      const deliverablesMap = (deliverablesData || []).reduce((acc:any, d:any) => {
         if (!acc[d.milestone_id]) acc[d.milestone_id] = [];
         acc[d.milestone_id].push(d);
         return acc;
       }, {} as Record<string, Deliverable[]>);
 
-      const fullMilestones = milestonesData.map((m) => ({
+      const fullMilestones = milestonesData.map((m:any) => ({
         ...m,
         deliverables: deliverablesMap[m.id] || [],
       }));
@@ -285,7 +288,7 @@ export function MilestonesSection({
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold">
+        <h2 className="text-2xl text-diaspora-darkBlue font-bold">
           Project Milestones & Deliverables
         </h2>
         {canEdit && (
@@ -407,7 +410,7 @@ export function MilestonesSection({
                           {del.status}
                         </Badge>
                       </div>
-                      <CommentsModal deliverableId={del.id || ""} />
+                      <CommentsModal deliverableId={del.id || ""} volunteers={volunteers} projectId={projectId} />
                     </div>
                     {canEdit && (
                       <div className="flex gap-2">

@@ -262,7 +262,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
           {project.description && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl">About This Project</CardTitle>
+                <CardTitle className="text-2xl text-diaspora-darkBlue">About This Project</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <p className="text-base leading-relaxed text-foreground/80 whitespace-pre-wrap">
@@ -322,7 +322,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
           {project.required_skills && project.required_skills.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Required Skills</CardTitle>
+                <CardTitle className="text-gray-400">Required Skills</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
