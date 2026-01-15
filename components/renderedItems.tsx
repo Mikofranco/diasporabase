@@ -289,7 +289,7 @@ export function CheckboxReactHookFormMultiple({
                     checked={field.value?.includes(item.id)}
                     onCheckedChange={() => handleSelect(item, field)}
                     onClick={(e) => e.stopPropagation()} // Prevent item click from triggering
-                    className="border-gray-400 focus:ring-2 focus:ring-offset-1 h-4 w-4 transition-all duration-200 hover:border-gray-600"
+                    className="border-gray-400 focus:ring-2 focus:ring-offset-1 h-4 w-4 transition-all duration-200 hover:border-gray-600 data-[state=checked]:border-diaspora-blue data-[state=checked]:bg-diaspora-blue"
                     aria-checked={field.value?.includes(item.id)}
                   />
                 </FormControl>
