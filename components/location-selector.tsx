@@ -272,7 +272,7 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
                   <div className="flex items-center py-2 px-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <Checkbox
                       id={`country-${countryKey}`}
-                      className="h-4 w-4 mr-3 border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 mr-3 border-gray-300 text-blue-600 focus:ring-blue-500 data-[state-checked]:bg-diaspora-blue"
                       checked={selected[countryKey]?.checked || false}
                       onCheckedChange={() => handleCheckboxChange("country", countryKey)}
                     />
