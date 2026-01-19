@@ -15,7 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSendMail } from "@/services/mail";
 import { resetPasswordMail } from "@/lib/email-templates/reset";
-import { sendCustomPasswordResetEmail } from "@/app/actions/reset-password/reset-password";
+import { sendCustomPasswordResetEmail } from "@/services/auth/forgot-password";
 
 const supabase = createClient();
 

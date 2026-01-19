@@ -1,6 +1,6 @@
-
+//extracting and creating a custom mail
 import { resetPasswordMail } from "@/lib/email-templates/reset";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/client";
 import { useSendMail } from "@/services/mail";
 
 export async function sendCustomPasswordResetEmail(formData: FormData) {
