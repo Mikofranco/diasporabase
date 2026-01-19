@@ -1,0 +1,37 @@
+// components/auth/SignInWithGoogle.tsx
+"use client";
+
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { FcGoogle } from "react-icons/fc";
+import { toast } from "sonner";
+
+export function SignInWithGoogle() {
+  const supabase = createClient();
+
+  const handleSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (err: any) {
+      toast.error(err.message || "Google sign in failed");
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleSignIn}
+      variant="outline"
+      className="w-full flex items-center justify-center gap-3 py-6 text-base font-medium"
+    >
+      <FcGoogle className="h-6 w-6" />
+      Sign in with Google
+    </Button>
+  );
+}
