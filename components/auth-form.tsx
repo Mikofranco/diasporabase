@@ -160,6 +160,10 @@ export default function LoginForm() {
 
           <div className="mt-4 text-sm text-center">
             Don&apos;t have an account? <br />
+
+             <Link href="/forgot-password" className="underline">
+              Forgot password
+            </Link>{" "}
             <Link href="/register-volunteer" className="underline">
               Register as Volunteer
             </Link>{" "}
