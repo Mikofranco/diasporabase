@@ -124,7 +124,7 @@ export default function ResetPasswordForm() {
             </p>
 
             <Button
-              className="w-full"
+              className="w-full action-btn"
               onClick={() => router.push("/login")}
             >
               Go to login
@@ -175,7 +175,7 @@ export default function ResetPasswordForm() {
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full action-btn"
                   disabled={loading}
                 >
                   {loading ? "Updating password…" : "Change password"}
