@@ -21,7 +21,15 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
 import { StepIndicator } from "./stepIndicator";
-import LocationSelector, { LocationSelectorHandle, SelectedData } from "@/components/location-selector";
+import LocationSelector, {
+  LocationSelectorHandle,
+  SelectedData,
+} from "@/components/location-selector";
+// import SkillsSelector from "@/components/skill-selector";
+import SkillsSelector, {
+  SkillsSelectorHandle,
+  SelectedSkillsData,
+} from "@/components/skill-selector";
 // import { LocationSelectorHandle, SelectedData } from "@/app/dashboard/volunteer/profile/page";
 
 const onboardingSchema = z
@@ -38,7 +46,7 @@ const onboardingSchema = z
     {
       message: "Please select both start and end dates",
       path: ["availabilityStartDate"],
-    }
+    },
   )
   .refine(
     (data) =>
@@ -49,7 +57,7 @@ const onboardingSchema = z
     {
       message: "Start date cannot be after end date",
       path: ["availabilityEndDate"],
-    }
+    },
   );
 
 type OnboardingFormData = z.infer<typeof onboardingSchema>;
@@ -88,6 +96,7 @@ export function VolunteerOnboardingForm() {
   });
 
   const availabilityType = watch("availabilityType");
+  const skillsSelectorRef = useRef<SkillsSelectorHandle>(null);
 
   const onSubmit = async (data: OnboardingFormData) => {
     setIsLoading(true);
@@ -176,7 +185,6 @@ export function VolunteerOnboardingForm() {
     if (step === 3) {
       if (selectedLocations.selectedCountries.length === 0) {
         isValid = false;
-        // You can add a UI error here if LocationSelector supports it
       }
     }
 
@@ -185,7 +193,6 @@ export function VolunteerOnboardingForm() {
     if (step < totalSteps) {
       setStep(step + 1);
     }
-    // Do NOT call handleSubmit here — let <form> do it
   };
 
   const handleBack = () => {
@@ -210,8 +217,23 @@ export function VolunteerOnboardingForm() {
               onChange={(selected) => setValue("skills", selected)}
             />
             {errors.skills && (
-              <p className="text-red-500 text-sm mt-1">{errors.skills.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.skills.message}
+              </p>
             )}
+
+            {/* <SkillsSelector
+              ref={skillsSelectorRef}
+              onSelectionChange={(data) => {
+                // Combine all selected ids into one flat array for your form
+                const allSelected = [
+                  ...data.selectedCategories,
+                  ...data.selectedSubCategories,
+                  ...data.selectedSkills,
+                ];
+                setValue("skills", allSelected, { shouldValidate: true });
+              }}
+            /> */}
           </div>
         )}
 
@@ -253,12 +275,16 @@ export function VolunteerOnboardingForm() {
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal mt-1",
-                          !watch("availabilityStartDate") && "text-muted-foreground"
+                          !watch("availabilityStartDate") &&
+                            "text-muted-foreground",
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {watch("availabilityStartDate")
-                          ? format(watch("availabilityStartDate") as Date, "PPP")
+                          ? format(
+                              watch("availabilityStartDate") as Date,
+                              "PPP",
+                            )
                           : "Pick a start date"}
                       </Button>
                     </PopoverTrigger>
@@ -266,7 +292,9 @@ export function VolunteerOnboardingForm() {
                       <Calendar
                         mode="single"
                         selected={watch("availabilityStartDate")}
-                        onSelect={(date) => setValue("availabilityStartDate", date)}
+                        onSelect={(date) =>
+                          setValue("availabilityStartDate", date)
+                        }
                         initialFocus
                       />
                     </PopoverContent>
@@ -286,7 +314,8 @@ export function VolunteerOnboardingForm() {
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal mt-1",
-                          !watch("availabilityEndDate") && "text-muted-foreground"
+                          !watch("availabilityEndDate") &&
+                            "text-muted-foreground",
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -299,7 +328,9 @@ export function VolunteerOnboardingForm() {
                       <Calendar
                         mode="single"
                         selected={watch("availabilityEndDate")}
-                        onSelect={(date) => setValue("availabilityEndDate", date)}
+                        onSelect={(date) =>
+                          setValue("availabilityEndDate", date)
+                        }
                         initialFocus
                       />
                     </PopoverContent>
@@ -350,12 +381,13 @@ export function VolunteerOnboardingForm() {
               (step === 2 && !availabilityType) ||
               (step === 2 &&
                 availabilityType === "specific-period" &&
-                (!watch("availabilityStartDate") || !watch("availabilityEndDate"))) ||
+                (!watch("availabilityStartDate") ||
+                  !watch("availabilityEndDate"))) ||
               (step === 3 && selectedLocations.selectedCountries.length === 0)
             }
             className={cn(
               "min-w-[120px]",
-              "bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 text-white"
+              "bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 text-white",
             )}
           >
             {isLoading ? (

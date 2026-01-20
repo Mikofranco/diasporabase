@@ -116,7 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={`${poppins.className} antialiased`}>
-        <GlobalLoading />
+        {/* <GlobalLoading /> */}
         <LoadingBar />
         <ModalSetup />
         {children}

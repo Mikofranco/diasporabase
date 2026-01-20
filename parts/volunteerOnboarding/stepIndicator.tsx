@@ -14,7 +14,7 @@ export function StepIndicator({ currentStep, totalSteps }: StepIndicatorProps) {
       <div className="flex justify-between mb-2">
         <span>Step {currentStep} of {totalSteps}</span>
       </div>
-      <Progress value={progress} className="w-full" />
+      <Progress value={progress} className="w-full bg-diaspora-blue" />
     </div>
   );
 }

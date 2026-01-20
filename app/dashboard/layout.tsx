@@ -16,10 +16,10 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, LogOut } from "lucide-react"; // Added LogOut icon
+import { Bell, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button"; // For the logout button
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -94,7 +94,7 @@ export default function DashboardLayout({
       toast.error("Error signing out: " + error.message);
     } else {
       toast.success("Logged out successfully");
-      router.push("/login"); // Redirect to login page after logout
+      router.push("/login");
     }
   };
 
@@ -102,7 +102,8 @@ export default function DashboardLayout({
     <SidebarProvider defaultOpen={true}>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-14 items-center justify-between gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+        {/* ← Key change here */}
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-white px-4 lg:h-[60px] lg:px-6">
           <div className="flex items-center gap-4">
             <SidebarTrigger />
           </div>
@@ -145,7 +146,6 @@ export default function DashboardLayout({
                     </Avatar>
                   </div>
 
-                  {/* Log out button */}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -153,7 +153,7 @@ export default function DashboardLayout({
                     className="text-red-600 hover:text-red-600 hover:bg-red-50"
                   >
                     <LogOut className="h-4 w-4" />
-                    <span className="ml-1 hidden sm:inline">Log out</span>
+                    <span className="ml-1 hidden sm:inline">Sign out</span>
                   </Button>
                 </div>
               </>
@@ -162,6 +162,7 @@ export default function DashboardLayout({
             )}
           </div>
         </header>
+
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-[#F0F9FF]">
           {children}
         </main>
