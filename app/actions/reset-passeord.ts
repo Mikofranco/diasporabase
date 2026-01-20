@@ -4,7 +4,6 @@ import { resetPasswordMail } from "@/lib/email-templates/reset";
 import { createAdminClient } from "@/lib/supabase/client";
 import { sendMailServer } from "@/services/mail/send-mail-server";
 
-const DEVELOPMENT ="https://localhost:3000"
 
 export async function sendCustomPasswordResetEmail(formData: FormData) {
   const email = formData.get("email") as string;
@@ -27,8 +26,7 @@ export async function sendCustomPasswordResetEmail(formData: FormData) {
       type: "recovery",
       email,
       options: {
-        // redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
-        redirectTo: `${DEVELOPMENT}/reset-password`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
       },
     });
 

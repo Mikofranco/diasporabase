@@ -153,7 +153,7 @@ export default function DashboardLayout({
                     className="text-red-600 hover:text-red-600 hover:bg-red-50"
                   >
                     <LogOut className="h-4 w-4" />
-                    <span className="ml-1 hidden sm:inline">Log out</span>
+                    <span className="ml-1 hidden sm:inline">Sign out</span>
                   </Button>
                 </div>
               </>

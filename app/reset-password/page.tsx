@@ -6,10 +6,7 @@ const ResetPassword = () => {
   return (
     <div>
       {/* <Suspense> */}
-        {/* <ResetPasswordForm /> */}
-        <div>
-          <h1>Reset password page</h1>
-        </div>
+        <ResetPasswordForm />
       {/* </Suspense> */}
     </div>
   );

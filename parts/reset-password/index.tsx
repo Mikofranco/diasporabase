@@ -3,6 +3,17 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import Logo from "@/components/logo";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function ResetPasswordForm() {
   const [password, setPassword] = useState("");
@@ -10,61 +21,62 @@ export default function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [checkingToken, setCheckingToken] = useState(true);
+  const [ready, setReady] = useState(false);
 
   const router = useRouter();
   const supabase = createClient();
-  const [token, setToken] = useState<string | null>(null);
 
-  // Parse token from hash on mount
   useEffect(() => {
-    const hash = window.location.hash; // #access_token=...
-    const params = new URLSearchParams(hash.replace("#", ""));
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+
     const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    const type = params.get("type");
 
-    if (!accessToken) {
-      setError("Missing or invalid recovery token.");
-    } else {
-      setToken(accessToken);
-
-      // Set the session using the token
-      supabase.auth.setSession({ access_token: accessToken }).catch((err: any) => {
-        console.error("Error setting session:", err);
-        setError("Failed to set session. Token may be expired.");
-      });
+    if (type !== "recovery" || !accessToken || !refreshToken) {
+      setError("This password reset link is invalid or has expired.");
+      setReady(true);
+      return;
     }
 
-    setCheckingToken(false);
+    supabase.auth
+      .setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      })
+      .then(({ data, error }: any) => {
+        if (error || !data.session) {
+          setError(
+            "This password reset link has expired. Please request a new one.",
+          );
+        }
+        setReady(true);
+      });
   }, [supabase.auth]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
+      setError("Password must be at least 8 characters long.");
+      setLoading(false);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Passwords do not match.");
+      setLoading(false);
       return;
     }
 
-    if (!token) {
-      setError("Missing recovery token.");
-      return;
-    }
-
-    setLoading(true);
-
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-
+    const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
 
-    if (updateError) {
-      console.error("Update password error:", updateError);
-      setError(updateError.message || "Failed to reset password. Link may be expired.");
+    if (error) {
+      setError(error.message || "Unable to update password.");
       return;
     }
 
@@ -72,57 +84,107 @@ export default function ResetPasswordForm() {
     setTimeout(() => router.push("/dashboard"), 2000);
   };
 
-  if (checkingToken) return <div className="text-center py-8">Verifying reset link...</div>;
-  if (success)
-    return (
-      <div className="text-center py-8 text-green-600">
-        <p className="text-xl font-medium">Password reset successful!</p>
-        <p className="mt-2">Redirecting you to the dashboard...</p>
-      </div>
-    );
-
   return (
-    <form onSubmit={handleResetPassword} className="mt-8 space-y-6">
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-          New Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          placeholder="••••••••"
-        />
-      </div>
-      <div>
-        <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700">
-          Confirm New Password
-        </label>
-        <input
-          id="confirm-password"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          placeholder="••••••••"
-        />
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-muted px-4">
+      <Card className="w-full max-w-md shadow-lg">
+        {/* ───────── VERIFYING STATE ───────── */}
+        {!ready && (
+          <CardContent className="py-16 text-center">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="mt-4 text-sm text-muted-foreground">
+              Verifying your password reset link…
+            </p>
+          </CardContent>
+        )}
 
-      {error && <p className="text-red-600 text-sm text-center">{error}</p>}
+        {/* ───────── ERROR STATE (INVALID / EXPIRED TOKEN) ───────── */}
+        {ready && error && !success && (
+          <CardContent className="py-12 text-center space-y-4">
+            <Alert variant="destructive" className="justify-center">
+              <AlertCircle className="h-5 w-5" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
-      >
-        {loading ? "Resetting..." : "Reset Password"}
-      </button>
-    </form>
+            <Button
+              className="w-full action-btn"
+              onClick={() => router.push("/forgot-password")}
+            >
+              Request new reset link
+            </Button>
+          </CardContent>
+        )}
+
+        {/* ───────── SUCCESS STATE ───────── */}
+        {success && (
+          <CardContent className="py-12 text-center space-y-4">
+            <CheckCircle2 className="mx-auto h-8 w-8 text-green-600" />
+            <h2 className="text-lg font-semibold">Password updated</h2>
+            <p className="text-sm text-muted-foreground">
+              Your password has been changed successfully.
+            </p>
+
+            <Button
+              className="w-full"
+              onClick={() => router.push("/login")}
+            >
+              Go to login
+            </Button>
+          </CardContent>
+        )}
+
+        {/* ───────── RESET FORM ───────── */}
+        {ready && !error && !success && (
+          <>
+            <CardHeader className="text-center space-y-2">
+              <div className="flex justify-center">
+                <Logo />
+              </div>
+              <CardTitle>Set a new password</CardTitle>
+              <CardDescription>
+                Choose a strong password to secure your account
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <form onSubmit={handleResetPassword} className="space-y-5">
+                <div>
+                  <label className="text-sm font-medium">New password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="mt-1 w-full rounded-md border px-3 py-2"
+                    placeholder="At least 8 characters"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">
+                    Confirm password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="mt-1 w-full rounded-md border px-3 py-2"
+                    placeholder="Repeat password"
+                    required
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? "Updating password…" : "Change password"}
+                </Button>
+              </form>
+            </CardContent>
+          </>
+        )}
+      </Card>
+    </div>
   );
 }
