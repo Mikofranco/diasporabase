@@ -266,7 +266,7 @@ export function AppSidebar() {
   return (
     <>
       <Sidebar className="bg-white dark:bg-gray-900">
-        <SidebarHeader>
+        <SidebarHeader onClick={()=>router.push("/")}>
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
@@ -277,7 +277,7 @@ export function AppSidebar() {
                       alt="Diaspora Logo"
                       width={24}
                       height={24}
-                      className="rounded-full mr-2"
+                      className="rounded-full mr-2 cursor-pointer"
                     />
                     <span className="hidden md:inline text-sm font-bold text-gray-900 dark:text-gray-100">
                       DiasporaBase

@@ -1,13 +1,13 @@
 "use client"
-import ResetPasswordPage from "@/parts/reset-password";
+import ResetPasswordForm from "@/parts/reset-password";
 import React, { Suspense } from "react";
 
 const ResetPassword = () => {
   return (
     <div>
-      <Suspense>
-        <ResetPasswordPage />
-      </Suspense>
+      {/* <Suspense> */}
+        <ResetPasswordForm />
+      {/* </Suspense> */}
     </div>
   );
 };

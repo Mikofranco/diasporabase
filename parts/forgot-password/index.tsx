@@ -15,7 +15,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSendMail } from "@/services/mail";
 import { resetPasswordMail } from "@/lib/email-templates/reset";
-import { sendCustomPasswordResetEmail } from "@/services/auth/forgot-password";
+import { sendCustomPasswordResetEmail } from "@/app/actions/reset-passeord";
+// import { sendCustomPasswordResetEmail } from "@/services/auth/forgot-password";
 
 const supabase = createClient();
 
@@ -91,7 +92,7 @@ export default function ForgotPasswordPage() {
     const formData = new FormData();
     formData.append("email", data.email);
 
-    const result = await sendCustomPasswordResetEmail(formData);
+    const  result = await sendCustomPasswordResetEmail(formData);
 
     if (!result.success) {
       throw new Error(result.error);
@@ -112,7 +113,7 @@ export default function ForgotPasswordPage() {
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-blue-100 rounded-full">
-              <Mail className="h-8 w-8 text-blue-600" />
+              <Mail className="h-8 w-8 text-diaspora-darkBlue" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Forgot Password?</CardTitle>
