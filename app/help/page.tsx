@@ -19,7 +19,7 @@ const HelpCenterPage = () => {
     <div className="min-h-screen flex flex-col">
       <NavBar />
 
-      <main className="flex-1 my-20">
+      <main className="flex-1 my-20 mt-10">
         <section className="container mx-auto px-4 py-16 max-w-4xl">
           {/* Header */}
           <div className="mb-12 text-center">
