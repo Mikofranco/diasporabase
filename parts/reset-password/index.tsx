@@ -81,7 +81,7 @@ export default function ResetPasswordForm() {
     }
 
     setSuccess(true);
-    setTimeout(() => router.push("/dashboard"), 2000);
+    // setTimeout(() => router.push("/dashboard"), 2000);
   };
 
   return (
