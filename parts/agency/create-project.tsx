@@ -86,7 +86,7 @@ const baseProjectSchema = z.object({
   description: z
     .string()
     .min(10, "Description must be at least 10 characters")
-    .max(1000, "Description must be 1000 characters or less"),
+    .max(5000, "Description must be 1000 characters or less"),
   country: z.string().min(1, "Country is required"),
   state: z.string().optional(), // ← single string, optional
   lga: z.string().optional(), // ← single string, optional
