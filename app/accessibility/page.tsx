@@ -9,7 +9,7 @@ const AccessibilityScreen = () => {
     <div className="min-h-screen flex flex-col bg-white text-gray-800">
       <NavBar />
 
-      <main className="flex-grow max-w-4xl mx-auto px-6 py-12 space-y-10 mt-0 md:mt-10">
+      <main className="flex-grow max-w-4xl mx-auto px-6 py-12 space-y-10 mt-10">
         <h1 className="text-3xl font-semibold">
           Accessibility Statement
         </h1>
