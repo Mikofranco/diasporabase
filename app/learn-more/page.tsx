@@ -28,7 +28,7 @@ const LearnMore = () => {
 
       {/* Hero Section */}
       <section
-        className="relative bg-cover bg-center h-[60vh] flex items-center justify-center"
+        className="relative bg-cover bg-center h-[60vh] flex items-center justify-center mt-10"
         style={{
           backgroundImage: `url('https://diasporabase.com/lifestyle-people-office.jpg')`,
         }}

@@ -51,7 +51,7 @@ const SuccessStoriesPage = () => {
     <>
       <NavBar />
 
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen bg-background  my-10">
         {/* Hero Section - unchanged */}
         <section className="container mx-auto px-4 py-16 md:py-24 text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">

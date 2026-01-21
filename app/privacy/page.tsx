@@ -7,7 +7,7 @@ export default function PrivacyScreen() {
   return (
     <>
       <NavBar />
-      <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 my-10">
         <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden mt-10">
           <div className="px-8 py-12 md:px-12">
             <h1 className="text-4xl md:text-5xl font-bold text-center text-gray-900 mb-4">
@@ -139,7 +139,7 @@ export default function PrivacyScreen() {
                 <p>
                   For questions, requests, or concerns about this Privacy Policy, please reach out via our contact form or email us at{" "}
                   <a href="mailto:privacy@diasporabase.com" className="text-blue-600 hover:underline">
-                    privacy@diasporabase.com
+                    support@diasporabase.com
                   </a>
                   .
                 </p>
