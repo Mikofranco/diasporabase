@@ -39,11 +39,10 @@ const RecentProjects = ({ userId }: { userId: string }) => {
       }
 
       setProjects(data as Project[]);
-      toast.success("Projects loaded successfully!");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
       setError(errorMessage);
-      toast.error(errorMessage);
+      console.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

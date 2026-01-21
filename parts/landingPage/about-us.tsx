@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import Image from "next/image";
 
 const AboutUsSection = () => {
   const features = [
@@ -20,7 +21,7 @@ const AboutUsSection = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-6">
             <h2 className="text-4xl font-bold text-[#1E293B]">
-              About DiasporaBase  
+              About DiasporaBase
             </h2>
             <p className="text-lg text-slate-600">
               DiasporaBase is a volunteering and collaboration platform which
@@ -46,7 +47,7 @@ const AboutUsSection = () => {
               ))}
             </div>
           </div>
-          <div className="bg-[#E5F4F9] rounded-lg p-8">
+          {/* <div className="bg-[#E5F4F9] rounded-lg p-8">
             <div className="grid grid-cols-2 gap-8 text-center">
               {stats.map((stat, index) => (
                 <div key={index}>
@@ -57,6 +58,16 @@ const AboutUsSection = () => {
                 </div>
               ))}
             </div>
+          </div> */}
+
+          <div className="p-2">
+            <Image
+              src="https://jbgnohxjwrvepqnlpccy.supabase.co/storage/v1/object/public/app_images/connecting.jpg" 
+              height={500}
+              width={500}
+              alt="DiasporaBase volunteering impact illustration"
+              className="rounded-lg shadow-xl object-cover"
+            />
           </div>
         </div>
       </div>

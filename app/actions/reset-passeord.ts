@@ -26,7 +26,9 @@ export async function sendCustomPasswordResetEmail(formData: FormData) {
       type: "recovery",
       email,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
+        // redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
+        redirectTo: `https://diasporabase.com/reset-password`,
+
       },
     });
 
