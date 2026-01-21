@@ -139,7 +139,7 @@ export default function PrivacyScreen() {
                 <p>
                   For questions, requests, or concerns about this Privacy Policy, please reach out via our contact form or email us at{" "}
                   <a href="mailto:privacy@diasporabase.com" className="text-blue-600 hover:underline">
-                    privacy@diasporabase.com
+                    support@diasporabase.com
                   </a>
                   .
                 </p>
