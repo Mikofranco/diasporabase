@@ -35,7 +35,6 @@ import {
 
 const SuccessStoriesPage = () => {
   const stories = [
-    // ... your stories array remains unchanged
     {
       name: "Sarah Johnson",
       role: "CEO, TechStart Inc.",
