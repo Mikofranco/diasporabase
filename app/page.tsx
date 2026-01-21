@@ -277,7 +277,7 @@ export default function LandingPage() {
                 >
                   <Button
                     size="lg"
-                    className="min-w-[200px] bg-primary hover:bg-primary/90"
+                    className="min-w-[200px] action-btn"
                   >
                     Start Volunteering
                   </Button>
