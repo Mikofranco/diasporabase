@@ -256,11 +256,11 @@ export default function AgencyRegistrationForm() {
     <>
       <Card className="w-full max-w-2xl mx-auto shadow-xl border-0 my-20">
         <CardHeader className="text-center pb-8">
-          <CardTitle className="text-3xl font-bold text-[#1E293B] flex items-center justify-center gap-3">
-            <Building2 className="h-10 w-10 text-primary" />
+          <CardTitle className="text-xl sm:text-3xl font-bold text-[#1E293B] flex items-center justify-center gap-3">
+            <Building2 className="h-10 w-10  text-primary" />
             Register Your Agency
           </CardTitle>
-          <CardDescription className="text-base mt-3 max-w-md mx-auto">
+          <CardDescription className="text-sm sm:text-base mt-3 max-w-md mx-auto">
             Connect with skilled diaspora volunteers to power your development projects
           </CardDescription>
         </CardHeader>

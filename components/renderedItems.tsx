@@ -174,7 +174,7 @@ export function CheckboxReactHookFormMultiple({
         (id: string) => id !== item.id && !descendantIds.includes(id)
       );
       console.log(`Deselecting ${item.id} and descendants:`, descendantIds);
-    } else {
+    } else {4
       newValue = [...new Set([...field.value, item.id, ...descendantIds])];
       console.log(`Selecting ${item.id} and descendants:`, descendantIds);
     }
@@ -316,7 +316,7 @@ export function CheckboxReactHookFormMultiple({
                     child.subChildren &&
                     expanded[child.id] && (
                       <div key={child.id} className="ml-2.5">
-                        {renderItems(child.subChildren, level + 2)}
+                        {/* {renderItems(child.subChildren, level + 2)} */}
                       </div>
                     )
                 )}

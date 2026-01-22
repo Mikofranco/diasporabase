@@ -9,10 +9,11 @@ import {
 } from "@/services/projects";
 import { Project, ProjectStatus } from "@/lib/types";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
 
 // Hook to fetch completed projects
 export const useFetchCompletedProjects = () => {
-  const [completedProjectdata, setCompletedProjectdata] = useState<
+  const [completedProjectData, setCompletedProjectData] = useState<
     Project[] | null
   >(null);
   const [completedProjectError, setCompletedProjectError] = useState<
@@ -24,20 +25,20 @@ export const useFetchCompletedProjects = () => {
   useEffect(() => {
     const fetchCompletedProjects = async () => {
       try {
-        const { data: completedProjectdata, error: completedProjectError } =
+        const { data: completedProjectData, error: completedProjectError } =
           await getProjectsByStatus("completed");
         if (completedProjectError) {
           setCompletedProjectError(completedProjectError);
-          setCompletedProjectdata(null);
+          setCompletedProjectData(null);
         } else {
-          setCompletedProjectdata(completedProjectdata);
+          setCompletedProjectData(completedProjectData);
           setCompletedProjectError(null);
         }
       } catch (err) {
         setCompletedProjectError(
           err instanceof Error ? err.message : "An unexpected error occurred"
         );
-        setCompletedProjectdata(null);
+        setCompletedProjectData(null);
       } finally {
         setCompletedProjectIsLoading(false);
       }
@@ -47,7 +48,7 @@ export const useFetchCompletedProjects = () => {
   }, []);
 
   return {
-    completedProjectdata,
+    completedProjectdata: completedProjectData,
     completedProjectError,
     completedProjectIsLoading,
   };
@@ -55,7 +56,7 @@ export const useFetchCompletedProjects = () => {
 
 // Hook to fetch projects the user is volunteering for
 export const useFetchVolunteerProjects = () => {
-  const [volunteerProjectdata, setVolunteerProjectdata] = useState<
+  const [volunteerProjectData, setVolunteerProjectData] = useState<
     Project[] | null
   >(null);
   const [volunteerProjectError, setVolunteerProjectError] = useState<
@@ -71,16 +72,16 @@ export const useFetchVolunteerProjects = () => {
           await getVolunteerProjects();
         if (volunteerProjectError) {
           setVolunteerProjectError(volunteerProjectError);
-          setVolunteerProjectdata(null);
+          setVolunteerProjectData(null);
         } else {
-          setVolunteerProjectdata(volunteerProjectdata);
+          setVolunteerProjectData(volunteerProjectdata);
           setVolunteerProjectError(null);
         }
       } catch (err) {
         setVolunteerProjectError(
           err instanceof Error ? err.message : "An unexpected error occurred"
         );
-        setVolunteerProjectdata(null);
+        setVolunteerProjectData(null);
       } finally {
         setVolunteerProjectIsLoading(false);
       }
@@ -90,7 +91,7 @@ export const useFetchVolunteerProjects = () => {
   }, []);
 
   return {
-    volunteerProjectdata,
+    volunteerProjectdata: volunteerProjectData,
     volunteerProjectError,
     volunteerProjectIsLoading,
   };
@@ -314,3 +315,35 @@ export const useFetchSkillMatchedProjects = () => {
     skillMatchedProjectIsLoading,
   };
 };
+
+//fetch project tied to volunteer in services for volunteer
+export const fetchProjectTiedToVolunteer = async (volunteerId: string) => {
+  const { data: linkedProjects, error: projectsError } = await supabase
+    .from("project_volunteers")
+    .select(
+      `
+              project_id,
+              created_at,
+              projects!project_volunteers_project_id_fkey (
+                id,
+                title,
+                status,
+                start_date,
+                end_date,
+                category,
+                volunteers_needed,
+                volunteers_registered,
+                organization_name
+              )
+            `
+    )
+    .eq("volunteer_id", volunteerId)
+    .order("created_at", { ascending: false });
+
+  if (projectsError) {
+    console.log("error getting project linked to volunteer", projectsError);
+    return;
+  }
+  return linkedProjects;
+};
+

@@ -121,11 +121,11 @@ const SuccessStoriesPage = () => {
                 <Users className="h-12 w-12 text-primary mx-auto mb-4" />
                 <h3 className="text-2xl font-bold mb-3">Join Our Community</h3>
                 <p className="text-muted-foreground mb-6 flex-1">
-                  Connect with like-minded changemakers and stay inspired.
+                  Connect with like-minded change makers and stay inspired.
                 </p>
                 <CardFooter className="mt-auto justify-center pt-0">
                   <Button variant="outline" asChild>
-                    <a href="/community">Join Now</a>
+                    <a href="/register-volunteer">Join Now</a>
                   </Button>
                 </CardFooter>
               </Card>
@@ -133,14 +133,14 @@ const SuccessStoriesPage = () => {
               <Card className="text-center p-8 bg-lime-50 flex flex-col h-full">
                 <BookOpen className="h-12 w-12 text-primary mx-auto mb-4" />
                 <h3 className="text-2xl font-bold mb-3">
-                  Explore More Stories
+                  Start Creating Projects
                 </h3>
                 <p className="text-muted-foreground mb-6 flex-1">
                   Dive deeper into impact stories on our blog.
                 </p>
                 <CardFooter className="mt-auto justify-center pt-0">
                   <Button variant="outline" asChild>
-                    <a href="/blog">Visit Blog</a>
+                    <a href="/register-agency">Start Now</a>
                   </Button>
                 </CardFooter>
               </Card>
@@ -166,13 +166,13 @@ const SuccessStoriesPage = () => {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Subscribe to Our Newsletter</DialogTitle>
+                <DialogTitle className="text-diaspora-blue mb-2">Subscribe to Our Newsletter</DialogTitle>
                 <DialogDescription>
                   Get the latest success stories, updates, and volunteer
                   opportunities delivered to your inbox.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
+              {/* <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -185,7 +185,9 @@ const SuccessStoriesPage = () => {
               </div>
               <DialogFooter>
                 <Button type="submit" className="action-btn">Subscribe</Button>
-              </DialogFooter>
+              </DialogFooter> */}
+
+              <h3 className="text-3xl font-bold text-center text-diaspora-blue p-4">Coming soon</h3>
             </DialogContent>
           </Dialog>
         </section>
