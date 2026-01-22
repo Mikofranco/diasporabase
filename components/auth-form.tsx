@@ -17,7 +17,7 @@ import {
 import Link from "next/link";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import SigninWithGoogleBtn from "./signinwithGoogleBtn";
+import { SignInWithGoogle } from "./loginWithGoogle";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -38,7 +38,7 @@ export default function LoginForm() {
   useEffect(() => {
     //@ts-ignore
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (event:any, session:any) => {
         if (event === "SIGNED_IN" && session?.user) {
           supabase
             .from("profiles")
@@ -160,6 +160,7 @@ export default function LoginForm() {
           <Link href="/forgot-password" className="text-sm text-right hover:text-diaspora-darkBlue">
             Forgot password ?
           </Link>{" "}
+          <SignInWithGoogle/>
           <Button
             type="submit"
             className="w-full bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
