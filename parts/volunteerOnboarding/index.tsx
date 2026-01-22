@@ -358,7 +358,7 @@ export function VolunteerOnboardingForm() {
             />
             {selectedLocations.selectedCountries.length === 0 && step === 3 && (
               <p className="text-red-500 text-sm mt-1">
-                Please select at least one country
+                Choose your volunteer area in Nigeria (LGA, state, or nationwide)
               </p>
             )}
           </div>
@@ -387,7 +387,7 @@ export function VolunteerOnboardingForm() {
             }
             className={cn(
               "min-w-[120px]",
-              "bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 text-white",
+              "action-btn",
             )}
           >
             {isLoading ? (

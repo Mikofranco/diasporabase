@@ -269,7 +269,9 @@ export default function VolunteerRegistrationForm() {
             Make a difference from anywhere in the world
           </CardDescription>
         </CardHeader>
-        <GoogleSignUpButton role="volunteer" />
+        <div className="flex items-center justify-center mb-2 p-2">
+          <GoogleSignUpButton role="volunteer" />
+        </div>
 
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-6">
