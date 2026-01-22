@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   checkIfAgencyIsActive,
+  getFirstTwoWordsShort,
   getUnreadNotificationCount,
   getUserId,
 } from "@/lib/utils";
@@ -133,7 +134,7 @@ export default function DashboardLayout({
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                      {profile.full_name}
+                      {getFirstTwoWordsShort(profile.full_name)}
                     </span>
                     <Avatar className="h-8 w-8">
                       <AvatarImage
@@ -141,7 +142,7 @@ export default function DashboardLayout({
                         alt={profile.full_name}
                       />
                       <AvatarFallback>
-                        {profile.full_name.charAt(0).toUpperCase()}
+                        {getFirstTwoWordsShort(profile.full_name.charAt(0).toUpperCase())}
                       </AvatarFallback>
                     </Avatar>
                   </div>
