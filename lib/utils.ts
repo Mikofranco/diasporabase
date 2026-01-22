@@ -553,3 +553,9 @@ export const getStatusColor = (status: string) => {
   }
 };
 
+export const getFirstTwoWordsShort = (text?: string | null) =>
+  (text?.trim().split(/\s+/) ?? []).slice(0, 2).join(" ");
+
+export const getFirstWordShort = (text?: string | null) =>
+  text?.trim().split(/\s+/, 1)[0] ?? "";
+

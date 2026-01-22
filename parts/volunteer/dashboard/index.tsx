@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import SmallCard, { SmallCardProps } from "./small-card";
 import RecentActivity from "./recent-activity";
 import MatchingProjects from "./matching-projects";
-import { getUserId } from "@/lib/utils";
+import { getFirstWordShort, getUserId } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -170,8 +170,8 @@ const VolunteerDashBoard = () => {
         <div className="mb-6 text-center sm:mb-8">
           <h1 className="mb-2 text-xl font-bold sm:text-2xl">
             Welcome Back{" "}
-            <span className="font-semibold text-gray-600">
-              {userInformation.name || "Volunteer"}
+            <span className="">
+              {getFirstWordShort(userInformation.name || "Volunteer")}
             </span>
           </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
