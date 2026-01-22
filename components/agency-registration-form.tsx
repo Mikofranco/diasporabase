@@ -34,6 +34,7 @@ import { z } from "zod";
 import { useSendMail } from "@/services/mail";
 import { welcomeHtmlAgency } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
+import { GoogleSignUpButton } from "./signinwithGoogleBtn";
 
 const formSchema = z
   .object({
@@ -71,8 +72,12 @@ export default function AgencyRegistrationForm() {
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const [touched, setTouched] = useState<Partial<Record<keyof FormData, boolean>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>(
+    {},
+  );
+  const [touched, setTouched] = useState<
+    Partial<Record<keyof FormData, boolean>>
+  >({});
 
   // Modal & Resend
   const [modalOpen, setModalOpen] = useState(false);
@@ -166,7 +171,7 @@ export default function AgencyRegistrationForm() {
           email: user.email!,
           purpose: "email_confirmation",
         },
-        "24h" // ← Now 24 hours
+        "24h", // ← Now 24 hours
       );
 
       const confirmationUrl = `${origin}/confirm?token=${token}`;
@@ -220,7 +225,10 @@ export default function AgencyRegistrationForm() {
       await useSendMail({
         to: pendingConfirmation.email,
         subject: "Confirm Your DiasporaBase Agency Account (Resent)",
-        html: welcomeHtmlAgency(pendingConfirmation.companyName, pendingConfirmation.confirmationUrl),
+        html: welcomeHtmlAgency(
+          pendingConfirmation.companyName,
+          pendingConfirmation.confirmationUrl,
+        ),
       });
 
       // Optional: mark as resent
@@ -261,9 +269,13 @@ export default function AgencyRegistrationForm() {
             Register Your Agency
           </CardTitle>
           <CardDescription className="text-sm sm:text-base mt-3 max-w-md mx-auto">
-            Connect with skilled diaspora volunteers to power your development projects
+            Connect with skilled diaspora volunteers to power your development
+            projects
           </CardDescription>
         </CardHeader>
+        <div className="flex items-center justify-center mb-2 p-2">
+          <GoogleSignUpButton role="agency" />
+        </div>
 
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -337,14 +349,20 @@ export default function AgencyRegistrationForm() {
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     disabled={loading}
-                    className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+                    className={
+                      errors.password ? "border-red-500 pr-10" : "pr-10"
+                    }
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
                 {errors.password && (
@@ -361,7 +379,9 @@ export default function AgencyRegistrationForm() {
                   id="confirmPassword"
                   type={showPassword ? "text" : "password"}
                   value={formData.confirmPassword}
-                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("confirmPassword", e.target.value)
+                  }
                   disabled={loading}
                   className={errors.confirmPassword ? "border-red-500" : ""}
                 />
@@ -392,7 +412,10 @@ export default function AgencyRegistrationForm() {
 
           <p className="text-center text-sm text-muted-foreground pt-4">
             Already have an agency account?{" "}
-            <Link href="/login" className="font-semibold text-[#0ea5e9] hover:underline">
+            <Link
+              href="/login"
+              className="font-semibold text-[#0ea5e9] hover:underline"
+            >
               Sign in
             </Link>
           </p>
