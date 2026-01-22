@@ -33,6 +33,7 @@ import { z } from "zod";
 import { useSendMail } from "@/services/mail";
 import { welcomeHtml } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
+import { GoogleSignUpButton } from "./signinwithGoogleBtn";
 
 const formSchema = z
   .object({
@@ -67,8 +68,12 @@ export default function VolunteerRegistrationForm() {
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const [touched, setTouched] = useState<Partial<Record<keyof FormData, boolean>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>(
+    {},
+  );
+  const [touched, setTouched] = useState<
+    Partial<Record<keyof FormData, boolean>>
+  >({});
 
   // Modal & Resend state
   const [modalOpen, setModalOpen] = useState(false);
@@ -165,7 +170,7 @@ export default function VolunteerRegistrationForm() {
           email: user.email!,
           purpose: "email_confirmation",
         },
-        "24h" // ← Now 24 hours
+        "24h", // ← Now 24 hours
       );
 
       const confirmationUrl = `${origin}/confirm?token=${token}`;
@@ -218,7 +223,10 @@ export default function VolunteerRegistrationForm() {
       await useSendMail({
         to: pendingConfirmation.email,
         subject: "Confirm your DiasporaBase account (Resent)",
-        html: welcomeHtml(pendingConfirmation.firstName, pendingConfirmation.confirmationUrl),
+        html: welcomeHtml(
+          pendingConfirmation.firstName,
+          pendingConfirmation.confirmationUrl,
+        ),
       });
 
       // Optional: mark as resent in DB
@@ -261,6 +269,7 @@ export default function VolunteerRegistrationForm() {
             Make a difference from anywhere in the world
           </CardDescription>
         </CardHeader>
+        <GoogleSignUpButton role="volunteer" />
 
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -327,14 +336,20 @@ export default function VolunteerRegistrationForm() {
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     disabled={loading}
-                    className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+                    className={
+                      errors.password ? "border-red-500 pr-10" : "pr-10"
+                    }
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
                 {errors.password && (
@@ -350,7 +365,9 @@ export default function VolunteerRegistrationForm() {
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={formData.confirmPassword}
-                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("confirmPassword", e.target.value)
+                  }
                   disabled={loading}
                   className={errors.confirmPassword ? "border-red-500" : ""}
                 />
