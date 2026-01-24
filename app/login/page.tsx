@@ -43,9 +43,9 @@ function LoginContent() {
 export default function LoginPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <div className="none sm:absolute top-20 left-10">
+      {/* <div className="none sm:absolute top-20 left-10">
         <BackButton className="text-diaspora-blue border-diaspora-blue " label="Home" fallbackHref="/"/>
-      </div>
+      </div> */}
       <LoginContent />
     </Suspense>
   );
