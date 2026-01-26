@@ -29,19 +29,24 @@ export function GoogleSignUpButton({
     if (disabled || loading) return;
 
     setLoading(true);
+    const successUrl =
+      role === "agency"
+        ? `${window.location.origin}/auth/success/agency`
+        : `${window.location.origin}/auth/success`;
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: successUrl,
           queryParams: {
+            // Optional: helps you distinguish signup vs login in callback
             mode: "signup",
-            role, // Pass role as query param → handled in callback
+            // Will be available in the /auth/success route via URL search params
+            role,
           },
         },
       });
-
       if (error) throw error;
     } catch (err: any) {
       toast.error(err.message || "Google sign up failed");
@@ -57,16 +62,16 @@ export function GoogleSignUpButton({
       variant="outline"
       className={cn(
         "w-fit flex items-center justify-center gap-3 py-6 text-base font-medium border-2 bg-slate-100 text-diaspora-blue hover:bg-white hover:text-primary",
-        className
+        className,
       )}
     >
       {loading ? (
         <Loader2 className="h-5 w-5 animate-spin" />
       ) : (
         <FcGoogle className="h-6 w-6" />
-        
       )}
-      {children || `Sign up with Google as ${role.charAt(0).toUpperCase() + role.slice(1)}`}
+      {children ||
+        `Sign up with Google as ${role.charAt(0).toUpperCase() + role.slice(1)}`}
     </Button>
   );
 }
