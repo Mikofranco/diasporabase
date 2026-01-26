@@ -55,7 +55,7 @@ export default function LoginForm() {
                 setLoading(false);
                 return;
               }
-              toast.success("Logged in successfully!");
+              // toast.success("Logged in successfully!");
               localStorage.setItem("diaspobase_role", profile.role);
               localStorage.setItem("diaspobase_userId", session.user.id);
               router.replace(`/dashboard/${profile.role}`);
@@ -99,7 +99,7 @@ export default function LoginForm() {
     );
 
     if (signInError) {
-      toast.error(signInError.message);
+      // toast.error(signInError.message);
       setMessage({ text: signInError.message, isError: true });
       setLoading(false);
       return;
