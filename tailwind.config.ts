@@ -66,8 +66,8 @@ const config: Config = {
 
         // Focus ring / selected outline color
         accent: {
-          DEFAULT: "#0284c7", // sky-600 — used for focus rings
-          foreground: "#ffffff",
+          DEFAULT: "#f2f2f2", // sky-600 — used for focus rings
+          foreground: "#000000",
         },
 
         // Checkbox specific (checked state)

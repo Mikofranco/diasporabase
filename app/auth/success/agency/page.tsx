@@ -30,6 +30,7 @@ export default function AuthSuccessAgency() {
             // Optional: carry over any Google metadata if useful
             full_name: getFirstTwoWordsShort(user.user_metadata?.full_name) ?? null,
             profile_picture: user.user_metadata?.avatar_url ?? null,
+            is_active: false,
           })
           .eq("id", userId);
 
