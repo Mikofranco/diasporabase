@@ -459,7 +459,7 @@ export default function VolunteerRegistrationForm() {
               onClick={handleResend}
               disabled={resendLoading || !canResend}
               variant="outline"
-              className="w-fit border-1 border-[#0000] "
+              className="w-fit "
             >
               {resendLoading ? (
                 <>

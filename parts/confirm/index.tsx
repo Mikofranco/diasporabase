@@ -3,12 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Loader2,
@@ -45,8 +40,9 @@ export default function ConfirmEmailPage() {
 
   const verifyToken = async (token: string) => {
     try {
-      const { data, error } = await supabase
-        .rpc("verify_confirmation_token", { p_token: token });
+      const { data, error } = await supabase.rpc("verify_confirmation_token", {
+        p_token: token,
+      });
 
       if (error) {
         console.error("RPC Error:", error);
@@ -55,6 +51,8 @@ export default function ConfirmEmailPage() {
         toast.error("Verification failed.");
         return;
       }
+
+      console.log("RPC Data:", data);
 
       if (!data?.valid) {
         const msg = data?.message || "invalid_token";
@@ -108,7 +106,7 @@ export default function ConfirmEmailPage() {
         if (role === "agency") redirectPath = "/onboarding";
         else if (role === "volunteer") redirectPath = "/dashboard/volunteer";
 
-        toast.success("Welcome back! Redirecting to your dashboard...");
+        // toast.success("Welcome back! Redirecting to your dashboard...");
         setTimeout(() => router.push(redirectPath), 3000);
       } else {
         // Wrong user logged in → silently sign out
@@ -121,7 +119,7 @@ export default function ConfirmEmailPage() {
       console.error("Unexpected error:", err);
       setStatus("error");
       setMessage("An unexpected error occurred.");
-      toast.error("Could not verify email.");
+      // toast.error("Could not verify email.");
     }
   };
 
@@ -144,7 +142,8 @@ export default function ConfirmEmailPage() {
 
   const getTitle = () => {
     if (status === "success") {
-      if (currentUserId && currentUserId === tokenUserId) return "Welcome Back!";
+      if (currentUserId && currentUserId === tokenUserId)
+        return "Welcome Back!";
       return "Email Verified Successfully!";
     }
     if (status === "used") return "Already Confirmed";
@@ -167,11 +166,21 @@ export default function ConfirmEmailPage() {
         </div>
 
         {/* Auto-redirect only when correct user is logged in */}
-        {status === "success" && currentUserId && currentUserId === tokenUserId && (
-          <p className="text-sm text-muted-foreground mt-4">
-            Redirecting you to your dashboard in 3 seconds...
-          </p>
-        )}
+        {status === "success" &&
+          currentUserId &&
+          currentUserId === tokenUserId && (
+            <>
+              <p className="text-sm text-muted-foreground mt-4">
+                Redirecting you to your dashboard in 3 seconds...
+              </p>
+              <Button
+                onClick={() => router.push("/dashboard")}
+                className="mt-6 action-btn"
+              >
+                Click to proceed.
+              </Button>
+            </>
+          )}
 
         {/* Show login button when needed (not logged in OR silently logged out) */}
         {status === "success" && showLoginButton && (
@@ -191,7 +200,9 @@ export default function ConfirmEmailPage() {
         )}
 
         {/* Invalid / Expired / Used */}
-        {(status === "invalid" || status === "expired" || status === "used") && (
+        {(status === "invalid" ||
+          status === "expired" ||
+          status === "used") && (
           <div className="space-y-4 mt-6 w-full max-w-xs">
             {status === "expired" && (
               <p className="text-sm text-muted-foreground">

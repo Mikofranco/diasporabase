@@ -406,12 +406,12 @@ const AgencyOnboarding: React.FC = () => {
             }
           : null
       );
-      toast.success("Onboarding completed successfully!");
+      // toast.success("Onboarding completed successfully!");
       router.push("/dashboard/agency");
     } catch (err: any) {
       setIsCompleting(false);
       setError(err.message);
-      toast.error(err.message);
+      // toast.error(err.message);
     }
   };
 
@@ -746,7 +746,7 @@ const AgencyOnboarding: React.FC = () => {
                       <FormControl>
                         <Input
                           value={locationDisplay}
-                          disabled
+                          // disabled
                           className="border-gray-300 bg-gray-100 rounded-lg"
                           placeholder="Location not available"
                         />

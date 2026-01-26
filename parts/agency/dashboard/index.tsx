@@ -25,7 +25,7 @@ const AgencyDashboard = () => {
   // Fetch projects by status
   const fetchProjects = async (
     orgId: string,
-    status: string
+    status: string,
   ): Promise<Project[]> => {
     const { data, error } = await supabase
       .from("projects")
@@ -39,42 +39,46 @@ const AgencyDashboard = () => {
     return (data as Project[]) ?? [];
   };
 
-async function getTotalVolunteersForOrganization(organizationId: string): Promise<number> {
-  if (!organizationId) return 0;
+  async function getTotalVolunteersForOrganization(
+    organizationId: string,
+  ): Promise<number> {
+    if (!organizationId) return 0;
 
-  try {
-    // First get all project IDs for this organization
-    const { data: projects, error: projError } = await supabase
-      .from("projects")
-      .select("id")
-      .eq("organization_id", organizationId)
-      // Optional: only active/completed projects
-      .in("status", ["active", "completed"]);
+    try {
+      // First get all project IDs for this organization
+      const { data: projects, error: projError } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("organization_id", organizationId)
+        // Optional: only active/completed projects
+        .in("status", ["active", "completed"]);
 
-    if (projError || !projects || projects.length === 0) {
+      if (projError || !projects || projects.length === 0) {
+        return 0;
+      }
+      //@ts-ignore
+      const projectIds = projects.map((p) => p.id);
+      console.log("Project IDs for organization:", projectIds);
+
+      // Now call the Supabase function
+      const { data, error } = await supabase.rpc(
+        "get_total_volunteers_for_projects",
+        {
+          project_ids: projectIds,
+        },
+      );
+
+      if (error) {
+        console.error("Error calling RPC:", error);
+        return 0;
+      }
+
+      return data ?? 0;
+    } catch (err) {
+      console.error("Unexpected error:", err);
       return 0;
     }
-    //@ts-ignore
-    const projectIds = projects.map(p=> p.id);
-    console.log("Project IDs for organization:", projectIds);
-
-    // Now call the Supabase function
-    const { data, error } = await supabase
-      .rpc("get_total_volunteers_for_projects", {
-        project_ids: projectIds
-      });
-
-    if (error) {
-      console.error("Error calling RPC:", error);
-      return 0;
-    }
-
-    return data ?? 0;
-  } catch (err) {
-    console.error("Unexpected error:", err);
-    return 0;
   }
-}
   // Fetch all projects – now takes userId as parameter
   const fetchAllProjects = async (orgId: string) => {
     if (!orgId) return;
@@ -115,7 +119,7 @@ async function getTotalVolunteersForOrganization(organizationId: string): Promis
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("is_active")
+          .select("is_active, tax_id")
           .eq("id", currentUserId)
           .single();
 
@@ -127,6 +131,11 @@ async function getTotalVolunteersForOrganization(organizationId: string): Promis
 
         setUserId(currentUserId);
         setIsActive(profile.is_active);
+
+        if (!profile.tax_id) {
+          router.replace("/onboarding/agency");
+          return;
+        }
 
         if (!profile.is_active) {
           toast.error("Your agency is pending approval.");
@@ -141,7 +150,7 @@ async function getTotalVolunteersForOrganization(organizationId: string): Promis
         toast.error(
           error instanceof Error
             ? error.message
-            : "An unexpected error occurred"
+            : "An unexpected error occurred",
         );
         setIsActive(false); // Or handle appropriately
       }

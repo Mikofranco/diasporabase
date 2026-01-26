@@ -80,7 +80,7 @@ export default function AgencyRegistrationForm() {
   >({});
 
   // Modal & Resend
-  const [modalOpen, setModalOpen] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [canResend, setCanResend] = useState(true);
   const [resendCountdown, setResendCountdown] = useState(0);
@@ -436,7 +436,7 @@ export default function AgencyRegistrationForm() {
 
       {/* Success Modal with Resend */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen} >
-        <DialogContent className="sm:max-w-md  bg-">
+        <DialogContent className="sm:max-w-md ">
           <DialogHeader className="text-center">
             <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
               <Mail className="h-10 w-10 text-green-600" />
