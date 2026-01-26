@@ -114,7 +114,7 @@ export default function VolunteerRegistrationForm() {
       () => {
         setModalOpen(false);
       },
-      3 * 60 * 1000,
+      1 * 60 * 1000,
     );
 
     return () => clearTimeout(timer);
@@ -214,7 +214,7 @@ export default function VolunteerRegistrationForm() {
         confirmationUrl,
       });
 
-      toast.success("Account created! Please check your email to confirm.");
+      // toast.success("Account created! Please check your email to confirm.");
       setModalOpen(true);
       resetForm();
       localStorage.setItem("diasporabase-email", formData.email);
@@ -273,7 +273,7 @@ export default function VolunteerRegistrationForm() {
 
   return (
     <>
-      <Card className="w-full max-w-2xl mx-auto shadow-xl border-0 ">
+      <Card className={`w-full max-w-2xl mx-auto shadow-xl border-0 ${modalOpen ? "blur-sm" : ""}`}>
         <CardHeader className="text-center pb-8">
           <CardTitle className="text-3xl font-bold text-[#1E293B]">
             Join as a Volunteer
@@ -440,12 +440,12 @@ export default function VolunteerRegistrationForm() {
       {/* Success Modal with Resend */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader className="text-center">
+          <DialogHeader className="">
             <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
               <Mail className="h-10 w-10 text-green-600" />
             </div>
-            <DialogTitle className="text-2xl">Check Your Email</DialogTitle>
-            <DialogDescription className="text-base mt-3">
+            <DialogTitle className="text-2xl text-center">Check Your Email</DialogTitle>
+            <DialogDescription className="text-base mt-3 text-center">
               We sent a confirmation link to
               <br />
               <strong className="text-foreground break-all">
@@ -454,12 +454,12 @@ export default function VolunteerRegistrationForm() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-6 space-y-3 justify-center flex flex-col items-center">
             <Button
               onClick={handleResend}
               disabled={resendLoading || !canResend}
               variant="outline"
-              className="w-full"
+              className="w-fit border-1 border-[#0000] "
             >
               {resendLoading ? (
                 <>

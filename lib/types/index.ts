@@ -51,6 +51,10 @@ export interface Notification {
   isRead?: boolean;
   createdAt?: string;
   relatedId?: string;
+  is_read?: boolean;
+  created_at?: string;
+  status?: string;
+  related_id?: string;
 }
 
 export interface Profile {

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getUserId } from '@/lib/utils';
 import { supabase } from '@/lib/supabase/client';
 import { number } from 'framer-motion';
+import { Notification } from '@/lib/types';
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState([]);
@@ -45,7 +46,7 @@ export default function Notifications() {
       }
 
       setNotifications(data);
-      const unread = data.filter((n) => !n.is_read).length;
+      const unread = data.filter((n:any) => !n.is_read).length;
       setUnreadCount(unread);
       localStorage.setItem('unreadNotifications', unread);
     };
@@ -91,7 +92,7 @@ export default function Notifications() {
     }
     //@ts-ignore
     setNotifications((prev) =>
-      prev.map((n) =>
+      prev.map((n:any) =>
         n.id === notificationId ? { ...n, is_read: true } : n
       )
     );
@@ -103,7 +104,7 @@ export default function Notifications() {
   };
 
   // Handle volunteer request response
-  const handleVolunteerResponse = async (requestId, status, projectId) => {
+  const handleVolunteerResponse = async (requestId:string, status:string, projectId:string) => {
     const { error } = await supabase
       .from('volunteer_requests')
       .update({ status })
@@ -148,7 +149,7 @@ export default function Notifications() {
         <p>No notifications.</p>
       ) : (
         <ul className="space-y-4">
-          {notifications.map((notification) => (
+          {notifications.map((notification: Notification) => (
             <li
               key={notification.id}
               className={`p-4 border rounded-lg ${

@@ -35,7 +35,6 @@ import { useSendMail } from "@/services/mail";
 import { welcomeHtmlAgency } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
 import { GoogleSignUpButton } from "./signinwithGoogleBtn";
-import Logo from "./logo";
 
 const formSchema = z
   .object({
@@ -81,7 +80,7 @@ export default function AgencyRegistrationForm() {
   >({});
 
   // Modal & Resend
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(true);
   const [resendLoading, setResendLoading] = useState(false);
   const [canResend, setCanResend] = useState(true);
   const [resendCountdown, setResendCountdown] = useState(0);
@@ -111,6 +110,18 @@ export default function AgencyRegistrationForm() {
       setErrors({});
     }
   }, [formData, touched]);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const timer = setTimeout(
+      () => {
+        setModalOpen(false);
+      },
+      1 * 60 * 1000,
+    );
+
+    return () => clearTimeout(timer);
+  }, [modalOpen]);
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -203,7 +214,7 @@ export default function AgencyRegistrationForm() {
         confirmationUrl,
       });
 
-      toast.success("Agency registered! Please check your email to confirm.");
+      // toast.success("Agency registered! Please check your email to confirm.");
       setModalOpen(true);
       resetForm();
       localStorage.setItem("diasporabase-email", formData.email);
@@ -239,7 +250,7 @@ export default function AgencyRegistrationForm() {
         .update({ is_resent: true })
         .eq("token_hash", token);
 
-      toast.success("Confirmation email resent successfully!");
+      // toast.success("Confirmation email resent successfully!");
 
       // 30-second cooldown
       setResendCountdown(30);
@@ -263,7 +274,7 @@ export default function AgencyRegistrationForm() {
 
   return (
     <>
-      <Card className="w-full max-w-2xl mx-auto shadow-xl border-0 ">
+      <Card className={`w-full max-w-2xl mx-auto shadow-xl border-0 ${modalOpen ? "blur-sm" : ""}`}>
         <CardHeader className="text-center pb-8">
           <CardTitle className="text-xl sm:text-3xl font-bold text-[#1E293B] flex items-center justify-center gap-3">
             <Building2 className="h-10 w-10  text-primary" />
@@ -424,14 +435,14 @@ export default function AgencyRegistrationForm() {
       </Card>
 
       {/* Success Modal with Resend */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={modalOpen} onOpenChange={setModalOpen} >
+        <DialogContent className="sm:max-w-md  bg-">
           <DialogHeader className="text-center">
             <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
               <Mail className="h-10 w-10 text-green-600" />
             </div>
-            <DialogTitle className="text-2xl">Check Your Email</DialogTitle>
-            <DialogDescription className="text-base mt-3">
+            <DialogTitle className="text-2xl text-center">Check Your Email</DialogTitle>
+            <DialogDescription className="text-base mt-3 text-center">
               A confirmation link has been sent to
               <br />
               <strong className="text-foreground break-all">
@@ -440,12 +451,12 @@ export default function AgencyRegistrationForm() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-6 space-y-3 justify-center flex flex-col items-center">
             <Button
               onClick={handleResend}
               disabled={resendLoading || !canResend}
               variant="outline"
-              className="w-full"
+              className="w-fit"
             >
               {resendLoading ? (
                 <>

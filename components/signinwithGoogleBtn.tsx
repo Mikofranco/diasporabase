@@ -68,7 +68,7 @@ export function GoogleSignUpButton({
       {loading ? (
         <Loader2 className="h-5 w-5 animate-spin" />
       ) : (
-        <FcGoogle className="h-6 w-6" />
+        <FcGoogle className="h-4 w-4" />
       )}
       {children ||
         `Sign up with Google as ${role.charAt(0).toUpperCase() + role.slice(1)}`}
