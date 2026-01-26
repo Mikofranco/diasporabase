@@ -9,9 +9,9 @@ export default function Layout({
 }) {
   return (
     <div>
-      <NavBar />
+      {/* <NavBar /> */}
       {children}
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

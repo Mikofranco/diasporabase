@@ -9,9 +9,9 @@ export default function LoginLayout({
 }) {
   return (
     <div>
-      <NavBar />
+      {/* <NavBar /> */}
       {children}
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

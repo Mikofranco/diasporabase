@@ -1,13 +1,15 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import AuthForm from "@/components/auth-form";
 import BackButton from "@/components/back-button";
+import Logo from "@/components/logo";
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  const route = useRouter();
 
   const getErrorMessage = (error: string) => {
     switch (error) {
@@ -34,6 +36,10 @@ function LoginContent() {
             {getErrorMessage(error)}
           </div>
         )}
+        <div onClick={() => route.push("/")} className="cursor-pointer">
+          <Logo />
+        </div>
+
         <AuthForm />
       </div>
     </div>
