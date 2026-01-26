@@ -794,11 +794,11 @@ export default function VolunteerProfile() {
                   htmlFor="experience"
                   className="text-base font-medium text-gray-800"
                 >
-                  Previous Volunteer Experience
+                  Work experience (summary)
                 </Label>
                 <Textarea
                   id="experience"
-                  placeholder="Tell us about your previous volunteer experience..."
+                  placeholder="Tell us about your previous experience..."
                   value={profile.experience || ""}
                   onChange={(e) =>
                     handleInputChange("experience", e.target.value)

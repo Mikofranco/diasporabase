@@ -34,6 +34,7 @@ import { useSendMail } from "@/services/mail";
 import { welcomeHtml } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
 import { GoogleSignUpButton } from "./signinwithGoogleBtn";
+import Logo from "./logo";
 
 const formSchema = z
   .object({
@@ -106,6 +107,18 @@ export default function VolunteerRegistrationForm() {
       setErrors({});
     }
   }, [formData, touched]);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const timer = setTimeout(
+      () => {
+        setModalOpen(false);
+      },
+      3 * 60 * 1000,
+    );
+
+    return () => clearTimeout(timer);
+  }, [modalOpen]);
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -260,7 +273,7 @@ export default function VolunteerRegistrationForm() {
 
   return (
     <>
-      <Card className="w-full max-w-2xl mx-auto shadow-xl border-0 my-20">
+      <Card className="w-full max-w-2xl mx-auto shadow-xl border-0 ">
         <CardHeader className="text-center pb-8">
           <CardTitle className="text-3xl font-bold text-[#1E293B]">
             Join as a Volunteer
