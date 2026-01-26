@@ -61,7 +61,7 @@ export function GoogleSignUpButton({
       disabled={disabled || loading}
       variant="outline"
       className={cn(
-        "w-fit flex items-center justify-center gap-3 py-6 text-base font-medium border-2 bg-slate-100 text-diaspora-blue hover:bg-white hover:text-primary",
+        "w-fit flex items-center justify-center gap-3 font-medium border-2 bg-slate-100 text-diaspora-blue hover:bg-white hover:text-primary",
         className,
       )}
     >

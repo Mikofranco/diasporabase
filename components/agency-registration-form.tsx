@@ -35,6 +35,7 @@ import { useSendMail } from "@/services/mail";
 import { welcomeHtmlAgency } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
 import { GoogleSignUpButton } from "./signinwithGoogleBtn";
+import Logo from "./logo";
 
 const formSchema = z
   .object({
@@ -262,7 +263,7 @@ export default function AgencyRegistrationForm() {
 
   return (
     <>
-      <Card className="w-full max-w-2xl mx-auto shadow-xl border-0 my-20">
+      <Card className="w-full max-w-2xl mx-auto shadow-xl border-0 ">
         <CardHeader className="text-center pb-8">
           <CardTitle className="text-xl sm:text-3xl font-bold text-[#1E293B] flex items-center justify-center gap-3">
             <Building2 className="h-10 w-10  text-primary" />

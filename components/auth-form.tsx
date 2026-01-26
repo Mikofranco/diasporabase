@@ -183,7 +183,7 @@ export default function LoginForm() {
               {message.text}
             </p>
           )}
-          <div className="mt-4 text-xs">
+          <div className="mt-4 text-xs text-center">
             Don&apos;t have an account? <br />
             <Link href="/register-volunteer" className="underline">
               Register as Volunteer
