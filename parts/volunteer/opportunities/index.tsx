@@ -223,7 +223,7 @@ const Opportunities: React.FC = () => {
                 <CardTitle className="text-xl text-gray-900">{project.title}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-gray-600 line-clamp-3">{project.description}</p>
+                <p className="text-gray-600 line-clamp-3 h-10">{project.description}</p>
                 <p className="text-sm text-gray-500">
                   <Briefcase className="inline h-4 w-4 mr-1" />
                   {project.organization_name}

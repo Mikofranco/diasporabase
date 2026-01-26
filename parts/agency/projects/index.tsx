@@ -4,7 +4,14 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // For navigation
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Calendar, Plus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CreateProjectForm from "../create-project";
@@ -51,7 +58,8 @@ const OrganizationsProjects: React.FC = () => {
           .eq("id", userId)
           .single();
 
-        if (profileError) throw new Error("Error fetching profile: " + profileError.message);
+        if (profileError)
+          throw new Error("Error fetching profile: " + profileError.message);
         if (profile.role !== "organization" && profile.role !== "agency") {
           throw new Error("Only organizations or agencies can view projects.");
         }
@@ -62,7 +70,8 @@ const OrganizationsProjects: React.FC = () => {
           .eq("organization_id", userId)
           .order("created_at", { ascending: false });
 
-        if (projectsError) throw new Error("Error fetching projects: " + projectsError.message);
+        if (projectsError)
+          throw new Error("Error fetching projects: " + projectsError.message);
         setProjects(projectsData || []);
       } catch (err: any) {
         setError(err.message);
@@ -93,36 +102,52 @@ const OrganizationsProjects: React.FC = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold mb-4">My Organization&apos;s Projects</h1>
+      <h1 className="text-2xl font-bold mb-4">
+        My Organization&apos;s Projects
+      </h1>
 
       <Button
         onClick={handleCreateProjectClick}
         variant={"outline"}
         // className="mb-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-      > <Plus className="mr-2 h-4 w-4" />
+      >
+        {" "}
+        <Plus className="mr-2 h-4 w-4" />
         Create Project
       </Button>
 
-      {showCreateForm && (//@ts-ignore
-        <CreateProjectForm onClose={handleFormClose} onProjectCreated={handleProjectCreated} />
+      {showCreateForm && ( //@ts-ignore
+        <CreateProjectForm
+          onClose={handleFormClose}
+          onProjectCreated={handleProjectCreated}
+        />
       )}
 
       {loading && <p className="text-gray-500">Loading projects...</p>}
-      {error && <p className="text-red-500 bg-red-100 p-3 rounded-md">{error}</p>}
+      {error && (
+        <p className="text-red-500 bg-red-100 p-3 rounded-md">{error}</p>
+      )}
       {!loading && !error && projects.length === 0 && (
-        <p className="text-gray-600">No projects found. Create one to get started!</p>
+        <p className="text-gray-600">
+          No projects found. Create one to get started!
+        </p>
       )}
 
       {!loading && !error && projects.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Card key={project.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+            <Card
+              key={project.id}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+            >
               <CardHeader>
                 <CardTitle className="text-lg">{project.title}</CardTitle>
                 <CardDescription>{project.organization_name}</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{project.description}</p>
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+                  {project.description}
+                </p>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
@@ -134,17 +159,20 @@ const OrganizationsProjects: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     <span>
-                      {project.volunteers_registered}/{project.volunteers_needed} volunteers
+                      {project.volunteers_registered}/
+                      {project.volunteers_needed} volunteers
                     </span>
                   </div>
                   <Badge variant="secondary">{project.category}</Badge>
                 </div>
-                <Button
-                  className="w-full mt-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
-                  onClick={() => handleProjectSelect(project)}
-                >
-                  View Details
-                </Button>
+                <CardFooter>
+                  <Button
+                    className="w-full mt-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
+                    onClick={() => handleProjectSelect(project)}
+                  >
+                    View Details
+                  </Button>
+                </CardFooter>
               </CardContent>
             </Card>
           ))}
