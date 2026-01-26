@@ -59,8 +59,12 @@ const ApprovalPending = () => {
   }, []);
 
   const handleGoHome = () => {
+    handleLogout();
     router.push("/");
   };
+   const handleLogout = async () => {
+      const { error } = await supabase.auth.signOut();
+    };
 
   return (
     <div className="min-h-screen bg-[#F0F9FF] flex flex-col space-y-8 px-4 py-8">
@@ -181,14 +185,11 @@ const ApprovalPending = () => {
           className="w-full bg-[#0C4A6E] hover:bg-[#0A3A5A] text-white font-medium"
           aria-label="Go to home page"
         >
-          Go to Home
+         Home
         </Button>
       </div>
 
-      {/* Footer with spacing */}
-      <div className="mt-auto">
-        <Footer />
-      </div>
+    
     </div>
   );
 };

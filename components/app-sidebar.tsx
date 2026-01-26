@@ -295,7 +295,7 @@ export function AppSidebar() {
           {loading ? (
             <SidebarGroup>
               <SidebarGroupLabel className="text-sm text-gray-900 dark:text-gray-100">
-                Loading...
+              
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
