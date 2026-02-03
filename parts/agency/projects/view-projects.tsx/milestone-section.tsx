@@ -82,6 +82,7 @@ export function MilestonesSection({
 
   // Dialog states
   const [editMilestone, setEditMilestone] = useState<Milestone | null>(null);
+  const [createMilestone, setCreateMilestone] = useState<Milestone | null>(null);
   const [editDeliverable, setEditDeliverable] = useState<Deliverable | null>(
     null
   );
@@ -265,14 +266,15 @@ export function MilestonesSection({
           </p>
           {canEdit && (
             <Button
-              onClick={() =>
-                setEditMilestone({
+              onClick={() => {
+                console.log("Add button clicked → setting createMilestone");
+                setCreateMilestone({
                   title: "",
                   description: "",
                   due_date: "",
                   status: "Pending",
                   deliverables: [],
-                })
+                })}
               }
               className="text-diaspora-darkBlue border-diaspora-darkBlue mt-5"
               variant={"outline"}
@@ -310,7 +312,7 @@ export function MilestonesSection({
         )}
       </div>
 
-      {milestones.map((milestone) => (
+      {milestones.map((milestone: Milestone) => (
         <Card
           key={milestone.id}
           className="shadow-lg hover:shadow-xl transition-shadow"
@@ -440,6 +442,96 @@ export function MilestonesSection({
           </CardContent>
         </Card>
       ))}
+
+      {/* create Milestone Dialog */}
+      <Dialog
+        open={!!createMilestone}
+        onOpenChange={() => setCreateMilestone(null)}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {createMilestone?.id ? "Edit" : "Add"} Milestone
+            </DialogTitle>
+          </DialogHeader>
+          {createMilestone && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Title</Label>
+                <Input
+                  value={createMilestone.title}
+                  onChange={(e) =>
+                    setCreateMilestone({
+                      ...createMilestone,
+                      title: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description (optional)</Label>
+                <Textarea
+                  value={createMilestone.description || ""}
+                  onChange={(e) =>
+                    setCreateMilestone({
+                      ...createMilestone,
+                      description: e.target.value,
+                    })
+                  }
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Due Date</Label>
+                <Input
+                  type="date"
+                  value={createMilestone.due_date}
+                  onChange={(e) =>
+                    setCreateMilestone({
+                      ...createMilestone,
+                      due_date: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={createMilestone.status}
+                  onValueChange={(v) =>
+                    setCreateMilestone({ ...createMilestone, status: v as any })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="Done">Done</SelectItem>
+                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateMilestone(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={saveMilestone}
+              disabled={saving}
+              className="action-btn"
+            >
+              {saving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Save Milestone
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Milestone Dialog */}
       <Dialog

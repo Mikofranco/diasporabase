@@ -282,7 +282,7 @@ export default function SkillsetManagementPage() {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Manage Skillsets</h1>
-        <Button onClick={() => handleAdd()} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={() => handleAdd()} className="action-btn">
           Add New Skillset
         </Button>
       </div>

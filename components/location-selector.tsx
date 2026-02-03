@@ -272,13 +272,13 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
                   <div className="flex items-center py-2 px-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <Checkbox
                       id={`country-${countryKey}`}
-                      className="h-4 w-4 mr-3 border-gray-300 text-blue-600 focus:ring-blue-500 data-[state-checked]:bg-diaspora-blue"
+                      className="h-4 w-4 mr-3 border-gray-300 text-diaspora-blue focus:ring-diaspora-blue data-[state-checked]:bg-diaspora-blue"
                       checked={selected[countryKey]?.checked || false}
                       onCheckedChange={() => handleCheckboxChange("country", countryKey)}
                     />
                     <button
                       type="button"
-                      className="flex items-center flex-1 text-base font-medium text-gray-800 hover:text-blue-600 transition-colors"
+                      className="flex items-center flex-1 text-base font-medium text-gray-800 hover:text-diaspora-blue transition-colors"
                       onClick={() => toggleExpand(countryKey)}
                     >
                       {isCountryExpanded ? (
@@ -301,7 +301,7 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
                             <div className="flex items-center py-1.5 px-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                               <Checkbox
                                 id={`state-${countryKey}-${stateKey}`}
-                                className="h-4 w-4 mr-3 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 mr-3 border-gray-300 text-diaspora-blue focus:ring-diaspora-blue"
                                 checked={selected[countryKey]?.states?.[stateKey]?.checked || false}
                                 onCheckedChange={() =>
                                   handleCheckboxChange("state", countryKey, stateKey)
@@ -309,7 +309,7 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
                               />
                               <button
                                 type="button"
-                                className="flex items-center flex-1 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
+                                className="flex items-center flex-1 text-sm font-medium text-gray-700 hover:text-diaspora-blue transition-colors"
                                 onClick={() => toggleExpand(`${countryKey}-${stateKey}`)}
                               >
                                 {isStateExpanded ? (
@@ -331,7 +331,7 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
                                     >
                                       <Checkbox
                                         id={`lga-${countryKey}-${stateKey}-${lga}`}
-                                        className="h-4 w-4 mr-2 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        className="h-4 w-4 mr-2 border-gray-300 text-diaspora-blue focus:ring-diaspora-blue"
                                         checked={
                                           selected[countryKey]?.states?.[stateKey]?.lgas?.[lga] || false
                                         }

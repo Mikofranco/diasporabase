@@ -13,8 +13,10 @@ import {
   LogIn,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getUserRole } from "@/lib/utils";
 
 type Status = "loading" | "success" | "invalid" | "expired" | "used" | "error";
+type UserRole = "agency" | "volunteer"
 
 export default function ConfirmEmailPage() {
   const searchParams = useSearchParams();
@@ -26,6 +28,7 @@ export default function ConfirmEmailPage() {
   const [tokenUserId, setTokenUserId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showLoginButton, setShowLoginButton] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
 
   useEffect(() => {
     const token = searchParams.get("token");
@@ -62,7 +65,7 @@ export default function ConfirmEmailPage() {
           setMessage("This confirmation link has expired.");
         } else if (msg === "already_used") {
           setStatus("used");
-          setMessage("This confirmation link has already been used.");
+          setMessage("This confirmation completed.");
         } else {
           setStatus("invalid");
           setMessage("Invalid or unknown confirmation link.");
@@ -102,6 +105,7 @@ export default function ConfirmEmailPage() {
           .single();
 
         let redirectPath = "/dashboard";
+        setUserRole(profile?.role?.toLowerCase() as UserRole);
         const role = profile?.role?.toLowerCase();
         if (role === "agency") redirectPath = "/onboarding";
         else if (role === "volunteer") redirectPath = "/dashboard/volunteer";
@@ -130,7 +134,9 @@ export default function ConfirmEmailPage() {
       case "success":
         return <CheckCircle className="h-16 w-16 text-green-600" />;
       case "invalid":
+        return <XCircle className="h-16 w-16 text-red-600" />;
       case "expired":
+        return <AlertCircle className="h-16 w-16 text-yellow-600" />;
       case "used":
         return <CheckCircle className="h-16 w-16 text-green-600" />;
       case "error":
@@ -139,6 +145,16 @@ export default function ConfirmEmailPage() {
         return null;
     }
   };
+  const handleRedirect = (role: string | null) => {
+    console.log("Redirecting based on role:", role);
+    if (role === "agency") {
+      router.push("/onboarding");
+    } else if (role === "volunteer") {
+      router.push("/dashboard/volunteer");
+    } else {
+      router.push("/login");
+    }
+  }
 
   const getTitle = () => {
     if (status === "success") {
@@ -174,7 +190,7 @@ export default function ConfirmEmailPage() {
                 Redirecting you to your dashboard in 3 seconds...
               </p>
               <Button
-                onClick={() => router.push("/dashboard")}
+                onClick={() => handleRedirect(userRole)}
                 className="mt-6 action-btn"
               >
                 Click to proceed.
@@ -183,7 +199,7 @@ export default function ConfirmEmailPage() {
           )}
 
         {/* Show login button when needed (not logged in OR silently logged out) */}
-        {status === "success" && showLoginButton && (
+        {status === "used" && showLoginButton && (
           <div className="space-y-4 mt-6 w-full max-w-xs">
             <p className="text-sm text-muted-foreground">
               Log in to access your account.
