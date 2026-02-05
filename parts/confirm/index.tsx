@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { getUserRole } from "@/lib/utils";
 
 type Status = "loading" | "success" | "invalid" | "expired" | "used" | "error";
-type UserRole = "agency" | "volunteer"
+type UserRole = "agency" | "volunteer";
 
 export default function ConfirmEmailPage() {
   const searchParams = useSearchParams();
@@ -28,7 +28,8 @@ export default function ConfirmEmailPage() {
   const [tokenUserId, setTokenUserId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showLoginButton, setShowLoginButton] = useState(false);
-  const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [userLoggedIn, setUserLoggedIn] = useState<boolean>(false);
 
   useEffect(() => {
     const token = searchParams.get("token");
@@ -65,7 +66,7 @@ export default function ConfirmEmailPage() {
           setMessage("This confirmation link has expired.");
         } else if (msg === "already_used") {
           setStatus("used");
-          setMessage("This confirmation completed.");
+          setMessage("This confirmation has been completed.");
         } else {
           setStatus("invalid");
           setMessage("Invalid or unknown confirmation link.");
@@ -136,9 +137,9 @@ export default function ConfirmEmailPage() {
       case "invalid":
         return <XCircle className="h-16 w-16 text-red-600" />;
       case "expired":
-        return <AlertCircle className="h-16 w-16 text-yellow-600" />;
+        return <XCircle className="h-16 w-16 text-yellow-600" />;
       case "used":
-        return <CheckCircle className="h-16 w-16 text-green-600" />;
+        return <AlertCircle className="h-16 w-16 text-yellow-600" />;
       case "error":
         return <XCircle className="h-16 w-16 text-red-600" />;
       default:
@@ -154,7 +155,7 @@ export default function ConfirmEmailPage() {
     } else {
       router.push("/login");
     }
-  }
+  };
 
   const getTitle = () => {
     if (status === "success") {
@@ -189,14 +190,30 @@ export default function ConfirmEmailPage() {
               <p className="text-sm text-muted-foreground mt-4">
                 Redirecting you to your dashboard in 3 seconds...
               </p>
-              <Button
+              {/* <Button
                 onClick={() => handleRedirect(userRole)}
                 className="mt-6 action-btn"
               >
                 Click to proceed.
-              </Button>
+              </Button> */}
             </>
           )}
+
+        {status === "success" && currentUserId !== tokenUserId && (
+          <>
+            <p className="text-sm text-muted-foreground mt-4">
+              Log in to access your account.
+            </p>
+            <Button
+              onClick={() => router.push("/login")}
+              className="w-full action-btn"
+              size="lg"
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              Log In Now
+            </Button>
+          </>
+        )}
 
         {/* Show login button when needed (not logged in OR silently logged out) */}
         {status === "used" && showLoginButton && (
