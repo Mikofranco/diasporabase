@@ -24,6 +24,7 @@ export function SignInWithGoogle() {
     <Button
       onClick={handleSignIn}
       variant="outline"
+      type="button"
       className="w-full flex items-center justify-center gap-3 font-medium bg-slate-100 text-diaspora-blue hover:bg-white hover:text-primary"
     >
       <FcGoogle className="h-4 w-4" />

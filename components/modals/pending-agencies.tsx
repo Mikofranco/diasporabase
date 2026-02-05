@@ -41,6 +41,8 @@ import {
   Tag,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSendMail } from "@/services/mail";
+import { getAgencyStatusEmailHtml } from "@/lib/email-templates/agenyStatusEmail";
 
 const supabase = createClient();
 
@@ -65,8 +67,12 @@ export function PendingAgenciesModal() {
 
   // Confirmation dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"approve" | "reject" | null>(null);
-  const [selectedAgency, setSelectedAgency] = useState<PendingAgency | null>(null);
+  const [confirmAction, setConfirmAction] = useState<
+    "approve" | "reject" | null
+  >(null);
+  const [selectedAgency, setSelectedAgency] = useState<PendingAgency | null>(
+    null,
+  );
 
   const router = useRouter();
 
@@ -76,7 +82,8 @@ export function PendingAgenciesModal() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select(`
+        .select(
+          `
           id,
           organization_name,
           contact_person_first_name,
@@ -88,7 +95,8 @@ export function PendingAgenciesModal() {
           description,
           focus_areas,
           created_at
-        `)
+        `,
+        )
         .eq("role", "agency")
         .neq("is_active", true)
         .order("created_at", { ascending: false });
@@ -98,7 +106,9 @@ export function PendingAgenciesModal() {
         toast.error("Failed to load pending agencies");
       } else {
         const pending = data || [];
-        const onboardingPending = pending.filter((agency:PendingAgency) => agency.contact_person_email != null);
+        const onboardingPending = pending.filter(
+          (agency: PendingAgency) => agency.contact_person_email != null,
+        );
         setAgencies(onboardingPending);
         setOpen(onboardingPending.length > 0);
       }
@@ -118,10 +128,24 @@ export function PendingAgenciesModal() {
         .update({ is_active: true })
         .eq("id", selectedAgency.id);
 
+      await useSendMail({
+        to: selectedAgency.contact_person_email,
+        subject: `Your Agency "${selectedAgency.organization_name}" Has Been Approved`,
+        html: getAgencyStatusEmailHtml({
+          organization_name: selectedAgency.organization_name,
+          isApproved: true,
+          appUrl: process.env.NEXT_PUBLIC_APP_URL || "https://diasporabase.com",
+        }),
+        onSuccess: () => toast.success("Status email sent"),
+        onError: () => console.error("Status updated, but email failed"),
+      });
+
       if (error) {
         toast.error("Failed to approve agency");
       } else {
-        toast.success(`"${selectedAgency.organization_name}" has been approved and activated!`);
+        toast.success(
+          `"${selectedAgency.organization_name}" has been approved and activated!`,
+        );
         setAgencies((prev) => prev.filter((a) => a.id !== selectedAgency.id));
         if (agencies.length === 1) setOpen(false);
       }
@@ -134,7 +158,9 @@ export function PendingAgenciesModal() {
       if (error) {
         toast.error("Failed to reject agency");
       } else {
-        toast.success(`"${selectedAgency.organization_name}" registration has been rejected.`);
+        toast.success(
+          `"${selectedAgency.organization_name}" registration has been rejected.`,
+        );
         setAgencies((prev) => prev.filter((a) => a.id !== selectedAgency.id));
         if (agencies.length === 1) setOpen(false);
       }
@@ -145,7 +171,10 @@ export function PendingAgenciesModal() {
     setSelectedAgency(null);
   };
 
-  const openConfirmDialog = (action: "approve" | "reject", agency: PendingAgency) => {
+  const openConfirmDialog = (
+    action: "approve" | "reject",
+    agency: PendingAgency,
+  ) => {
     setConfirmAction(action);
     setSelectedAgency(agency);
     setConfirmOpen(true);
@@ -165,7 +194,8 @@ export function PendingAgenciesModal() {
               Pending Agency Approvals
             </DialogTitle>
             <DialogDescription className="text-lg mt-2">
-              {agencies.length} agenc{agencies.length === 1 ? "y" : "ies"} awaiting activation
+              {agencies.length} agenc{agencies.length === 1 ? "y" : "ies"}{" "}
+              awaiting activation
             </DialogDescription>
           </DialogHeader>
 
@@ -173,7 +203,10 @@ export function PendingAgenciesModal() {
             {loading ? (
               <div className="space-y-4">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-24 bg-gray-100 rounded-lg animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-24 bg-gray-100 rounded-lg animate-pulse"
+                  />
                 ))}
               </div>
             ) : (
@@ -193,10 +226,16 @@ export function PendingAgenciesModal() {
                     <TableRow
                       key={agency.id}
                       className="hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => router.push(`/dashboard/super_admin/agencies/${agency.id}`)}
+                      onClick={() =>
+                        router.push(
+                          `/dashboard/super_admin/agencies/${agency.id}`,
+                        )
+                      }
                     >
                       <TableCell className="font-medium max-w-sm">
-                        <p className="font-semibold text-lg">{agency.organization_name}</p>
+                        <p className="font-semibold text-lg">
+                          {agency.organization_name}
+                        </p>
                         {agency.description && (
                           <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
                             {agency.description}
@@ -207,7 +246,8 @@ export function PendingAgenciesModal() {
                       <TableCell>
                         <div className="space-y-1">
                           <p className="font-medium">
-                            {agency.contact_person_first_name} {agency.contact_person_last_name}
+                            {agency.contact_person_first_name}{" "}
+                            {agency.contact_person_last_name}
                           </p>
                           <a
                             href={`mailto:${agency.contact_person_email}`}
@@ -250,31 +290,42 @@ export function PendingAgenciesModal() {
 
                       <TableCell>
                         <div className="flex flex-wrap gap-2">
-                          {agency.focus_areas && agency.focus_areas.length > 0 ? (
+                          {agency.focus_areas &&
+                          agency.focus_areas.length > 0 ? (
                             agency.focus_areas.slice(0, 4).map((area, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">
+                              <Badge
+                                key={i}
+                                variant="secondary"
+                                className="text-xs"
+                              >
                                 {area}
                               </Badge>
                             ))
                           ) : (
-                            <span className="text-sm text-muted-foreground">Not specified</span>
+                            <span className="text-sm text-muted-foreground">
+                              Not specified
+                            </span>
                           )}
-                          {agency.focus_areas && agency.focus_areas.length > 4 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{agency.focus_areas.length - 4} more
-                            </Badge>
-                          )}
+                          {agency.focus_areas &&
+                            agency.focus_areas.length > 4 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{agency.focus_areas.length - 4} more
+                              </Badge>
+                            )}
                         </div>
                       </TableCell>
 
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm">
                           <Clock className="h-4 w-4 text-muted-foreground" />
-                          {new Date(agency.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
+                          {new Date(agency.created_at).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )}
                         </div>
                       </TableCell>
 
@@ -318,22 +369,27 @@ export function PendingAgenciesModal() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmAction === "approve" ? "Approve Agency?" : "Reject Agency?"}
+              {confirmAction === "approve"
+                ? "Approve Agency?"
+                : "Reject Agency?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmAction === "approve" ? (
                 <>
-                  You are about to <strong>approve and activate</strong> the agency:
+                  You are about to <strong>approve and activate</strong> the
+                  agency:
                   <br />
                   <span className="font-semibold text-lg mt-2 block">
                     {selectedAgency?.organization_name}
                   </span>
                   <br />
-                  They will immediately gain full access to create projects and manage volunteers.
+                  They will immediately gain full access to create projects and
+                  manage volunteers.
                 </>
               ) : (
                 <>
-                  You are about to <strong>reject</strong> the agency registration:
+                  You are about to <strong>reject</strong> the agency
+                  registration:
                   <br />
                   <span className="font-semibold text-lg mt-2 block">
                     {selectedAgency?.organization_name}
@@ -354,7 +410,9 @@ export function PendingAgenciesModal() {
                   : "bg-destructive hover:bg-destructive/90"
               }
             >
-              {confirmAction === "approve" ? "Yes, Approve Agency" : "Yes, Reject Agency"}
+              {confirmAction === "approve"
+                ? "Yes, Approve Agency"
+                : "Yes, Reject Agency"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
