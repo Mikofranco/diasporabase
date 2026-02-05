@@ -359,6 +359,19 @@ export function checkIfAgencyIsActive() {//@ts-ignore
     });
 }
 
+export async function getUserRole(userId: string){
+  const {data: profileRole, error: profileError} = supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .single()//@ts-ignore
+  if(profileError){
+    console.log("could not find profile", profileError);
+    return;
+  }
+  return profileRole;
+}
+
 export async function getPlatformStat  (){
   const { data } = await supabase.rpc('get_platform_stats');
   return data;

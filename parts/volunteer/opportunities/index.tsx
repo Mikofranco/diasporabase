@@ -5,12 +5,24 @@ import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatLocation, getUserId, LocationData } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { MapPin, Briefcase, Calendar, Users } from "lucide-react";
 import Link from "next/link";
@@ -57,18 +69,20 @@ const Opportunities: React.FC = () => {
         const { data: projectsData, error: projectsError } = await supabase
           .from("projects")
           .select(
-            "id, title, description, organization_name, location, start_date, end_date, volunteers_needed, volunteers_registered, status, category, required_skills, created_at"
+            "id, title, description, organization_name, location, start_date, end_date, volunteers_needed, volunteers_registered, status, category, required_skills, created_at",
           )
           .eq("status", "active")
           .order("created_at", { ascending: false });
 
-        if (projectsError) throw new Error("Error fetching projects: " + projectsError.message);
+        if (projectsError)
+          throw new Error("Error fetching projects: " + projectsError.message);
         if (!projectsData) throw new Error("No active projects found.");
 
         // Extract unique skills
-        const skillsSet = new Set<string>();//@ts-ignore
+        const skillsSet = new Set<string>(); //@ts-ignore
         projectsData.forEach((project) => {
-          if (project.required_skills) {//@ts-ignore
+          if (project.required_skills) {
+            //@ts-ignore
             project.required_skills.forEach((skill) => skillsSet.add(skill));
           }
         });
@@ -87,7 +101,7 @@ const Opportunities: React.FC = () => {
 
     fetchProjectsAndSkills();
   }, []);
-  
+
   useEffect(() => {
     // Filter projects based on search query, location, and skills
     const filtered = projects.filter((project) => {
@@ -97,11 +111,15 @@ const Opportunities: React.FC = () => {
         project.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesLocation =
         locationFilter === "" ||
-        formatLocation(project.location).toLowerCase().includes(locationFilter.toLowerCase());
+        formatLocation(project.location)
+          .toLowerCase()
+          .includes(locationFilter.toLowerCase());
       const matchesSkills =
         skillsFilter.length === 0 ||
-        (project.required_skills &&//@ts-ignore
-          skillsFilter.every((skill) => project.required_skills.includes(skill)));
+        (project.required_skills && 
+          skillsFilter.every((skill) =>//@ts-ignore
+            project.required_skills.includes(skill),
+          ));
       return matchesSearch && matchesLocation && matchesSkills;
     });
     setFilteredProjects(filtered);
@@ -111,7 +129,9 @@ const Opportunities: React.FC = () => {
     setSearchQuery(e.target.value);
   };
 
-  const handleLocationFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLocationFilterChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     setLocationFilter(e.target.value);
   };
 
@@ -119,7 +139,7 @@ const Opportunities: React.FC = () => {
     setSkillsFilter((prev) =>
       prev.includes(value)
         ? prev.filter((skill) => skill !== value)
-        : [...prev, value]
+        : [...prev, value],
     );
   };
 
@@ -153,7 +173,9 @@ const Opportunities: React.FC = () => {
 
   return (
     <div className="container mx-auto p-8 space-y-8 ">
-      <h1 className="text-3xl font-bold text-gray-900">Volunteer Opportunities</h1>
+      <h1 className="text-3xl font-bold text-gray-900">
+        Volunteer Opportunities
+      </h1>
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <Input
           placeholder="Search projects by title or description..."
@@ -167,10 +189,7 @@ const Opportunities: React.FC = () => {
           onChange={handleLocationFilterChange}
           className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
         />
-        <Select
-          onValueChange={handleSkillsFilterChange}
-          value=""
-        >
+        <Select onValueChange={handleSkillsFilterChange} value="">
           <SelectTrigger className="w-full sm:w-1/4 border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg">
             <SelectValue placeholder="Filter by skills..." />
           </SelectTrigger>
@@ -185,7 +204,8 @@ const Opportunities: React.FC = () => {
                       readOnly
                       className="h-4 w-4"
                     />
-                    {skill.charAt(0).toUpperCase() + skill.slice(1).replace("_", " ")}
+                    {skill.charAt(0).toUpperCase() +
+                      skill.slice(1).replace("_", " ")}
                   </div>
                 </SelectItem>
               ))
@@ -218,12 +238,22 @@ const Opportunities: React.FC = () => {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredProjects.map((project) => (
-            <Card key={project.id} className="shadow-md border-0 hover:shadow-lg transition-shadow duration-200">
+            <Card
+              key={project.id}
+              className="shadow-md border-0 hover:shadow-lg transition-shadow duration-200 flex flex-col"
+            >
               <CardHeader>
-                <CardTitle className="text-xl text-gray-900">{project.title}</CardTitle>
+                <CardTitle className="text-xl text-gray-900">
+                  {project.title}
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-gray-600 line-clamp-3 h-10">{project.description}</p>
+
+              <CardContent className="flex-1 space-y-3">
+                {" "}
+                {/* ← key change here */}
+                <p className="text-gray-600 line-clamp-3 h-10">
+                  {project.description}
+                </p>
                 <p className="text-sm text-gray-500">
                   <Briefcase className="inline h-4 w-4 mr-1" />
                   {project.organization_name}
@@ -239,28 +269,36 @@ const Opportunities: React.FC = () => {
                 </p>
                 <p className="text-sm text-gray-500">
                   <Users className="inline h-4 w-4 mr-1" />
-                  {project.volunteers_registered}/{project.volunteers_needed} volunteers
+                  {project.volunteers_registered}/{project.volunteers_needed}{" "}
+                  volunteers
                 </p>
                 {project.category && (
                   <Badge className="action-btn text-white">
-                    {project.category.charAt(0).toUpperCase() + project.category.slice(1)}
+                    {project.category.charAt(0).toUpperCase() +
+                      project.category.slice(1)}
                   </Badge>
                 )}
-                {project.required_skills && project.required_skills.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {project.required_skills.slice(0,5).map((skill) => (
-                      <Badge key={skill} variant="outline" className="text-sm">
-                        {skill.charAt(0).toUpperCase() + skill.slice(1).replace("_", " ")}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+                {project.required_skills &&
+                  project.required_skills.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {project.required_skills.slice(0, 5).map((skill) => (
+                        <Badge
+                          key={skill}
+                          variant="outline"
+                          className="text-sm"
+                        >
+                          {skill.charAt(0).toUpperCase() +
+                            skill.slice(1).replace("_", " ")}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
               </CardContent>
-              <CardFooter>
-                <Button
-                  asChild
-                  className="w-full action-btn"
-                >
+
+              <CardFooter className="mt-auto">
+                {" "}
+                {/* ← key change here */}
+                <Button asChild className="w-full action-btn">
                   <Link href={`/dashboard/volunteer/projects/${project.id}`}>
                     View Details
                   </Link>

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // For navigation
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardHeader,
@@ -101,54 +101,57 @@ const OrganizationsProjects: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold mb-4">
-        My Organization&apos;s Projects
-      </h1>
-
-      <Button
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">My Organization's Projects</h1>
+        <Button
         onClick={handleCreateProjectClick}
         variant={"outline"}
-        // className="mb-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
       >
         {" "}
         <Plus className="mr-2 h-4 w-4" />
         Create Project
       </Button>
 
-      {showCreateForm && ( //@ts-ignore
+      </div>
+
+      {showCreateForm && (
         <CreateProjectForm
-          onClose={handleFormClose}
+          onClose={handleFormClose} //@ts-ignore
           onProjectCreated={handleProjectCreated}
         />
       )}
 
       {loading && <p className="text-gray-500">Loading projects...</p>}
       {error && (
-        <p className="text-red-500 bg-red-100 p-3 rounded-md">{error}</p>
+        <p className="text-red-500 bg-red-50 p-4 rounded-md border border-red-200">
+          {error}
+        </p>
       )}
       {!loading && !error && projects.length === 0 && (
-        <p className="text-gray-600">
+        <p className="text-gray-600 py-8 text-center">
           No projects found. Create one to get started!
         </p>
       )}
 
       {!loading && !error && projects.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
           {projects.map((project) => (
             <Card
               key={project.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
+              className="cursor-pointer hover:shadow-lg transition-shadow flex flex-col border"
             >
               <CardHeader>
                 <CardTitle className="text-lg">{project.title}</CardTitle>
                 <CardDescription>{project.organization_name}</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+
+              <CardContent className="flex-1 space-y-4">
+                <p className="text-sm text-muted-foreground line-clamp-3">
                   {project.description}
                 </p>
-                <div className="space-y-2 text-sm">
+
+                <div className="space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
                     <span>
@@ -159,21 +162,24 @@ const OrganizationsProjects: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     <span>
-                      {project.volunteers_registered}/
-                      {project.volunteers_needed} volunteers
+                      {project.volunteers_registered}/{project.volunteers_needed}{" "}
+                      volunteers
                     </span>
                   </div>
-                  <Badge variant="secondary">{project.category}</Badge>
+                  <div>
+                    <Badge variant="secondary">{project.category}</Badge>
+                  </div>
                 </div>
-                <CardFooter>
-                  <Button
-                    className="w-full mt-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
-                    onClick={() => handleProjectSelect(project)}
-                  >
-                    View Details
-                  </Button>
-                </CardFooter>
               </CardContent>
+
+              <CardFooter className="mt-auto pt-2">
+                <Button
+                  className="w-full bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
+                  onClick={() => handleProjectSelect(project)}
+                >
+                  View Details
+                </Button>
+              </CardFooter>
             </Card>
           ))}
         </div>

@@ -44,6 +44,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { CommentsModal } from "@/components/modals/comment";
 import { Volunteer } from "@/lib/types";
+import { CreateMilestoneModal } from "@/components/modals/create-milestone";
 
 const supabase = createClient();
 
@@ -67,23 +68,24 @@ interface Milestone {
 
 interface MilestonesSectionProps {
   projectId: string;
-  canEdit?: boolean; 
-  volunteers: Volunteer[]
+  canEdit?: boolean;
+  volunteers: Volunteer[];
 }
 
 export function MilestonesSection({
   projectId,
   canEdit = true,
-  volunteers
+  volunteers,
 }: MilestonesSectionProps) {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Dialog states
   const [editMilestone, setEditMilestone] = useState<Milestone | null>(null);
   const [editDeliverable, setEditDeliverable] = useState<Deliverable | null>(
-    null
+    null,
   );
   const [milestoneToAddDeliverable, setMilestoneToAddDeliverable] = useState<
     string | null
@@ -102,19 +104,22 @@ export function MilestonesSection({
       .order("due_date");
 
     if (milestonesData) {
-      const milestoneIds = milestonesData.map((m:any) => m.id);
+      const milestoneIds = milestonesData.map((m: any) => m.id);
       const { data: deliverablesData } = await supabase
         .from("deliverables")
         .select("*")
         .in("milestone_id", milestoneIds);
 
-      const deliverablesMap = (deliverablesData || []).reduce((acc:any, d:any) => {
-        if (!acc[d.milestone_id]) acc[d.milestone_id] = [];
-        acc[d.milestone_id].push(d);
-        return acc;
-      }, {} as Record<string, Deliverable[]>);
+      const deliverablesMap = (deliverablesData || []).reduce(
+        (acc: any, d: any) => {
+          if (!acc[d.milestone_id]) acc[d.milestone_id] = [];
+          acc[d.milestone_id].push(d);
+          return acc;
+        },
+        {} as Record<string, Deliverable[]>,
+      );
 
-      const fullMilestones = milestonesData.map((m:any) => ({
+      const fullMilestones = milestonesData.map((m: any) => ({
         ...m,
         deliverables: deliverablesMap[m.id] || [],
       }));
@@ -259,21 +264,24 @@ export function MilestonesSection({
       <Card className="border-dashed">
         <CardContent className="text-center py-16">
           <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2 text-diaspora-darkBlue">No Milestones Defined</h3>
+          <h3 className="text-xl font-semibold mb-2 text-diaspora-darkBlue">
+            No Milestones Defined
+          </h3>
           <p className="text-gray-600">
             Start by adding your first milestone and its deliverables.
           </p>
           {canEdit && (
             <Button
-              onClick={() =>
-                setEditMilestone({
-                  title: "",
-                  description: "",
-                  due_date: "",
-                  status: "Pending",
-                  deliverables: [],
-                })
-              }
+              // onClick={() =>
+              //   setEditMilestone({
+              //     title: "",
+              //     description: "",
+              //     due_date: "",
+              //     status: "Pending",
+              //     deliverables: [],
+              //   })
+              // }
+              onClick={() => setIsCreateModalOpen(true)}
               className="text-diaspora-darkBlue border-diaspora-darkBlue mt-5"
               variant={"outline"}
             >
@@ -410,7 +418,11 @@ export function MilestonesSection({
                           {del.status}
                         </Badge>
                       </div>
-                      <CommentsModal deliverableId={del.id || ""} volunteers={volunteers} projectId={projectId} />
+                      <CommentsModal
+                        deliverableId={del.id || ""}
+                        volunteers={volunteers}
+                        projectId={projectId}
+                      />
                     </div>
                     {canEdit && (
                       <div className="flex gap-2">
@@ -629,6 +641,15 @@ export function MilestonesSection({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CreateMilestoneModal
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        projectId={projectId}
+        onMilestoneCreated={() => {
+          fetchMilestones(); // refresh your list
+        }}
+      />
     </div>
   );
 }

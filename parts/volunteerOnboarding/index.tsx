@@ -357,7 +357,7 @@ export function VolunteerOnboardingForm() {
               onSelectionChange={handleLocationChange}
             />
             {selectedLocations.selectedCountries.length === 0 && step === 3 && (
-              <p className="text-red-500 text-sm mt-1">
+              <p className="text-diaspora-blue text-sm mt-1">
                 Choose your volunteer area in Nigeria (LGA, state, or nationwide)
               </p>
             )}

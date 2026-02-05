@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
 import RequestSlate from "./request-slate";
 import { toast } from "sonner";
+import { useSendMail } from "@/services/mail";
+import { volunteerApplicationStatusHtml } from "@/lib/email-templates/volunteerApplicationStatus";
 
 interface VolunteerRequest {
   id: string;
@@ -13,6 +15,7 @@ interface VolunteerRequest {
   created_at: string;
   applicant_name: string;
   project_title: string;
+  applicant_email: string;
 }
 
 interface AgencyRequestFromVolunteerProps {
@@ -33,16 +36,18 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
 
       const { data: volunteerRequestData, error } = await supabase
         .from("volunteer_requests")
-        .select(`
+        .select(
+          `
           id,
           organization_id,
           volunteer_id,
           project_id,
           status,
           created_at,
-          profiles:volunteer_id (full_name),
+          profiles:volunteer_id (full_name, email),
           projects:project_id (title)
-        `)
+        `,
+        )
         .eq("organization_id", userId)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
@@ -51,16 +56,19 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
         throw new Error("Error fetching requests: " + error.message);
       }
 
-      const formattedRequests: VolunteerRequest[] = volunteerRequestData.map((request: any) => ({
-        id: request.id,
-        organization_id: request.organization_id,
-        volunteer_id: request.volunteer_id,
-        project_id: request.project_id,
-        status: request.status,
-        created_at: request.created_at,
-        applicant_name: request.profiles?.full_name || "Unknown",
-        project_title: request.projects?.title || "Unknown Project",
-      }));
+      const formattedRequests: VolunteerRequest[] = volunteerRequestData.map(
+        (request: any) => ({
+          id: request.id,
+          organization_id: request.organization_id,
+          volunteer_id: request.volunteer_id,
+          project_id: request.project_id,
+          status: request.status,
+          created_at: request.created_at,
+          applicant_name: request.profiles?.full_name || "Unknown",
+          project_title: request.projects?.title || "Unknown Project",
+          applicant_email: request.profiles?.email || "",
+        }),
+      );
 
       setRequests(formattedRequests);
     } catch (err: any) {
@@ -108,6 +116,22 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
           project_id: request.project_id,
         });
       }
+
+      await useSendMail({
+        to: requests.find((req) => req.id === requestId)?.applicant_email || "",
+        subject: "Volunteer Request Accepted",
+        html: volunteerApplicationStatusHtml(
+          requests.find((req) => req.id === requestId)?.applicant_name ||
+            "Volunteer",
+          "DiasporaBase", // organization name
+          requests.find((req) => req.id === requestId)?.project_id || "",
+          "accepted",
+          requests.find((req) => req.id === requestId)?.project_title || "",
+        ),
+        onSuccess() {
+          console.log("Accept email sent successfully");
+        },
+      });
     } catch (err: any) {
       toast.error(err.message, { position: "top-right" });
     }
@@ -127,10 +151,28 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
 
       setRequests((prev) =>
         prev.map((req) =>
-          req.id === requestId ? { ...req, status: "declined" } : req
-        )
+          req.id === requestId ? { ...req, status: "declined" } : req,
+        ),
       );
-      toast.success("Request declined successfully!", { position: "top-right" });
+
+      await useSendMail({
+        to: requests.find((req) => req.id === requestId)?.applicant_email || "",
+        subject: "Volunteer Request Declined",
+        html: volunteerApplicationStatusHtml(
+          requests.find((req) => req.id === requestId)?.applicant_name ||
+            "Volunteer",
+          "DiasporaBase", // organization name
+          requests.find((req) => req.id === requestId)?.project_id || "",
+          "declined",
+          requests.find((req) => req.id === requestId)?.project_title || "",
+        ),
+        onSuccess() {
+          console.log("Decline email sent successfully");
+        },
+      });
+      toast.success("Request declined successfully!", {
+        position: "top-right",
+      });
 
       const request = requests.find((req) => req.id === requestId);
       if (request) {
@@ -154,7 +196,9 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
       const { data: userId, error: userError } = await getUserId();
       if (userError || !userId) {
         setError("Failed to authenticate user");
-        toast.error("Please log in to view requests", { position: "top-right" });
+        toast.error("Please log in to view requests", {
+          position: "top-right",
+        });
         setIsLoading(false);
         return;
       }
@@ -176,7 +220,9 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
     <div
       className={`bg-white p-6 rounded-lg shadow-md space-y-4 mt-8 ${className}`}
     >
-      <h2 className="font-semibold text-xl text-gray-800">Volunteer Requests </h2>
+      <h2 className="font-semibold text-xl text-gray-800">
+        Volunteer Requests{" "}
+      </h2>
 
       {isLoading && (
         <div className="flex justify-center items-center py-4">

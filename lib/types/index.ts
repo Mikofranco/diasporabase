@@ -30,6 +30,7 @@ export interface Deliverable {
   status: DeliverableStatus;
   createdAt?: string;
   due_date?: string;
+  milestone_id?: string;
 }
 
 export interface Milestone {
@@ -41,6 +42,7 @@ export interface Milestone {
   status: MilestoneStatus;
   createdAt?: string;
   due_date?: string;
+  deliverables?: Deliverable[];
 }
 
 export interface Notification {
