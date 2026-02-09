@@ -66,7 +66,7 @@ export default function LandingPage() {
           }}
         >
           {/* Optional subtle animated overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
 
           {/* Glassmorphic Content Card – Perfectly Centered */}
           <motion.div
@@ -166,7 +166,7 @@ export default function LandingPage() {
           className="w-full py-12 md:py-24 lg:py-32 bg-gray-100 dark:bg-gray-800"
           aria-labelledby="features-heading"
         >
-          <div className="container px-4 md:px-6 mx-auto">
+          <div className="container px-4 md:px-6 max-w-7xl mx-auto">
             <h2
               id="features-heading"
               className="text-3xl font-bold tracking-tighter text-center mb-12"
@@ -275,10 +275,7 @@ export default function LandingPage() {
                   href="/register-volunteer"
                   aria-label="Start volunteering"
                 >
-                  <Button
-                    size="lg"
-                    className="min-w-[200px] action-btn"
-                  >
+                  <Button size="lg" className="min-w-[200px] action-btn">
                     Start Volunteering
                   </Button>
                 </Link>
