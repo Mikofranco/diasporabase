@@ -66,7 +66,7 @@ export default function LandingPage() {
           }}
         >
           {/* Optional subtle animated overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
 
           {/* Glassmorphic Content Card – Perfectly Centered */}
           <motion.div
@@ -275,10 +275,7 @@ export default function LandingPage() {
                   href="/register-volunteer"
                   aria-label="Start volunteering"
                 >
-                  <Button
-                    size="lg"
-                    className="min-w-[200px] action-btn"
-                  >
+                  <Button size="lg" className="min-w-[200px] action-btn">
                     Start Volunteering
                   </Button>
                 </Link>
