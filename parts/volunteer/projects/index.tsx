@@ -11,6 +11,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -78,7 +79,7 @@ export default function VolunteerProjectsManagement() {
           location, start_date, end_date,
           volunteers_registered, status, category,
           required_skills, volunteers_needed
-        `
+        `,
         )
         .in("id", projectIds)
         .order("start_date", { ascending: true });
@@ -180,7 +181,10 @@ export default function VolunteerProjectsManagement() {
             </p>
           </div>
           {projects.length != 0 && (
-            <Button className="action-btn text-base md:text-sm" onClick={handleRouteToViewProject}>
+            <Button
+              className="action-btn text-base md:text-sm"
+              onClick={handleRouteToViewProject}
+            >
               View Ongoing Projects
             </Button>
           )}
@@ -215,7 +219,7 @@ export default function VolunteerProjectsManagement() {
           {projects.map((project) => (
             <Card
               key={project.id}
-              className="hover:shadow-lg transition-shadow"
+              className="hover:shadow-lg transition-shadow flex flex-col"
             >
               <CardHeader>
                 <div className="flex items-start justify-between gap-3">
@@ -231,7 +235,7 @@ export default function VolunteerProjectsManagement() {
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 flex-1">
                 <div className="space-y-3 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="h-4 w-4" />
@@ -271,7 +275,9 @@ export default function VolunteerProjectsManagement() {
                       </div>
                     </>
                   )}
+              </CardContent>
 
+              <CardFooter className="mt-auto pt-2">
                 <Button
                   className="w-full mt-4 action-btn"
                   onClick={() => goToProjectDetails(project.id)}
@@ -279,7 +285,7 @@ export default function VolunteerProjectsManagement() {
                   View Project Details
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-              </CardContent>
+              </CardFooter>
             </Card>
           ))}
         </div>
