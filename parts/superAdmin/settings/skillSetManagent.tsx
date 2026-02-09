@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Trash2, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Item } from "@/app/dashboard/volunteer/profile/page";
+import { Item } from "@/app/(dashboard)/(volunteer)/volunteer/profile/page";
 import { getSkillsets } from "@/lib/utils";
 
 const supabase = createClient();
