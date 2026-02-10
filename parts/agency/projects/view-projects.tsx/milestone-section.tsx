@@ -272,16 +272,16 @@ export function MilestonesSection({
           </p>
           {canEdit && (
             <Button
-              // onClick={() =>
-              //   setEditMilestone({
-              //     title: "",
-              //     description: "",
-              //     due_date: "",
-              //     status: "Pending",
-              //     deliverables: [],
-              //   })
-              // }
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() =>
+                setEditMilestone({
+                  title: "",
+                  description: "",
+                  due_date: "",
+                  status: "Pending",
+                  deliverables: [],
+                })
+              }
+              // onClick={() => setIsCreateModalOpen(true)}
               className="text-diaspora-darkBlue border-diaspora-darkBlue mt-5"
               variant={"outline"}
             >
