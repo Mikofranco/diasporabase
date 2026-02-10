@@ -19,7 +19,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (error || profile?.role !== "admin") {
     // Redirect to their actual dashboard or login if not admin
     if (profile?.role) {
-      redirect(`/dashboard/${profile.role}`)
+      const rolePath = profile.role === "super_admin" ? "super-admin" : profile.role;
+      redirect(`/${rolePath}/dashboard`)
     } else {
       redirect("/login")
     }

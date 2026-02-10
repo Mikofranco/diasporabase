@@ -132,7 +132,7 @@ const AgencyList: React.FC = () => {
 
   // Handle row click to navigate to agency profile
   const handleRowClick = (agencyId: string) => {
-    router.replace(`/dashboard/${userRole}/agencies/${agencyId}`);
+    router.replace(`/${userRole === "super_admin" ? "super-admin" : userRole}/agencies/${agencyId}`);
   };
 
   if (!user) return null;

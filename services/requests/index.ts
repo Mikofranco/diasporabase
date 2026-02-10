@@ -95,7 +95,7 @@ export async function createAgencyRequest({
   }
 
   // Send invitation email to volunteer
-  const volunteerDashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/volunteer/requests`;
+  const volunteerDashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/volunteer/requests`;
 
   const html = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f9fafb;">

@@ -436,7 +436,7 @@ const ProjectDetails: React.FC = () => {
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={() => router.push("/dashboard/agency/projects")}
+              onClick={() => router.push("/agency/projects")}
             >
               Back to Projects
             </Button>

@@ -270,7 +270,7 @@ const AgencyOnboarding: React.FC = () => {
           profileData.focus_areas.length > 0 &&
           profileData.address
         ) {
-          router.push("/dashboard/agency");
+          router.push("/agency/dashboard");
         }
       } catch (err: any) {
         setError(err.message);

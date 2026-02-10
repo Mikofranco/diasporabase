@@ -85,7 +85,8 @@ export default function DashboardLayout({
 
   const handleRouteToNotifications = () => {
     if (userRole) {
-      router.push(`/dashboard/${userRole}/notifications`);
+      const rolePath = userRole === "super_admin" ? "super-admin" : userRole;
+      router.push(`/${rolePath}/notifications`);
     }
   };
 

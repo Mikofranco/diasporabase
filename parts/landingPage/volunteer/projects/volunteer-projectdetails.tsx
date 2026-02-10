@@ -262,7 +262,7 @@ const VolunteerProjectDetails: React.FC = () => {
             <Button
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => router.push("/dashboard/volunteer/opportunities")}
+              onClick={() => router.push("/volunteer/opportunities")}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Opportunities
@@ -285,7 +285,7 @@ const VolunteerProjectDetails: React.FC = () => {
             <Button
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => router.push("/dashboard/volunteer/opportunities")}
+              onClick={() => router.push("/volunteer/opportunities")}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Opportunities
@@ -303,7 +303,7 @@ const VolunteerProjectDetails: React.FC = () => {
         <Button
           variant="outline"
           className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          onClick={() => router.push("/dashboard/volunteer/opportunities")}
+          onClick={() => router.push("/volunteer/opportunities")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Opportunities

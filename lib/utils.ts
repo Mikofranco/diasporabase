@@ -107,22 +107,22 @@ export async function handleEmailConfirmationRedirect() {
     if (profile && profile.role) {
       switch (profile.role) {
         case "admin":
-          window.location.href = "/dashboard/admin";
+          window.location.href = "/admin/dashboard";
           break;
         case "super_admin":
-          window.location.href = "/dashboard/super_admin";
+          window.location.href = "/super-admin/dashboard";
           break;
         case "volunteer":
-          window.location.href = "/dashboard/volunteer";
+          window.location.href = "/volunteer/dashboard";
           break;
         case "agency":
           window.location.href = "/onboarding/agency";
           break;
         default:
-          window.location.href = "/dashboard";
+          window.location.href = "/login";
       }
     } else {
-      window.location.href = "/dashboard";
+      window.location.href = "/login";
     }
   } else {
     window.location.href = "/login";

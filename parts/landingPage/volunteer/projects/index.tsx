@@ -216,7 +216,7 @@ const fetchProjects = async (userId: string) => {
   };
 
   const handleRouteToViewProject = () => {
-    router.push("/dashboard/volunteer/find-opportunity");
+    router.push("/volunteer/find-opportunity");
   };
 
   const handleViewVolunteers = () => {
@@ -227,7 +227,7 @@ const fetchProjects = async (userId: string) => {
   };
 
   const handleRouteToSelectedProject=(projectId:string)=>{
-    router.push(`/dashboard/volunteer/projects/${projectId}`)
+    router.push(`/volunteer/projects/${projectId}`)
   }
 
   if (loading) {

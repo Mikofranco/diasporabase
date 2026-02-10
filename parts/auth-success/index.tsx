@@ -71,7 +71,9 @@ export default function AuthSuccessContent() {
 
         setStatus(`Welcome! Redirecting as ${role}...`);
 
-        if (role === 'super_admin' || role === 'admin') {
+        if (role === 'super_admin') {
+          router.replace('/super-admin/dashboard');
+        } else if (role === 'admin') {
           router.replace('/admin/dashboard');
         } else if (role === 'agency') {
           if (!profile.tax_id || profile.tax_id.trim() === '') {
@@ -82,7 +84,7 @@ export default function AuthSuccessContent() {
         } else if (role === 'volunteer') {
           router.replace('/volunteer/dashboard');
         } else {
-          router.replace('/dashboard');
+          router.replace('/login');
         }
       } catch (err) {
         console.error("Finalization error:", err);

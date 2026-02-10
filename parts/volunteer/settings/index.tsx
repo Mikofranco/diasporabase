@@ -290,7 +290,7 @@ if (loading) {
               <Button
                 variant="outline"
                 className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                onClick={() => router.push("/dashboard/volunteer")}
+                onClick={() => router.push("/volunteer/dashboard")}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
@@ -310,7 +310,7 @@ if (loading) {
         <Button
           variant="outline"
           className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          onClick={() => router.push("/dashboard/volunteer")}
+          onClick={() => router.push("/volunteer/dashboard")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard

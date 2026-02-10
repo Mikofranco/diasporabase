@@ -206,7 +206,7 @@ export default function ViewProjectDetails() {
   }, [id]);
 
   const handleLeaveSuccess = () => {
-    router.push("/dashboard/volunteer/projects");
+    router.push("/volunteer/projects");
     router.refresh();
   };
 

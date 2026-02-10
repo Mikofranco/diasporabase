@@ -61,6 +61,12 @@ export default function LoginForm() {
 
               if (profile.role === "super_admin") {
                 router.replace("/super-admin/dashboard");
+              } else if (profile.role === "admin") {
+                router.replace("/admin/dashboard");
+              } else if (profile.role === "agency") {
+                router.replace("/agency/dashboard");
+              } else if (profile.role === "volunteer") {
+                router.replace("/volunteer/dashboard");
               } else {
                 router.replace("/login");
               }

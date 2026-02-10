@@ -123,10 +123,10 @@ export default function VolunteerProjectsManagement() {
     date ? format(new Date(date), "MMM d, yyyy") : "TBD";
 
   const goToProjectDetails = (projectId: string) => {
-    router.push(`/dashboard/volunteer/projects/${projectId}`);
+    router.push(`/volunteer/projects/${projectId}`);
   };
   const handleRouteToViewProject = () => {
-    router.push("/dashboard/volunteer/find-opportunity");
+    router.push("/volunteer/find-opportunity");
   };
 
   // Loading State
@@ -207,7 +207,7 @@ export default function VolunteerProjectsManagement() {
             <Button
               className="action-btn"
               onClick={() =>
-                router.push("/dashboard/volunteer/find-opportunity")
+                router.push("/volunteer/find-opportunity")
               }
             >
               Browse Projects

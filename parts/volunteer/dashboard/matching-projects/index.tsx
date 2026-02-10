@@ -15,11 +15,11 @@ const MatchingProjects = () => {
   const router = useRouter();
 
   const handleProjectSelect = (projectId: string) => {
-    router.push(`/dashboard/volunteer/projects/${projectId}`);
+    router.push(`/volunteer/projects/${projectId}`);
   };
 
   const handleViewAll = () => {
-    router.push(`/dashboard/volunteer/matching-projects`);
+    router.push(`/volunteer/matching-projects`);
   };
 
   return (

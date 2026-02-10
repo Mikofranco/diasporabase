@@ -100,7 +100,7 @@ export default function AdminManagement() {
 
         if (user.user_metadata.role !== ROLES.SUPER_ADMIN) {
           toast.error("Super admin access required");
-          router.push("/dashboard");
+          router.push("/super-admin/dashboard");
           return;
         }
 

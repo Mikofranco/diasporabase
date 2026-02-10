@@ -97,7 +97,7 @@ const OrganizationsProjects: React.FC = () => {
   };
 
   const handleProjectSelect = (project: Project) => {
-    router.push(`/dashboard/agency/projects/${project.id}`);
+    router.push(`/agency/projects/${project.id}`);
   };
 
   return (

@@ -62,13 +62,13 @@ export default function SkillsetManagementPage() {
 
       if (profileError) {
         toast.error("Error fetching user role.");
-        router.push("/dashboard");
+        router.push("/super-admin/dashboard");
         return;
       }
 
       if (!["admin", "super_admin"].includes(data.role)) {
         toast.error("You are not authorized to access this page.");
-        router.push("/dashboard");
+        router.push("/super-admin/dashboard");
         return;
       }
 

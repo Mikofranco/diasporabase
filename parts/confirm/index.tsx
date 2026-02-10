@@ -105,7 +105,7 @@ export default function ConfirmEmailPage() {
           .eq("id", currentId)
           .single();
 
-        let redirectPath = "/dashboard";
+        let redirectPath = "/login";
         setUserRole(profile?.role?.toLowerCase() as UserRole);
         const role = profile?.role?.toLowerCase();
         if (role === "agency") redirectPath = "/onboarding";

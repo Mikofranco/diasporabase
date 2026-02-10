@@ -19,7 +19,8 @@ export default async function AgencyLayout({ children }: { children: React.React
   if (error || profile?.role !== "agency") {
     // Redirect to their actual dashboard or login if not agency
     if (profile?.role) {
-      redirect(`/dashboard/${profile.role}`)
+      const rolePath = profile.role === "super_admin" ? "super-admin" : profile.role;
+      redirect(`/${rolePath}/dashboard`)
     } else {
       redirect("/login")
     }
