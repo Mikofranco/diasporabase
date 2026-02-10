@@ -38,7 +38,7 @@ export default function LoginForm() {
   useEffect(() => {
     //@ts-ignore
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event:any, session:any) => {
+      (event: any, session: any) => {
         if (event === "SIGNED_IN" && session?.user) {
           supabase
             .from("profiles")
@@ -58,7 +58,12 @@ export default function LoginForm() {
               // toast.success("Logged in successfully!");
               localStorage.setItem("diaspobase_role", profile.role);
               localStorage.setItem("diaspobase_userId", session.user.id);
-              router.replace(`/dashboard/${profile.role}`);
+
+              if (profile.role === "super_admin") {
+                router.replace("/super-admin/dashboard");
+              } else {
+                router.replace("/login");
+              }
             });
         }
       },
@@ -157,10 +162,13 @@ export default function LoginForm() {
               </button>
             </div>
           </div>
-          <Link href="/forgot-password" className="text-sm text-right hover:text-diaspora-darkBlue">
+          <Link
+            href="/forgot-password"
+            className="text-sm text-right hover:text-diaspora-darkBlue"
+          >
             Forgot password ?
           </Link>{" "}
-          <SignInWithGoogle/>
+          <SignInWithGoogle />
           <Button
             type="submit"
             className="w-full bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"

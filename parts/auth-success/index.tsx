@@ -72,15 +72,15 @@ export default function AuthSuccessContent() {
         setStatus(`Welcome! Redirecting as ${role}...`);
 
         if (role === 'super_admin' || role === 'admin') {
-          router.replace('/dashboard/admin');
+          router.replace('/admin/dashboard');
         } else if (role === 'agency') {
           if (!profile.tax_id || profile.tax_id.trim() === '') {
             router.replace('/onboarding/agency');
           } else {
-            router.replace('/dashboard/agency');
+            router.replace('/agency/dashboard');
           }
         } else if (role === 'volunteer') {
-          router.replace('/dashboard/volunteer');
+          router.replace('/volunteer/dashboard');
         } else {
           router.replace('/dashboard');
         }
