@@ -58,7 +58,7 @@ export default function LoginForm() {
               // toast.success("Logged in successfully!");
               localStorage.setItem("diaspobase_role", profile.role);
               localStorage.setItem("diaspobase_userId", session.user.id);
-              router.replace(`/dashboard/${profile.role}`);
+              router.replace(`/${profile.role}/dashboard`);
             });
         }
       },
