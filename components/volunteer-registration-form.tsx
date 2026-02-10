@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,17 +108,50 @@ export default function VolunteerRegistrationForm() {
     }
   }, [formData, touched]);
 
-  useEffect(() => {
-    if (!modalOpen) return;
-    const timer = setTimeout(
-      () => {
-        setModalOpen(false);
-      },
-      1 * 60 * 1000,
-    );
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHoveringRef = useRef(false);
+  const AUTO_CLOSE_MS = 5000;
 
-    return () => clearTimeout(timer);
-  }, [modalOpen]);
+  const handleCloseModal = useCallback(() => {
+    setModalOpen(false);
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const startAutoCloseTimer = useCallback(() => {
+    if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    autoCloseTimerRef.current = setTimeout(() => {
+      if (!isHoveringRef.current) handleCloseModal();
+      autoCloseTimerRef.current = null;
+    }, AUTO_CLOSE_MS);
+  }, [handleCloseModal]);
+
+  const clearAutoCloseTimer = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (modalOpen) {
+      isHoveringRef.current = false;
+      startAutoCloseTimer();
+    }
+    return () => clearAutoCloseTimer();
+  }, [modalOpen, startAutoCloseTimer, clearAutoCloseTimer]);
+
+  const handleModalMouseEnter = () => {
+    isHoveringRef.current = true;
+    clearAutoCloseTimer();
+  };
+
+  const handleModalMouseLeave = () => {
+    isHoveringRef.current = false;
+    startAutoCloseTimer();
+  };
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -438,52 +471,64 @@ export default function VolunteerRegistrationForm() {
       </Card>
 
       {/* Success Modal with Resend */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <Dialog
+        open={modalOpen}
+        onOpenChange={(open) => (open ? setModalOpen(true) : handleCloseModal())}
+      >
         <DialogContent className="sm:max-w-md">
-          <DialogHeader className="">
-            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-              <Mail className="h-10 w-10 text-green-600" />
+          <div
+            onMouseEnter={handleModalMouseEnter}
+            onMouseLeave={handleModalMouseLeave}
+            className="rounded-lg"
+          >
+            <DialogHeader>
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100">
+                <Mail className="h-8 w-8 text-emerald-600" />
+              </div>
+              <DialogTitle className="text-center text-xl font-semibold">
+                Check Your Email
+              </DialogTitle>
+              <DialogDescription className="mt-2 text-center text-[15px]">
+                We sent a confirmation link to
+                <br />
+                <strong className="break-all text-foreground">
+                  {pendingConfirmation?.email || "your email"}
+                </strong>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-6 flex flex-col items-center justify-center space-y-3">
+              <Button
+                onClick={handleResend}
+                disabled={resendLoading || !canResend}
+                variant="outline"
+                className="w-full max-w-[280px]"
+              >
+                {resendLoading ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Resending...
+                  </>
+                ) : canResend ? (
+                  "Resend Confirmation Email"
+                ) : (
+                  <>Resend in {resendCountdown}s</>
+                )}
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={handleCloseModal}
+                className="w-full max-w-[280px]"
+              >
+                OK, I&apos;ll check my email
+              </Button>
             </div>
-            <DialogTitle className="text-2xl text-center">Check Your Email</DialogTitle>
-            <DialogDescription className="text-base mt-3 text-center">
-              We sent a confirmation link to
-              <br />
-              <strong className="text-foreground break-all">
-                {pendingConfirmation?.email || "your email"}
-              </strong>
-            </DialogDescription>
-          </DialogHeader>
 
-          <div className="mt-6 space-y-3 justify-center flex flex-col items-center">
-            <Button
-              onClick={handleResend}
-              disabled={resendLoading || !canResend}
-              variant="outline"
-              className="w-fit "
-            >
-              {resendLoading ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Resending...
-                </>
-              ) : canResend ? (
-                "Resend Confirmation Email"
-              ) : (
-                <>Resend in {resendCountdown}s</>
-              )}
-            </Button>
-
-            {/* <Button
-              onClick={() => setModalOpen(false)}
-              className="w-full"
-            >
-              OK, I'll check my email
-            </Button> */}
+            <p className="mt-6 text-center text-xs text-muted-foreground">
+              The confirmation link is valid for 24 hours.
+            </p>
           </div>
-
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            The confirmation link is valid for 24 hours.
-          </p>
         </DialogContent>
       </Dialog>
     </>
