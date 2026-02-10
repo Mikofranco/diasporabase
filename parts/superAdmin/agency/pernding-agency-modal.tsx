@@ -201,7 +201,7 @@ export function PendingAgenciesModal() {
                     <TableRow
                       key={agency.id}
                       className="hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => router.push(`/dashboard/super_admin/agencies/${agency.id}`)}
+                      onClick={() => router.push(`/super-admin/agencies/${agency.id}`)}
                     >
                       <TableCell className="font-medium max-w-sm">
                         <p className="font-semibold text-lg">{agency.organization_name}</p>

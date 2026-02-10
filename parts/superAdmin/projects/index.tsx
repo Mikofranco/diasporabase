@@ -78,7 +78,7 @@ const AdminProjectsScreen: React.FC = () => {
 
   // Handle project selection
   const handleProjectSelect = (project: Project) => {
-    router.push(`/dashboard/${userRole}/projects/${project.id}`);
+    router.push(`/${userRole === "super_admin" ? "super-admin" : userRole}/projects/${project.id}`);
   };
 
   if (loading) {

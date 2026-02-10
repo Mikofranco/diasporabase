@@ -19,7 +19,7 @@ export default async function AdminDetailsPage() {
     .single();
 
   if (profile?.role !== "super_admin") {
-    redirect("/dashboard");
+    redirect("/super-admin/dashboard");
   }
 
   // Fetch the target admin

@@ -26,7 +26,7 @@ const OngoingProjectItem: React.FC<OngoingProjectItemItemsProps> = ({
 
   const handleRouting = (id: string | number | undefined) => {
     console.log(`Routing to project with ID: ${id}`);
-    router.push(`/dashboard/volunteer/projects/${id}`)
+    router.push(`/volunteer/projects/${id}`)
   };
   return (
     <div

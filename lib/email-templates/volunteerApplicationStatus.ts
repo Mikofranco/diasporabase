@@ -23,7 +23,7 @@ export const volunteerApplicationStatusHtml = (
   const safeOrgName = escapeHtml(organizationName);
   const safeProjectTitle = projectTitle ? escapeHtml(projectTitle) : "the project";
 
-  const projectUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://diasporabase.com"}/dashboard/volunteer/projects/${projectId}`;
+  const projectUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://diasporabase.com"}/volunteer/projects/${projectId}`;
 
   const isAccepted = status === "accepted";
 

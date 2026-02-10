@@ -71,7 +71,7 @@ const RecentProjects = ({ userId }: { userId: string }) => {
   };
   const redirectToCreateProject =()=>{
      toast.info("Redirecting to create a new project...");
-    router.replace("/dashboard/agency/projects")
+    router.replace("/agency/projects")
   }
 
   return (

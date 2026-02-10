@@ -23,7 +23,7 @@ export const taggedInCommentHTML = (
 
   // Optional fallback link if no direct comment link is provided
   const projectUrl = commentLink ||
-    `${process.env.NEXT_PUBLIC_APP_URL || "https://diasporabase.com"}/dashboard/volunteer/projects/${projectId}`;
+    `${process.env.NEXT_PUBLIC_APP_URL || "https://diasporabase.com"}/volunteer/projects/${projectId}`;
 
   return `
 <!DOCTYPE html>

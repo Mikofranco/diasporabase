@@ -64,7 +64,7 @@ const AgencyReviewPage: React.FC = () => {
         .eq("id", agencyId);
       if (error) throw error;
       toast.success(`Agency ${isActive ? "approved" : "rejected"} successfully`);
-      router.push("/dashboard/notifications");
+      router.push("/super-admin/notifications");
     } catch (err: any) {
       toast.error(`Error updating agency: ${err.message}`);
     }

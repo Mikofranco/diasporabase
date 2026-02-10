@@ -57,7 +57,7 @@ const ProjectReviewPage: React.FC = () => {
         .eq("id", projectId);
       if (error) throw error;
       toast.success(`Project ${status === "active" ? "approved" : "rejected"} successfully`);
-      router.push("/dashboard/notifications");
+      router.push("/super-admin/notifications");
     } catch (err: any) {
       toast.error(`Error updating project: ${err.message}`);
     }

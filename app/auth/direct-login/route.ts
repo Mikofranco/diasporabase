@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       type: "magiclink",
       email: "", // We don't need email — we have userId
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/login`,
       },
     });
 

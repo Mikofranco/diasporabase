@@ -100,7 +100,7 @@ const VolunteersManagement: React.FC = () => {
   }, [statusFilter, volunteers]);
 
   const handleRowClick = (volunteerId: string) => {
-    router.push(`/dashboard/${userRole}/volunteers/${volunteerId}`);
+    router.push(`/${userRole === "super_admin" ? "super-admin" : userRole}/volunteers/${volunteerId}`);
   };
 
   if (loading) {

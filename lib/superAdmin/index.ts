@@ -27,7 +27,7 @@ export async function deleteUser(userId: string) {
 
     if (authError) throw authError;
 
-    revalidatePath("/dashboard/super-admin/user-management");
+    revalidatePath("/super-admin/users");
     return { success: true };
   } catch (error) {
     console.error("Error deleting user:", error);

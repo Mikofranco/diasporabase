@@ -252,7 +252,7 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
       const origin =
         typeof window !== "undefined" ? window.location.origin : "";
-      const volunteerDashboardUrl = `${origin}/dashboard/volunteer`;
+      const volunteerDashboardUrl = `${origin}/volunteer/dashboard`;
 
       const html = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f9fafb;">
