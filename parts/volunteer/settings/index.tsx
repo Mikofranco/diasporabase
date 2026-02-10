@@ -193,7 +193,7 @@ const VolunteerSettings: React.FC = () => {
 
       if (error)
         throw new Error(
-          "Error updating notification preferences: " + error.message
+          "Error updating notification preferences: " + error.message,
         );
 
       setProfile({
@@ -238,42 +238,66 @@ const VolunteerSettings: React.FC = () => {
       toast.error(err.message);
     }
   };
+if (loading) {
+  return (
+    <div className="container mx-auto px-4 py-8 space-y-10 max-w-7xl">
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8 space-y-6 max-w-4xl">
-        <Skeleton className="h-10 w-1/2 rounded-lg" />
-        <Card className="shadow-lg">
-          <CardContent className="space-y-6 pt-6">
-            <Skeleton className="h-8 w-1/3 rounded-lg" />
-            <Skeleton className="h-10 w-full rounded-lg" />
-            <Skeleton className="h-10 w-full rounded-lg" />
-          </CardContent>
-        </Card>
+      {/* Grid of card skeletons */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+        {[...Array(4)].map((_, idx) => (
+          <Card key={idx} className="flex flex-col shadow-md border">
+            <CardHeader className="space-y-2">
+              <Skeleton className="h-7 w-4/5 rounded-lg" /> {/* Title */}
+              <Skeleton className="h-5 w-3/5 rounded-lg" /> {/* Org name */}
+            </CardHeader>
+            <CardContent className="flex-1 space-y-4 pt-2">
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-full rounded-lg" /> {/* Description line 1 */}
+                <Skeleton className="h-5 w-full rounded-lg" /> {/* Description line 2 */}
+                <Skeleton className="h-5 w-3/4 rounded-lg" /> {/* Description line 3 */}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded-full" /> {/* Icon */}
+                  <Skeleton className="h-4 w-5/6 rounded-lg" /> {/* Date/location */}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                  <Skeleton className="h-4 w-4/6 rounded-lg" />
+                </div>
+              </div>
+              <Skeleton className="h-6 w-32 rounded-lg" /> {/* Badge / category */}
+            </CardContent>
+            <CardFooter className="mt-auto">
+              <Skeleton className="h-10 w-full rounded-lg" /> {/* Button */}
+            </CardFooter>
+          </Card>
+        ))}
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card className="shadow-lg border-red-300 bg-red-50">
-          <CardHeader>
-            <CardTitle className="text-xl text-red-700">Error</CardTitle>
-          </CardHeader>
-          <CardContent className="text-red-600">{error}</CardContent>
-          <CardFooter>
-            <Button
-              variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => router.push("/dashboard/volunteer")}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <Card className="shadow-lg border-red-300 bg-red-50">
+            <CardHeader>
+              <CardTitle className="text-xl text-red-700">Error</CardTitle>
+            </CardHeader>
+            <CardContent className="text-red-600">{error}</CardContent>
+            <CardFooter>
+              <Button
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                onClick={() => router.push("/volunteer/dashboard")}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
     );
   }
 
@@ -286,7 +310,7 @@ const VolunteerSettings: React.FC = () => {
         <Button
           variant="outline"
           className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          onClick={() => router.push("/dashboard/volunteer")}
+          onClick={() => router.push("/volunteer/dashboard")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
@@ -296,7 +320,7 @@ const VolunteerSettings: React.FC = () => {
         <Card className="shadow-lg border-0 bg-white rounded-xl">
           <CardHeader className="border-b border-gray-200">
             <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
-              <User className="h-5 w-5 mr-2 text-gray-500" />
+              <User className="h-5 w-5 mr-2 text-gray-500" /> 
               Profile Information
             </CardTitle>
           </CardHeader>

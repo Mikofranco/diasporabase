@@ -3,7 +3,7 @@ import { cookies } from "next/headers"
 import { createServerClientComponentClient } from "@/lib/supabase/server"
 import type React from "react"
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AgencyLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies()
   const supabase = createServerClientComponentClient(cookieStore)
 
@@ -16,10 +16,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const { data: profile, error } = await supabase.from("profiles").select("role").eq("id", session.user.id).single()
 
-  if (error || profile?.role !== "admin") {
-    // Redirect to their actual dashboard or login if not admin
+  if (error || profile?.role !== "agency") {
+    // Redirect to their actual dashboard or login if not agency
     if (profile?.role) {
-      redirect(`/dashboard/${profile.role}`)
+      const rolePath = profile.role === "super_admin" ? "super-admin" : profile.role;
+      redirect(`/${rolePath}/dashboard`)
     } else {
       redirect("/login")
     }

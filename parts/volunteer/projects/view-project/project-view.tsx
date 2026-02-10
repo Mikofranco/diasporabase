@@ -107,7 +107,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   };
 
   const handleLeaveSuccess = () => {
-    router.push("/dashboard/volunteer/projects");
+    router.push("/volunteer/projects");
     router.refresh();
   };
 
@@ -221,7 +221,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                           className="w-full text-base py-6"
                           onClick={() =>
                             router.push(
-                              `/dashboard/volunteer/project_management/${project.id}`
+                              `/volunteer/project_management/${project.id}`
                             )
                           }
                         >

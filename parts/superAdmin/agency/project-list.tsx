@@ -115,7 +115,7 @@ export default function ProjectsList({ agencyId }: ProjectsListProps) {
           return (
             <Link
               key={project.id}
-              href={`/dashboard/agency/projects/${project.id}`}
+              href={`/agency/projects/${project.id}`}
               className="group block"
             >
               <Card className="h-full transition-all hover:shadow-md hover:border-primary/20">

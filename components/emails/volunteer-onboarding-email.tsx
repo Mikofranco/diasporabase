@@ -44,7 +44,7 @@ export default function VolunteerOnboardingEmail() {
           </p>
 
           <div className="text-center">
-            <Link href="/dashboard/volunteer" passHref>
+            <Link href="/volunteer/dashboard" passHref>
               <Button size="lg" className="bg-gradient-primary text-white hover:opacity-90 transition-opacity">
                 Go to My Volunteer Dashboard
               </Button>

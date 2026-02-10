@@ -151,7 +151,7 @@ export function VolunteerOnboardingForm() {
         return;
       }
 
-      router.push(`/dashboard/${profile?.role || "volunteer"}`);
+      router.push(`/${profile?.role === "super_admin" ? "super-admin" : profile?.role || "volunteer"}/dashboard`);
     } catch (err) {
       console.error("Unexpected error during onboarding:", err);
     } finally {

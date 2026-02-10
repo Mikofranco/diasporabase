@@ -106,7 +106,7 @@ export default function UserManagement() {
   }, [users, searchQuery, selectedRole]);
 
   const handleRowClick = (userId: string) => {
-    router.push(`/dashboard/super_admin/users/${userId}`);
+    router.push(`/super-admin/users/${userId}`);
   };
 
   const handleDeleteClick = (e: React.MouseEvent, userId: string) => {

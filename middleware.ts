@@ -77,6 +77,15 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Map DB role to URL path (e.g. super_admin -> super-admin)
+  const roleToPath: Record<string, string> = {
+    super_admin: "super-admin",
+    admin: "admin",
+    agency: "agency",
+    volunteer: "volunteer",
+  };
+  const rolePath = roleToPath[userRole] || userRole;
+
   // If logged in and accessing auth pages, redirect to their dashboard
   if (
     path === "/login" ||
@@ -84,14 +93,14 @@ export async function middleware(req: NextRequest) {
     path === "/register-volunteer"
   ) {
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = `/dashboard/${userRole}`;
+    redirectUrl.pathname = `/${rolePath}/dashboard`;
     return NextResponse.redirect(redirectUrl);
   }
 
   // Handle generic /dashboard redirect
   if (path === "/dashboard") {
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = `/dashboard/${userRole}`;
+    redirectUrl.pathname = `/${rolePath}/dashboard`;
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -101,7 +110,7 @@ export async function middleware(req: NextRequest) {
       //@ts-ignore
       if (!protectedPaths[prefix].includes(userRole)) {
         const redirectUrl = req.nextUrl.clone();
-        redirectUrl.pathname = `/dashboard/${userRole}`;
+        redirectUrl.pathname = `/${rolePath}/dashboard`;
         return NextResponse.redirect(redirectUrl);
       }
     }

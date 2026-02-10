@@ -171,7 +171,7 @@ const NotificationScreen: React.FC = () => {
           <div className="space-y-2">
             <p className="text-sm text-gray-900 dark:text-gray-100">{notification.message}</p>
             {/* <Link
-              href={`/dashboard/${userRole}/projects/${notification.project_id}`}
+              href={`/${userRole === "super_admin" ? "super-admin" : userRole}/projects/${notification.project_id}`}
               className="text-[#0284C7] hover:underline text-sm"
             >
               View Project
@@ -204,7 +204,7 @@ const NotificationScreen: React.FC = () => {
           <div className="space-y-2">
             <p className="text-sm text-gray-900 dark:text-gray-100">{notification.message}</p>
             {/* <Link
-              href={`/dashboard/${userRole}/projects/${notification.project_id}`}
+              href={`/${userRole === "super_admin" ? "super-admin" : userRole}/projects/${notification.project_id}`}
               className="text-[#0284C7] hover:underline text-sm"
             >
               View Project

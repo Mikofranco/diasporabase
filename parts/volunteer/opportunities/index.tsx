@@ -299,7 +299,7 @@ const Opportunities: React.FC = () => {
                 {" "}
                 {/* ← key change here */}
                 <Button asChild className="w-full action-btn">
-                  <Link href={`/dashboard/volunteer/projects/${project.id}`}>
+                  <Link href={`/volunteer/projects/${project.id}`}>
                     View Details
                   </Link>
                 </Button>

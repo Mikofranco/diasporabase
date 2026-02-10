@@ -148,7 +148,7 @@ const EditProject: React.FC = () => {
       }
 
       toast.success('Project updated successfully!');
-      router.push(`/dashboard/admin/projects/${projectId}`);
+      router.push(`/admin/projects/${projectId}`);
     } catch (err) {
       toast.error('Error updating project: ' + (err as Error).message);
     }

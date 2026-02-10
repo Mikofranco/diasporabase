@@ -17,7 +17,7 @@ const MatchingProjectsFull = () => {
   const router = useRouter();
 
   const handleProjectSelect = (projectId: string) => {
-    router.push(`/dashboard/volunteer/projects/${projectId}`);
+    router.push(`/volunteer/projects/${projectId}`);
   };
 
   // useEffect(() => {

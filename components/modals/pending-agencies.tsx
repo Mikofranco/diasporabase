@@ -228,7 +228,7 @@ export function PendingAgenciesModal() {
                       className="hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() =>
                         router.push(
-                          `/dashboard/super_admin/agencies/${agency.id}`,
+                          `/super-admin/agencies/${agency.id}`,
                         )
                       }
                     >

@@ -123,7 +123,7 @@ export function getAgencyStatusEmailHtml({
           You can start posting projects, defining needed skills, setting timelines, and connecting with talented diaspora professionals right away.
         </p>
         <div style="text-align: center;">
-          <a href="${appUrl}/dashboard/agency" class="cta-button">
+          <a href="${appUrl}/agency/dashboard" class="cta-button">
             Go to Your Dashboard
           </a>
         </div>

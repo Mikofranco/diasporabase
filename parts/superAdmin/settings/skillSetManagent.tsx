@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Trash2, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Item } from "@/app/dashboard/volunteer/profile/page";
+import { Item } from "@/app/(dashboard)/(volunteer)/volunteer/profile/page";
 import { getSkillsets } from "@/lib/utils";
 
 const supabase = createClient();
@@ -62,13 +62,13 @@ export default function SkillsetManagementPage() {
 
       if (profileError) {
         toast.error("Error fetching user role.");
-        router.push("/dashboard");
+        router.push("/super-admin/dashboard");
         return;
       }
 
       if (!["admin", "super_admin"].includes(data.role)) {
         toast.error("You are not authorized to access this page.");
-        router.push("/dashboard");
+        router.push("/super-admin/dashboard");
         return;
       }
 
