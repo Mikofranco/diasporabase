@@ -59,7 +59,7 @@ export default function AuthSuccessAgency() {
           profile.organization_name?.trim(); 
 
         if (isOnboarded) {
-          router.replace("/dashboard/agency");
+          router.replace("/agency/dashboard");
         } else {
           router.replace("/onboarding/agency");
         }

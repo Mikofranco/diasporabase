@@ -109,7 +109,7 @@ export default function ConfirmEmailPage() {
         setUserRole(profile?.role?.toLowerCase() as UserRole);
         const role = profile?.role?.toLowerCase();
         if (role === "agency") redirectPath = "/onboarding";
-        else if (role === "volunteer") redirectPath = "/dashboard/volunteer";
+        else if (role === "volunteer") redirectPath = "/volunteer/dashboard";
 
         // toast.success("Welcome back! Redirecting to your dashboard...");
         setTimeout(() => router.push(redirectPath), 3000);
@@ -151,7 +151,7 @@ export default function ConfirmEmailPage() {
     if (role === "agency") {
       router.push("/onboarding");
     } else if (role === "volunteer") {
-      router.push("/dashboard/volunteer");
+      router.push("/volunteer/dashboard");
     } else {
       router.push("/login");
     }
