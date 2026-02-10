@@ -407,7 +407,7 @@ const AgencyOnboarding: React.FC = () => {
           : null
       );
       // toast.success("Onboarding completed successfully!");
-      router.push("/dashboard/agency");
+      router.push("/agency/dashboard");
     } catch (err: any) {
       setIsCompleting(false);
       setError(err.message);
