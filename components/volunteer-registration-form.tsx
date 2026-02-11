@@ -472,7 +472,7 @@ export default function VolunteerRegistrationForm() {
       </Card>
 
       {/* Success Modal with Resend */}
-      {/* <Dialog
+      <Dialog
         open={modalOpen}
         onOpenChange={(open) => (open ? setModalOpen(true) : handleCloseModal())}
       >
@@ -531,9 +531,9 @@ export default function VolunteerRegistrationForm() {
             </p>
           </div>
         </DialogContent>
-      </Dialog> */}
+      </Dialog>
 
-      <DiasporaBaseModal
+      {/* <DiasporaBaseModal
         isOpen={modalOpen}
         onClose={handleCloseModal}
         title="Registration Successful"
@@ -576,7 +576,7 @@ export default function VolunteerRegistrationForm() {
               The confirmation link is valid for 24 hours.
             </p>
         </div>
-      </DiasporaBaseModal>
+      </DiasporaBaseModal> */}
     </>
   );
 }
