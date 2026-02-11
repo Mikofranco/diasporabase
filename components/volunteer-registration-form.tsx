@@ -35,6 +35,7 @@ import { welcomeHtml } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
 import { GoogleSignUpButton } from "./signinwithGoogleBtn";
 import Logo from "./logo";
+import DiasporaBaseModal from "./diasporabase-modal";
 
 const formSchema = z
   .object({
@@ -531,6 +532,51 @@ export default function VolunteerRegistrationForm() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* <DiasporaBaseModal
+        isOpen={modalOpen}
+        onClose={handleCloseModal}
+        title="Registration Successful"
+        size="sm"
+      >
+        <div className="p-4">
+          <p className="text-center text-sm text-muted-foreground">
+            Your registration is complete. Please check your email for confirmation.
+          </p>
+
+          <div className="mt-6 flex flex-col items-center justify-center space-y-3">
+              <Button
+                onClick={handleResend}
+                disabled={resendLoading || !canResend}
+                variant="outline"
+                className="w-full max-w-[280px]"
+              >
+                {resendLoading ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Resending...
+                  </>
+                ) : canResend ? (
+                  "Resend Confirmation Email"
+                ) : (
+                  <>Resend in {resendCountdown}s</>
+                )}
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={handleCloseModal}
+                className="w-full max-w-[280px]"
+              >
+                OK, I&apos;ll check my email
+              </Button>
+            </div>
+
+             <p className="mt-6 text-center text-xs text-muted-foreground">
+              The confirmation link is valid for 24 hours.
+            </p>
+        </div>
+      </DiasporaBaseModal> */}
     </>
   );
 }

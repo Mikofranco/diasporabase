@@ -35,6 +35,7 @@ import { useSendMail } from "@/services/mail";
 import { welcomeHtmlAgency } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
 import { GoogleSignUpButton } from "./signinwithGoogleBtn";
+import DiasporaBaseModal from "./diasporabase-modal";
 
 const formSchema = z
   .object({
@@ -274,7 +275,9 @@ export default function AgencyRegistrationForm() {
 
   return (
     <>
-      <Card className={`w-full max-w-2xl mx-auto shadow-xl border-0 ${modalOpen ? "blur-sm" : ""}`}>
+      <Card
+        className={`w-full max-w-2xl mx-auto shadow-xl border-0 ${modalOpen ? "blur-sm" : ""}`}
+      >
         <CardHeader className="text-center pb-8">
           <CardTitle className="text-xl sm:text-3xl font-bold text-[#1E293B] flex items-center justify-center gap-3">
             <Building2 className="h-10 w-10  text-primary" />
@@ -435,13 +438,15 @@ export default function AgencyRegistrationForm() {
       </Card>
 
       {/* Success Modal with Resend */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen} >
+      {/* <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md ">
           <DialogHeader className="text-center">
             <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
               <Mail className="h-10 w-10 text-green-600" />
             </div>
-            <DialogTitle className="text-2xl text-center">Check Your Email</DialogTitle>
+            <DialogTitle className="text-2xl text-center">
+              Check Your Email
+            </DialogTitle>
             <DialogDescription className="text-base mt-3 text-center">
               A confirmation link has been sent to
               <br />
@@ -469,20 +474,58 @@ export default function AgencyRegistrationForm() {
                 <>Resend in {resendCountdown}s</>
               )}
             </Button>
-
-            {/* <Button
-              onClick={() => setModalOpen(false)}
-              className="w-full"
-            >
-              OK, I'll check my email
-            </Button> */}
           </div>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
             The confirmation link is valid for 24 hours.
           </p>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
+
+      <DiasporaBaseModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Check Your Email"
+        size="sm"
+      >
+        <div className="text-base mt-3 text-center">
+          A confirmation link has been sent to
+          <br />
+          <strong className="text-foreground break-all">
+            {pendingConfirmation?.email || "your email"}
+          </strong>
+        </div>
+        <div className="mt-6 space-y-3 justify-center flex flex-col items-center">
+          <Button
+            onClick={handleResend}
+            disabled={resendLoading || !canResend}
+            variant="outline"
+            className="w-fit"
+          >
+            {resendLoading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Resending...
+              </>
+            ) : canResend ? (
+              "Resend Confirmation Email"
+            ) : (
+              <>Resend in {resendCountdown}s</>
+            )}
+          </Button>
+
+          {/* <Button
+              onClick={() => setModalOpen(false)}
+              className="w-full"
+            >
+              OK, I'll check my email
+            </Button> */}
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          The confirmation link is valid for 24 hours.
+        </p>
+      </DiasporaBaseModal>
     </>
   );
 }

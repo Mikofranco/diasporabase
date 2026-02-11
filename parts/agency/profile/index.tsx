@@ -387,7 +387,7 @@ const Profile: React.FC = () => {
                           href={profile.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
+                          className="text-diaspora-darkBlue hover:underline"
                         >
                           {profile.website}
                         </a>
@@ -424,7 +424,7 @@ const Profile: React.FC = () => {
                           <Badge
                             key={area}
                             variant="default"
-                            className="bg-blue-600 text-white rounded-md px-2 py-1 text-sm"
+                            className="bg-diaspora-blue text-white rounded-md px-2 py-1 text-sm"
                           >
                             {area.charAt(0).toUpperCase() + area.slice(1).replace("_", " ")}
                           </Badge>
@@ -442,7 +442,7 @@ const Profile: React.FC = () => {
                           <Badge
                             key={city}
                             variant="default"
-                            className="bg-blue-600 text-white rounded-md px-2 py-1 text-sm"
+                            className="bg-diaspora-blue text-white rounded-md px-2 py-1 text-sm"
                           >
                             {city}
                           </Badge>
@@ -460,7 +460,7 @@ const Profile: React.FC = () => {
                           <Badge
                             key={state}
                             variant="default"
-                            className="bg-blue-600 text-white rounded-md px-2 py-1 text-sm"
+                            className="bg-diaspora-blue text-white rounded-md px-2 py-1 text-sm"
                           >
                             {state}
                           </Badge>
@@ -796,7 +796,7 @@ const Profile: React.FC = () => {
                       <TooltipTrigger asChild>
                         <Button
                           type="submit"
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 py-2"
+                          className="w-full action-btn text-white font-semibold rounded-lg transition-colors duration-200 py-2"
                           disabled={loading}
                         >
                           Save Changes
