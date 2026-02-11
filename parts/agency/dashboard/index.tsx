@@ -161,7 +161,7 @@ const AgencyDashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, [router]);
+  }, []);
 
   // Optional: Refetch when userId changes (extra safety)
   useEffect(() => {

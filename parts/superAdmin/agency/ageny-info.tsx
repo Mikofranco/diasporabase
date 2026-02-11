@@ -55,6 +55,10 @@ interface AgencyProfile {
   environment_states: string[] | null;
   profile_picture: string | null;
   is_active: boolean;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  cac_number: string | null;
 }
 
 const profileSchema = z.object({
@@ -443,9 +447,21 @@ const AgencyProfile = () => {
               </div>
             </CardHeader>
 
-            <CardContent className="grid md:grid-cols-2 gap-8">
+            <CardContent className="grid md:grid-cols-1 gap-8">
               <InfoSection
-                title="Contact"
+                title="Overview"
+                data={{
+                  Email: profile.email,
+                  "Display Name": profile.full_name,
+                  Phone: profile.phone,
+                  Description: profile.description,
+                  "Cac Number": profile.cac_number,
+                  Address: profile.address,
+                }}
+              />
+
+              <InfoSection
+                title="Contact information"
                 data={{
                   Email: profile.contact_person_email,
                   Phone: profile.contact_person_phone,
@@ -549,7 +565,7 @@ const ProfileSkeleton = () => (
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-1 gap-8">
           {[...Array(2)].map((_, i) => (
             <div key={i} className="space-y-4">
               <Skeleton className="h-6 w-32" />
@@ -582,12 +598,12 @@ const InfoSection = ({
   data: Record<string, string | null | undefined>;
 }) => (
   <div className="space-y-3">
-    <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+    <h3 className="text-lg font-semibold text-diaspora-darkBlue">{title}</h3>
     <dl className="space-y-2 text-sm">
       {Object.entries(data).map(([key, value]) => (
-        <div key={key} className="flex justify-between">
-          <dt className="font-medium text-gray-600">{key}:</dt>
-          <dd className="text-gray-900 ml-4">
+        <div key={key} className="flex">
+          <dt className="font-medium text-gray-600 flex-1">{key}:</dt>
+          <dd className="text-gray-900 ml-4 flex-1">
             {value ? (
               key === "Website" ? (
                 <a
