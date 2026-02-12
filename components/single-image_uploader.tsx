@@ -14,10 +14,11 @@ export interface SingleImageUploaderRef {
 interface SingleImageUploaderProps {
   onFileSelected?: (file: File | null) => void;
   onUploadComplete?: (url: string) => void;
+  title?: string;
 }
 
 const SingleImageUploader = forwardRef<SingleImageUploaderRef, SingleImageUploaderProps>(
-  ({ onFileSelected, onUploadComplete }, ref) => {
+  ({ onFileSelected, onUploadComplete, title }, ref) => {
     const [preview, setPreview] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -81,9 +82,9 @@ const SingleImageUploader = forwardRef<SingleImageUploaderRef, SingleImageUpload
     }));
 
     return (
-      <div className="w-full max-w-md mx-auto p-5 border border-border rounded-xl bg-card shadow-sm">
-        <h3 className="text-lg font-medium text-foreground mb-4">
-          Upload Image (max 2MB)
+      <div className="w-full  mx-auto p-5 border border-border rounded-xl bg-card shadow-sm">
+        <h3 className="font-medium text-foreground mb-4">
+          {title }
         </h3>
 
         {preview ? (
@@ -92,7 +93,7 @@ const SingleImageUploader = forwardRef<SingleImageUploaderRef, SingleImageUpload
               <img
                 src={preview}
                 alt="Preview"
-                className="w-full h-64 object-contain transition-transform duration-300 group-hover:scale-105"
+                className="w-full h-40 object-contain transition-transform duration-300 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                 <span className="text-white text-sm font-medium">Preview</span>
@@ -115,7 +116,7 @@ const SingleImageUploader = forwardRef<SingleImageUploaderRef, SingleImageUpload
               <svg className="mx-auto h-10 w-10 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              <p className="text-sm font-medium text-foreground">Click to select image or drag & drop</p>
+              <p className="text-sm font-medium text-foreground">Click to select image</p>
               <p className="text-xs text-muted-foreground">PNG, JPG, WEBP • Max 2MB</p>
             </div>
             <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />

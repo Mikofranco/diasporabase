@@ -137,7 +137,7 @@ interface Item {
   subChildren?: Item[];
 }
 
-interface Skillset {
+export interface SkillSet {
   id: string;
   label: string;
   parent_id: string | null;
@@ -155,16 +155,16 @@ export async function getSkillsets(): Promise<Item[]> {
     }
 
     // Transform flat skillsets into hierarchical structure
-    const topLevel = data.filter((s: Skillset) => s.parent_id === null);
-    const transformedItems: Item[] = topLevel.map((top: Skillset) => {
+    const topLevel = data.filter((s: SkillSet) => s.parent_id === null);
+    const transformedItems: Item[] = topLevel.map((top: SkillSet) => {
       const children = data
-        .filter((s: Skillset) => s.parent_id === top.id)
-        .map((child: Skillset) => ({
+        .filter((s: SkillSet) => s.parent_id === top.id)
+        .map((child: SkillSet) => ({
           id: child.id,
           label: child.label,
           subChildren: data
-            .filter((s: Skillset) => s.parent_id === child.id)
-            .map((subChild: Skillset) => ({
+            .filter((s: SkillSet) => s.parent_id === child.id)
+            .map((subChild: SkillSet) => ({
               id: subChild.id,
               label: subChild.label,
             })),

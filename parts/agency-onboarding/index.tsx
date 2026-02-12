@@ -1,7 +1,11 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { getUserId, getUserLocation } from "@/lib/utils";
+import {
+  getSkillsets as getSkillSets,
+  getUserId,
+  getUserLocation,
+} from "@/lib/utils";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -58,6 +62,8 @@ import SingleImageUploader, {
 import MultipleImageUploader, {
   MultipleImageUploaderRef,
 } from "@/components/multi-image-uploader";
+import { SkillSet } from "@/lib/types";
+import { is } from "date-fns/locale";
 
 const supabase = createClient();
 
@@ -70,13 +76,7 @@ const organizationTypes = [
   "Other",
 ];
 
-const focusAreaOptions = [
-  { id: "education", label: "Education" },
-  { id: "healthcare", label: "Healthcare" },
-  { id: "environment", label: "Environment" },
-  { id: "technology", label: "Technology" },
-  { id: "social_services", label: "Social Services" },
-];
+const focusAreaOptions: SkillSet[] = [];
 
 const generalSchema = z.object({
   organization_name: z.string().min(1, "Organization name is required.").trim(),
@@ -127,6 +127,7 @@ const operationalSchema = z.object({
 
 const pictureSchema = z.object({
   profile_picture: z.string().url("Invalid URL.").nullable(),
+  documents: z.array(z.string().url("Invalid URL.")).nullable(),
 });
 
 const formSchema = z.object({
@@ -170,6 +171,7 @@ const AgencyOnboarding: React.FC = () => {
   const singleRef = useRef<SingleImageUploaderRef>(null);
   const multipleRef = useRef<MultipleImageUploaderRef>(null);
   const router = useRouter();
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -190,6 +192,7 @@ const AgencyOnboarding: React.FC = () => {
       environment_states: [],
       profile_picture: null,
       cac_number: "",
+      documents: [],
     },
   });
 
@@ -202,6 +205,11 @@ const AgencyOnboarding: React.FC = () => {
         const { data: userId, error: userIdError } = await getUserId();
         if (userIdError) throw new Error(userIdError);
         if (!userId) throw new Error("Please log in to complete onboarding.");
+
+        const skillSets = await getSkillSets();
+        focusAreaOptions.push(
+          ...skillSets.map((skill) => ({ id: skill.id, label: skill.label })),
+        );
 
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
@@ -254,6 +262,7 @@ const AgencyOnboarding: React.FC = () => {
           environment_cities: profileData.environment_cities || [],
           environment_states: profileData.environment_states || [],
           profile_picture: profileData.profile_picture || null,
+          documents: profileData.documents || [],
         });
 
         // Fetch and set location
@@ -324,6 +333,7 @@ const AgencyOnboarding: React.FC = () => {
         "description",
         "organization_type",
         "tax_id",
+        "cac_number",
       ]);
       if (!isValid) {
         console.log("Step 1 validation errors:", form.formState.errors);
@@ -340,6 +350,7 @@ const AgencyOnboarding: React.FC = () => {
       isValid = await form.trigger(["address", "focus_areas"]);
     } else if (step === 4) {
       isValid = await form.trigger(["profile_picture"]);
+      isValid = await form.trigger(["documents"]) && isValid;
     }
 
     if (isValid && step < 4) {
@@ -383,12 +394,15 @@ const AgencyOnboarding: React.FC = () => {
       // }
 
       const picture_singleUrl = await singleRef.current?.upload();
-      if (!picture_singleUrl) throw new Error("Profile picture upload failed");
 
       // Upload multiple images
       const multipleUrls = await multipleRef.current?.upload();
-     if (multipleUrls && multipleUrls.length > 0) {
+      if (multipleUrls && multipleUrls.length > 0) {
         console.log("Multiple documents uploaded:", multipleUrls);
+      } else {
+        setDocumentsError(
+          "No documents uploaded. Please upload at least one document.",
+        );
       }
       const { error: updateError } = await supabase
         .from("profiles")
@@ -872,13 +886,34 @@ const AgencyOnboarding: React.FC = () => {
                         </FormItem>
                       )}
                     /> */}
-                    <div className="mb-10">
-                      <SingleImageUploader ref={singleRef} />
+                    <div>
+                      <h3 className="text-gray-700 font-medium mb-2">
+                        Profile Picture (Business Logo)
+                      </h3>
+                      <p className="text-xs text-gray-600 mb-4">
+                        Upload a clear logo or photo of your organization
+                      </p>
+                      <SingleImageUploader ref={singleRef} title="" />
                     </div>
 
-                    <div className="mb-10">
-                      <MultipleImageUploader ref={multipleRef} />
+                    <div>
+                      <h3 className="text-gray-700 font-medium mb-2">
+                        Supporting Documents
+                        <span className="text-red-500 text-sm ml-1 font-light">
+                          (at least one recommended)
+                        </span>
+                      </h3>
+                      <p className="text-xs text-gray-600 mb-4">
+                        Upload CAC certificate, registration documents, or other
+                        relevant files (PDF, JPG, PNG)
+                      </p>
+                      <MultipleImageUploader ref={multipleRef} title="" />
                     </div>
+                    {documentsError && (
+                      <div className="mt-2 text-red-500 text-[10px]">
+                        {documentsError}
+                      </div>
+                    )}
                   </div>
                 )}
 
