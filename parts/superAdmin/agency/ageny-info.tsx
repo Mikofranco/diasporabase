@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, Upload, AlertTriangle } from "lucide-react";
+import { Loader2, AlertCircle, Upload, AlertTriangle, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,24 +38,14 @@ import { Switch } from "@/components/ui/switch";
 import { useSendMail } from "@/services/mail";
 import ProjectsList from "./project-list";
 import { formatLocation } from "@/lib/utils";
+import DocumentViewer from "@/components/document-viewer";
+import OverviewSection from "./overview";
+import { de } from "date-fns/locale";
+import type { AgencyProfile } from "@/lib/types";
 
 const supabase = createClient();
 
-interface AgencyProfile {
-  id: string;
-  organization_name: string | null;
-  contact_person_email: string | null;
-  contact_person_phone: string | null;
-  website: string | null;
-  focus_areas: string[] | null;
-  address: string | null;
-  organization_type: string | null;
-  description: string | null;
-  environment_cities: string[] | null;
-  environment_states: string[] | null;
-  profile_picture: string | null;
-  is_active: boolean;
-}
+
 
 const profileSchema = z.object({
   organization_name: z.string().min(1, "Organization name is required"),
@@ -69,6 +59,7 @@ const profileSchema = z.object({
   environment_cities: z.string().optional(),
   environment_states: z.string().optional(),
   is_active: z.boolean(),
+  documents: z.array(z.string()).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -309,8 +300,8 @@ const AgencyProfile = () => {
           status === "activated"
             ? "Checkmark Approved"
             : status === "deactivated"
-            ? "Cross Rejected"
-            : "Clock Pending Review"
+              ? "Cross Rejected"
+              : "Clock Pending Review"
         }
         <strong>${status.charAt(0).toUpperCase() + status.slice(1)}</strong>
       </div>
@@ -326,12 +317,12 @@ const AgencyProfile = () => {
         </a>
       `
           : status === "deactivated"
-          ? `
+            ? `
         <p class="message">
           Your application is under review. We'll notify you within 48 hours.
         </p>
       `
-          : `
+            : `
         <p class="message">
           Unfortunately, your application was not approved at this time.<br/>
           Please contact <a href="mailto:support@diasporabase.com">support</a> for more details.
@@ -392,9 +383,8 @@ const AgencyProfile = () => {
   return (
     <>
       <div className="min-h-screen bg-gray-50 py-8">
-        <div className="container mx-auto px-4 max-w-5xl">
-         {
-          profile.contact_person_email === null ? (
+        <div className="container mx-auto px-4 ">
+          {profile.contact_person_email === null ? (
             <Alert className="mb-6 bg-red-50 border-red-200 text-red-600">
               <AlertCircle className="h-5 w-5" />
               <AlertTitle>Incomplete Profile</AlertTitle>
@@ -403,8 +393,7 @@ const AgencyProfile = () => {
                 contact the agency to provide the necessary information.
               </AlertDescription>
             </Alert>
-          ) : null
-         }
+          ) : null}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="flex items-center gap-4">
@@ -443,9 +432,13 @@ const AgencyProfile = () => {
               </div>
             </CardHeader>
 
-            <CardContent className="grid md:grid-cols-2 gap-8">
+            <CardContent className="grid md:grid-cols-1 gap-8">
+              <OverviewSection
+                profile={profile}
+              />
+
               <InfoSection
-                title="Contact"
+                title="Contact information"
                 data={{
                   Email: profile.contact_person_email,
                   Phone: profile.contact_person_phone,
@@ -453,6 +446,14 @@ const AgencyProfile = () => {
                   Type: profile.organization_type,
                   Address: profile.address,
                 }}
+              />
+              <DocumentViewer
+                documents={profile.documents.map(
+                  (doc: string, index: number) => ({
+                    url: doc,
+                    name: `Document ${index + 1}`,
+                  }),
+                )}
               />
               {/* <InfoSection
                 title="Operations"
@@ -537,7 +538,7 @@ const AgencyProfile = () => {
 
 // ——— Helper Components (unchanged) ———
 const ProfileSkeleton = () => (
-  <div className="container mx-auto p-6 max-w-5xl">
+  <div className="container mx-auto p-6 max-w-6xl">
     <Card>
       <CardHeader>
         <div className="flex items-center gap-4">
@@ -549,7 +550,7 @@ const ProfileSkeleton = () => (
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-1 gap-8">
           {[...Array(2)].map((_, i) => (
             <div key={i} className="space-y-4">
               <Skeleton className="h-6 w-32" />
@@ -581,13 +582,13 @@ const InfoSection = ({
   title: string;
   data: Record<string, string | null | undefined>;
 }) => (
-  <div className="space-y-3">
-    <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+  <Card className="space-y-3 p-6">
+    <h3 className="text-lg font-semibold text-diaspora-darkBlue">{title}</h3>
     <dl className="space-y-2 text-sm">
       {Object.entries(data).map(([key, value]) => (
-        <div key={key} className="flex justify-between">
-          <dt className="font-medium text-gray-600">{key}:</dt>
-          <dd className="text-gray-900 ml-4">
+        <div key={key} className="flex">
+          <dt className="font-medium text-gray-600 flex-1">{key}:</dt>
+          <dd className="text-gray-900 ml-4 flex-1">
             {value ? (
               key === "Website" ? (
                 <a
@@ -608,7 +609,7 @@ const InfoSection = ({
         </div>
       ))}
     </dl>
-  </div>
+  </Card>
 );
 
 interface EditModalProps {

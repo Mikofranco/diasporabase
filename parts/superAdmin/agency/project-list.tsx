@@ -93,9 +93,9 @@ export default function ProjectsList({ agencyId }: ProjectsListProps) {
         <CardContent className="py-12 text-center text-muted-foreground">
           <Briefcase className="mx-auto h-12 w-12 text-gray-300 mb-4" />
           <p className="text-lg font-medium">No Projects Yet</p>
-          <p className="mt-2 text-sm">
+          {/* <p className="mt-2 text-sm">
             Create your first project to get started.
-          </p>
+          </p> */}
         </CardContent>
       </Card>
     );

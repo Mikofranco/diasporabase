@@ -169,7 +169,7 @@ export function PendingAgenciesModal() {
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-3xl font-bold flex items-center gap-4">
-              <Building2 className="h-10 w-10 text-blue-600" />
+              <Building2 className="h-10 w-10 text-diaspora-blue" />
               Pending Agency Approvals
             </DialogTitle>
             <DialogDescription className="text-lg mt-2">

@@ -214,3 +214,26 @@ export interface Volunteer {
   avatar_url?: string;
   profile?: Profile;
 }
+
+export interface AgencyProfile {
+  id: string;
+  organization_name: string | null;
+  contact_person_email: string | null;
+  contact_person_phone: string | null;
+  website: string | null;
+  focus_areas: string[] | null;
+  address: string | null;
+  organization_type: string | null;
+  description: string | null;
+  environment_cities: string[] | null;
+  environment_states: string[] | null;
+  profile_picture: string | null;
+  is_active: boolean;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  cac_number: string | null;
+  documents: string[] | [];
+  contact_person_first_name: string | null;
+contact_person_last_name: string | null;
+}

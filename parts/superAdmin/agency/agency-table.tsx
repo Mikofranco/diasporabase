@@ -215,13 +215,13 @@ const AgencyList: React.FC = () => {
                           href={agency.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                          onClick={(e) => e.stopPropagation()}
+                          className="text-diaspora-darkBlue hover:underline"
+                          // onClick={(e) => e.stopPropagation()}
                         >
                           {agency.website}
                         </a>
                       ) : (
-                        'N/A'
+                        'no website'
                       )}
                     </TableCell>
                     <TableCell>

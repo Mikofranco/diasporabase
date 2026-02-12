@@ -1,8 +1,12 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { getUserId, getUserLocation } from "@/lib/utils";
-import React, { useState, useEffect } from "react";
+import {
+  getSkillsets as getSkillSets,
+  getUserId,
+  getUserLocation,
+} from "@/lib/utils";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -22,7 +26,15 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { MapPin, User, Globe, Phone, Mail, Building, Loader2 } from "lucide-react";
+import {
+  MapPin,
+  User,
+  Globe,
+  Phone,
+  Mail,
+  Building,
+  Loader2,
+} from "lucide-react";
 import {
   Form,
   FormField,
@@ -44,6 +56,14 @@ import * as z from "zod";
 import Image from "next/image";
 import { CategoryCheckBox } from "@/components/ui/select-caegories";
 import CategorySelect from "@/components/category-select";
+import SingleImageUploader, {
+  SingleImageUploaderRef,
+} from "@/components/single-image_uploader";
+import MultipleImageUploader, {
+  MultipleImageUploaderRef,
+} from "@/components/multi-image-uploader";
+import { SkillSet } from "@/lib/types";
+import { is } from "date-fns/locale";
 
 const supabase = createClient();
 
@@ -56,13 +76,7 @@ const organizationTypes = [
   "Other",
 ];
 
-const focusAreaOptions = [
-  { id: "education", label: "Education" },
-  { id: "healthcare", label: "Healthcare" },
-  { id: "environment", label: "Environment" },
-  { id: "technology", label: "Technology" },
-  { id: "social_services", label: "Social Services" },
-];
+const focusAreaOptions: SkillSet[] = [];
 
 const generalSchema = z.object({
   organization_name: z.string().min(1, "Organization name is required.").trim(),
@@ -75,6 +89,21 @@ const generalSchema = z.object({
     errorMap: () => ({ message: "Please select a valid organization type." }),
   }),
   tax_id: z.string().min(1, "Tax ID is required.").trim(),
+  website: z
+    .string()
+    .refine(
+      (value) => {
+        return /^(?:(https?:\/\/)(www\.)?)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(
+          value,
+        );
+      },
+      {
+        message:
+          "Invalid URL. Must be a valid URL with http://, https://, or start with www.",
+      },
+    )
+    .nullable(),
+  cac_number: z.string().min(1, "CAC number is required.").trim(),
 });
 
 const contactSchema = z.object({
@@ -85,15 +114,6 @@ const contactSchema = z.object({
     .email("Invalid email address.")
     .min(1, "Email is required."),
   contact_person_phone: z.string().min(1, "Phone number is required.").trim(),
-  website: z
-  .string()
-  .refine(
-    (value) => {
-      return /^(?:(https?:\/\/)(www\.)?)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(value);
-    },
-    { message: "Invalid URL. Must be a valid URL with http://, https://, or start with www." }
-  )
-  .nullable(),
 });
 
 const operationalSchema = z.object({
@@ -107,6 +127,7 @@ const operationalSchema = z.object({
 
 const pictureSchema = z.object({
   profile_picture: z.string().url("Invalid URL.").nullable(),
+  documents: z.array(z.string().url("Invalid URL.")).nullable(),
 });
 
 const formSchema = z.object({
@@ -135,6 +156,7 @@ interface Profile {
   environment_cities: string[] | null;
   environment_states: string[] | null;
   profile_picture: string | null;
+  documents: string[] | null;
 }
 
 const AgencyOnboarding: React.FC = () => {
@@ -144,9 +166,12 @@ const AgencyOnboarding: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState<boolean>(false);
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
-    null
+    null,
   );
+  const singleRef = useRef<SingleImageUploaderRef>(null);
+  const multipleRef = useRef<MultipleImageUploaderRef>(null);
   const router = useRouter();
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -160,12 +185,14 @@ const AgencyOnboarding: React.FC = () => {
       contact_person_email: "",
       contact_person_phone: "",
       website: null,
-      organization_type: organizationTypes[0], 
+      organization_type: organizationTypes[0],
       tax_id: "",
       focus_areas: [],
       environment_cities: [],
       environment_states: [],
       profile_picture: null,
+      cac_number: "",
+      documents: [],
     },
   });
 
@@ -178,6 +205,11 @@ const AgencyOnboarding: React.FC = () => {
         const { data: userId, error: userIdError } = await getUserId();
         if (userIdError) throw new Error(userIdError);
         if (!userId) throw new Error("Please log in to complete onboarding.");
+
+        const skillSets = await getSkillSets();
+        focusAreaOptions.push(
+          ...skillSets.map((skill) => ({ id: skill.id, label: skill.label })),
+        );
 
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
@@ -201,7 +233,7 @@ const AgencyOnboarding: React.FC = () => {
             environment_cities,
             environment_states,
             profile_picture
-          `
+          `,
           )
           .eq("id", userId)
           .eq("role", "agency")
@@ -230,6 +262,7 @@ const AgencyOnboarding: React.FC = () => {
           environment_cities: profileData.environment_cities || [],
           environment_states: profileData.environment_states || [],
           profile_picture: profileData.profile_picture || null,
+          documents: profileData.documents || [],
         });
 
         // Fetch and set location
@@ -251,7 +284,7 @@ const AgencyOnboarding: React.FC = () => {
                     environment_cities: updatedCities,
                     environment_states: updatedStates,
                   }
-                : profileData
+                : profileData,
             );
             console.log("Location fetched and set:", {
               environment_cities: updatedCities,
@@ -284,7 +317,7 @@ const AgencyOnboarding: React.FC = () => {
   }, [form, router]);
 
   const handleProfilePictureChange = (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     if (e.target.files && e.target.files[0]) {
       setProfilePictureFile(e.target.files[0]);
@@ -300,6 +333,7 @@ const AgencyOnboarding: React.FC = () => {
         "description",
         "organization_type",
         "tax_id",
+        "cac_number",
       ]);
       if (!isValid) {
         console.log("Step 1 validation errors:", form.formState.errors);
@@ -316,6 +350,7 @@ const AgencyOnboarding: React.FC = () => {
       isValid = await form.trigger(["address", "focus_areas"]);
     } else if (step === 4) {
       isValid = await form.trigger(["profile_picture"]);
+      isValid = await form.trigger(["documents"]) && isValid;
     }
 
     if (isValid && step < 4) {
@@ -333,30 +368,42 @@ const AgencyOnboarding: React.FC = () => {
 
   const handleSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsCompleting(true);
+
     try {
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
       if (!userId) throw new Error("Please log in to complete onboarding.");
 
-      let profilePictureUrl = data.profile_picture;
-      if (profilePictureFile) {
-        const fileExt = profilePictureFile.name.split(".").pop();
-        const fileName = `${userId}_${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("profile-pictures")
-          .upload(fileName, profilePictureFile, { upsert: true });
+      // let profilePictureUrl = data.profile_picture;
+      // if (profilePictureFile) {
+      //   const fileExt = profilePictureFile.name.split(".").pop();
+      //   const fileName = `${userId}_${Date.now()}.${fileExt}`;
+      //   const { error: uploadError } = await supabase.storage
+      //     .from("profile-pictures")
+      //     .upload(fileName, profilePictureFile, { upsert: true });
 
-        if (uploadError)
-          throw new Error(
-            "Error uploading profile picture: " + uploadError.message
-          );
+      //   if (uploadError)
+      //     throw new Error(
+      //       "Error uploading profile picture: " + uploadError.message,
+      //     );
 
-        const { data: publicUrlData } = supabase.storage
-          .from("profile-pictures")
-          .getPublicUrl(fileName);
-        profilePictureUrl = publicUrlData.publicUrl;
+      //   const { data: publicUrlData } = supabase.storage
+      //     .from("profile-pictures")
+      //     .getPublicUrl(fileName);
+      //   profilePictureUrl = publicUrlData.publicUrl;
+      // }
+
+      const picture_singleUrl = await singleRef.current?.upload();
+
+      // Upload multiple images
+      const multipleUrls = await multipleRef.current?.upload();
+      if (multipleUrls && multipleUrls.length > 0) {
+        console.log("Multiple documents uploaded:", multipleUrls);
+      } else {
+        setDocumentsError(
+          "No documents uploaded. Please upload at least one document.",
+        );
       }
-
       const { error: updateError } = await supabase
         .from("profiles")
         .update({
@@ -374,7 +421,12 @@ const AgencyOnboarding: React.FC = () => {
           focus_areas: data.focus_areas,
           environment_cities: data.environment_cities,
           environment_states: data.environment_states,
-          profile_picture: profilePictureUrl,
+          profile_picture: picture_singleUrl,
+          cac_number: data.cac_number,
+          documents:
+            multipleUrls && multipleUrls.length > 0
+              ? multipleUrls
+              : profile?.documents || null,
         })
         .eq("id", userId)
         .eq("role", "agency");
@@ -402,16 +454,19 @@ const AgencyOnboarding: React.FC = () => {
               focus_areas: data.focus_areas,
               environment_cities: data.environment_cities,
               environment_states: data.environment_states,
-              profile_picture: profilePictureUrl,
+              profile_picture: picture_singleUrl,
+              cac_number: data.cac_number,
+              documents:
+                multipleUrls && multipleUrls.length > 0
+                  ? multipleUrls
+                  : prev.documents,
             }
-          : null
+          : null,
       );
-      // toast.success("Onboarding completed successfully!");
       router.push("/agency/dashboard");
     } catch (err: any) {
       setIsCompleting(false);
       setError(err.message);
-      // toast.error(err.message);
     }
   };
 
@@ -476,14 +531,15 @@ const AgencyOnboarding: React.FC = () => {
               {step === 1 && "General Information"}
               {step === 2 && "Contact Details"}
               {step === 3 && "Operational Details"}
-              {step === 4 && "Profile Picture"}
+              {step === 4 && "Upload Documents"}
             </CardTitle>
             <CardDescription className="text-gray-600">
               {step === 1 && "Tell us about your organization."}
               {step === 2 &&
                 "Provide contact information for your organization."}
               {step === 3 && "Specify your operational scope and focus areas."}
-              {step === 4 && "Upload a profile picture for your organization."}
+              {step === 4 &&
+                "Upload a profile picture and important documents for your organization."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
@@ -574,6 +630,53 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter tax ID"
+                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500 text-sm" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            Website{" "}
+                            <Globe className="inline h-4 w-4 text-gray-500 ml-1" />
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) =>
+                                field.onChange(e.target.value || null)
+                              }
+                              placeholder="Enter website URL"
+                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500 text-sm" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cac_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            CAC Number{" "}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) =>
+                                field.onChange(e.target.value || null)
+                              }
+                              placeholder="Enter CAC number"
                               className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
@@ -689,30 +792,6 @@ const AgencyOnboarding: React.FC = () => {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="website"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">
-                            Website{" "}
-                            <Globe className="inline h-4 w-4 text-gray-500 ml-1" />
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              value={field.value ?? ""}
-                              onChange={(e) =>
-                                field.onChange(e.target.value || null)
-                              }
-                              placeholder="Enter website URL"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
                   </div>
                 )}
 
@@ -746,7 +825,7 @@ const AgencyOnboarding: React.FC = () => {
                       <FormControl>
                         <Input
                           value={locationDisplay}
-                          // disabled
+                          disabled
                           className="border-gray-300 bg-gray-100 rounded-lg"
                           placeholder="Location not available"
                         />
@@ -776,7 +855,7 @@ const AgencyOnboarding: React.FC = () => {
 
                 {step === 4 && (
                   <div className="grid gap-6">
-                    <FormField
+                    {/* <FormField
                       control={form.control}
                       name="profile_picture"
                       render={({ field }) => (
@@ -806,7 +885,35 @@ const AgencyOnboarding: React.FC = () => {
                           <FormMessage className="text-red-500 text-sm" />
                         </FormItem>
                       )}
-                    />
+                    /> */}
+                    <div>
+                      <h3 className="text-gray-700 font-medium mb-2">
+                        Profile Picture (Business Logo)
+                      </h3>
+                      <p className="text-xs text-gray-600 mb-4">
+                        Upload a clear logo or photo of your organization
+                      </p>
+                      <SingleImageUploader ref={singleRef} title="" />
+                    </div>
+
+                    <div>
+                      <h3 className="text-gray-700 font-medium mb-2">
+                        Supporting Documents
+                        <span className="text-red-500 text-sm ml-1 font-light">
+                          (at least one recommended)
+                        </span>
+                      </h3>
+                      <p className="text-xs text-gray-600 mb-4">
+                        Upload CAC certificate, registration documents, or other
+                        relevant files (PDF, JPG, PNG)
+                      </p>
+                      <MultipleImageUploader ref={multipleRef} title="" />
+                    </div>
+                    {documentsError && (
+                      <div className="mt-2 text-red-500 text-[10px]">
+                        {documentsError}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -829,7 +936,7 @@ const AgencyOnboarding: React.FC = () => {
                         className="w-full action-btn text-white font-semibold rounded-lg transition-colors duration-200 py-2"
                         disabled={loading}
                       >
-                       {isCompleting || loading ? (
+                        {isCompleting || loading ? (
                           <>
                             <Loader2 className="h-5 w-5 animate-spin" />
                             {step === 4 ? "Completing..." : "Processing..."}
