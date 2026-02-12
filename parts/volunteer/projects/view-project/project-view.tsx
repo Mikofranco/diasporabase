@@ -12,6 +12,7 @@ import {
   AlertCircle,
   XCircle,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 
 import {
@@ -28,6 +29,7 @@ import ViewTaskModal from "@/components/modals/view-task";
 import LeaveProjectModal from "@/components/modals/leave-project";
 import { useRouter } from "next/navigation";
 import { VolunteerActionButton } from "./volunteer-action-btn";
+import { useModal } from "@/components/ui/modal";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -73,6 +75,7 @@ interface ProjectViewProps {
   onLeaveSuccess?: () => void;
   volunteersRegistered?: number;
   agencyHasSentRequest?: boolean;
+  onboardingComplete?: boolean;
 }
 
 const ProjectView: React.FC<ProjectViewProps> = ({
@@ -87,9 +90,11 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   onLeaveSuccess,
   volunteersRegistered,
   agencyHasSentRequest,
+  onboardingComplete = true,
 }) => {
   const router = useRouter();
-  const [isRequesting, setIsRequesting] = useState(false); // ← NEW: loading state for request
+  const { open: openContactModal } = useModal("contact-organization-modal");
+  const [isRequesting, setIsRequesting] = useState(false);
   //@ts-ignore
   const spotsLeft = project.volunteers_needed - volunteersRegistered || 0;
   const isFull = spotsLeft === 0;
@@ -113,7 +118,23 @@ const ProjectView: React.FC<ProjectViewProps> = ({
 
   const status = statusConfig[project.status ?? "pending"];
 
+  const handleContactOrganizer = () => {
+    if (!onboardingComplete) {
+      toast.info("Complete your profile first to contact organizers.", {
+        action: { label: "Complete profile", onClick: () => router.push("/onboarding/volunteer") },
+      });
+      return;
+    }
+    openContactModal({});
+  };
+
   const handleVolunteerRequest = async () => {
+    if (!onboardingComplete) {
+      toast.info("Complete your profile to apply. Add your skills so organizers can match you.", {
+        action: { label: "Complete profile", onClick: () => router.push("/onboarding/volunteer") },
+      });
+      return;
+    }
     if (isRequesting) return;
 
     setIsRequesting(true);
@@ -207,7 +228,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     variant="outline"
                     size="lg"
                     className="w-full text-base py-6"
-                    data-modal-trigger="contact-organization-modal"
+                    onClick={handleContactOrganizer}
                   >
                     Contact Organizer
                   </Button>
@@ -241,6 +262,16 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                       disabled
                     >
                       Agency request Pending
+                    </Button>
+                  ) : !onboardingComplete ? (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full text-base py-6 border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800"
+                      onClick={() => router.push("/onboarding/volunteer")}
+                    >
+                      <Sparkles className="h-5 w-5 mr-2" />
+                      Complete profile to apply
                     </Button>
                   ) : (
                     <VolunteerActionButton

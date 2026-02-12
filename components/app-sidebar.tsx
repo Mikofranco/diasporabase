@@ -201,11 +201,19 @@ export function AppSidebar() {
 
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) throw error; 
 
-      setUserRole(null);
-      setUserName(null);
-      router.replace(ROUTES.guest.home);
+      // Clear local and session storage after sign out
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (err) {
+        // Optionally log or handle error but don't block logout
+        console.error("Error clearing storage after sign out", err);
+      }
+      // setUserRole(null);
+      // setUserName(null);
+      router.replace(ROUTES.guest.login);
       toast({ title: "Signed out", description: "See you soon!" });
     } catch (err: any) {
       console.error("Logout error:", err);
