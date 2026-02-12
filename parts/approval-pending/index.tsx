@@ -64,6 +64,18 @@ const ApprovalPending = () => {
   };
    const handleLogout = async () => {
       const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Error signing out: " + error.message)
+      }
+     // Clear local and session storage after sign ou
+     try {
+       localStorage.clear();
+       sessionStorage.clear();
+     } catch (err) {
+       // Optionally log or handle error but don't block logout
+       console.error("Error clearing storage after sign out", err);
+     }
+   router.push("/login")
     };
 
   return (

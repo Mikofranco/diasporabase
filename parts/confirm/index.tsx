@@ -148,6 +148,15 @@ export default function ConfirmEmailPage() {
         }, 3000);
       } else {
         await supabase.auth.signOut();
+
+        // Clear local and session storage after sign out
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (err) {
+          // Optionally log or handle error but don't block logout
+          console.error("Error clearing storage after sign out", err);
+        }
         setCurrentUserId(null);
         setShowLoginButton(true);
       }

@@ -222,6 +222,14 @@ const VolunteerSettings: React.FC = () => {
 
       await supabase.auth.signOut();
       toast.success("Account deleted successfully.");
+      // Clear local and session storage after sign out
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (err) {
+        // Optionally log or handle error but don't block logout
+        console.error("Error clearing storage after sign out", err);
+      }
       router.push("/login");
     } catch (err: any) {
       toast.error(err.message);
@@ -232,7 +240,16 @@ const VolunteerSettings: React.FC = () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw new Error("Error signing out: " + error.message);
-      toast.success("Signed out successfully.");
+      // toast.success("Signed out successfully.");
+      // Clear local and session storage after sign out
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (err) {
+        // Optionally log or handle error but don't block logout
+        console.error("Error clearing storage after sign out", err);
+      }
+
       router.push("/login");
     } catch (err: any) {
       toast.error(err.message);

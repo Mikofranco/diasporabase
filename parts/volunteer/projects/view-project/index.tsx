@@ -38,6 +38,7 @@ export default function ViewProjectDetails() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isUserProjectManager, setIsUserProjectManager] = useState(false);
   const [agencyHasSentRequest, setAgencyHasSentRequest] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(true); // assume complete until we check
 
   const [organizationDetails, setOrganizationDetails] =
     useState<OrganizationContact>({
@@ -161,6 +162,14 @@ export default function ViewProjectDetails() {
 
         // 5. User-specific checks (only if logged in)
         if (userId) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("skills")
+            .eq("id", userId)
+            .single();
+          const skills = profile?.skills ?? [];
+          setOnboardingComplete(skills.length > 0);
+
           const [requestRes, ratingRes] = await Promise.all([
             supabase
               .from("volunteer_requests")
@@ -244,7 +253,7 @@ export default function ViewProjectDetails() {
           volunteersRegistered={volunteers.length}
           agencyHasSentRequest={agencyHasSentRequest}
           setHasRated={setHasRated}
-          // onLeaveSuccess={handleLeaveSuccess}
+          onboardingComplete={onboardingComplete}
         />
       </section>
 
