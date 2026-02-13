@@ -1,5 +1,6 @@
 "use client";
 
+import { routes } from "@/lib/routes";
 import { Link as LucideLink, Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,24 +14,24 @@ const NavBar = () => {
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   const allNavLinks = [
-    { href: "/", label: "Home" },
-    { href: "/about-us", label: "About us" },
+    { href: routes.home, label: "Home" },
+    { href: routes.about, label: "About us" },
     // { href: "/projects", label: "Browse Projects" },
-    { href: "/login", label: "Login" },
-    { href: "/register-volunteer", label: "Join as Volunteer" },
-    { href: "/register-agency", label: "Register Organization or Government Agency" },
+    { href: routes.login, label: "Login" },
+    { href: routes.registerVolunteer, label: "Join as Volunteer" },
+    { href: routes.registerAgency, label: "Register Organization or Government Agency" },
   ];
 
   // Hide "Home" link when on the homepage
-  const navLinks = pathname === "/" 
-    ? allNavLinks.filter(link => link.href !== "/")
+  const navLinks = pathname === routes.home 
+    ? allNavLinks.filter(link => link.href !== routes.home)
     : allNavLinks;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
       <div className="px-4 lg:px-6 h-16 flex items-center justify-between max-w-7xl mx-auto">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2" aria-label="DiasporaBase Home">
+        <Link href={routes.home} className="flex items-center gap-2" aria-label="DiasporaBase Home">
           <Image
             src="/svg/logo.svg"
             alt="DiasporaBase Logo"

@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSendMail } from "@/services/mail";
 import { resetPasswordMail } from "@/lib/email-templates/reset";
 import { sendCustomPasswordResetEmail } from "@/app/actions/reset-passeord";
+import { routes } from "@/lib/routes";
 // import { sendCustomPasswordResetEmail } from "@/services/auth/forgot-password";
 
 const supabase = createClient();
@@ -167,7 +168,7 @@ export default function ForgotPasswordPage() {
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => router.push(routes.login)}
               className="flex items-center gap-1 mx-auto text-primary hover:underline"
             >
               <ArrowLeft className="h-4 w-4" />

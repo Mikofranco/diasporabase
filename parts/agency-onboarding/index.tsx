@@ -64,6 +64,7 @@ import MultipleImageUploader, {
 } from "@/components/multi-image-uploader";
 import { SkillSet } from "@/lib/types";
 import { is } from "date-fns/locale";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -207,10 +208,10 @@ const AgencyOnboarding: React.FC = () => {
         if (!userId) throw new Error("Please log in to complete onboarding.");
 
         const skillSets = await getSkillSets();
-        focusAreaOptions.push(
+        if(focusAreaOptions.length === 0)  focusAreaOptions.push(
           ...skillSets.map((skill) => ({ id: skill.id, label: skill.label })),
         );
-
+        
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select(
@@ -303,7 +304,7 @@ const AgencyOnboarding: React.FC = () => {
           profileData.focus_areas.length > 0 &&
           profileData.address
         ) {
-          router.push("/agency/dashboard");
+          router.push(routes.agencyDashboard);
         }
       } catch (err: any) {
         setError(err.message);
@@ -463,7 +464,7 @@ const AgencyOnboarding: React.FC = () => {
             }
           : null,
       );
-      router.push("/agency/dashboard");
+      router.push(routes.agencyDashboard);
     } catch (err: any) {
       setIsCompleting(false);
       setError(err.message);

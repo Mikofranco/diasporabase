@@ -58,6 +58,7 @@ import { MilestonesSection } from "./milestone-section";
 import { AssignedVolunteersTable } from "./assigned-volunteer";
 import { ClosingRemarksModal } from "@/components/closing-remarks";
 import { ProjectStatus } from "@/lib/types";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -436,7 +437,7 @@ const ProjectDetails: React.FC = () => {
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={() => router.push("/agency/projects")}
+              onClick={() => router.push(routes.agencyProjects)}
             >
               Back to Projects
             </Button>

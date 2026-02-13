@@ -13,6 +13,7 @@ import {
 
 import NavBar from "@/components/navbar"
 import Footer from "@/parts/landingPage/footer"
+import { routes } from "@/lib/routes"
 
 const HelpCenterPage = () => {
   return (
@@ -48,7 +49,7 @@ const HelpCenterPage = () => {
                     To reset your password, visit our password reset page where you can enter your email and follow the instructions sent to you.
                   </p>
                   <Link
-                    href="/forgot-password"
+                    href={routes.forgotPassword}
                     className="underline hove:text-diaspora-darkBlue transition"
                   >
                     Go to Reset Password Page
@@ -88,7 +89,7 @@ const HelpCenterPage = () => {
             </p>
 
             <Link
-              href="/contact"
+              href={routes.contact}
               className="inline-flex items-center justify-center rounded-md action-btn px-6 py-3 text-white font-medium hover:bg-primary/90 transition"
             >
               Contact Support

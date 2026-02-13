@@ -14,6 +14,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { routes } from "@/lib/routes";
 
 const CONFIRM_TOKEN_KEY = "diasporabase_confirm_token";
 
@@ -21,16 +22,16 @@ type Status = "loading" | "success" | "invalid" | "expired" | "used" | "error";
 type UserRole = "super_admin" | "admin" | "agency" | "volunteer" | null;
 
 const getRedirectPath = (role: UserRole, taxId?: string | null): string => {
-  if (!role) return "/login";
+  if (!role) return routes.login;
   const r = role.toLowerCase();
-  if (r === "super_admin") return "/super-admin/dashboard";
-  if (r === "admin") return "/admin/dashboard";
+  if (r === "super_admin") return routes.superAdminDashboard;
+  if (r === "admin") return routes.adminDashboard;
   if (r === "agency") {
-    if (!taxId || taxId.trim() === "") return "/onboarding/agency";
-    return "/agency/dashboard";
+    if (!taxId || taxId.trim() === "") return routes.agencyOnboarding;
+    return routes.agencyDashboard;
   }
-  if (r === "volunteer") return "/volunteer/dashboard";
-  return "/login";
+  if (r === "volunteer") return routes.volunteerDashboard;
+  return routes.login;
 };
 
 export default function ConfirmEmailPage() {
@@ -58,7 +59,7 @@ export default function ConfirmEmailPage() {
 
   const handleGoToLogin = useCallback(() => {
     sessionStorage.removeItem(CONFIRM_TOKEN_KEY);
-    router.push("/login");
+    router.push(routes.login);
   }, [router]);
 
   useEffect(() => {
@@ -68,7 +69,7 @@ export default function ConfirmEmailPage() {
 
     if (token) {
       sessionStorage.setItem(CONFIRM_TOKEN_KEY, token);
-      window.history.replaceState({}, "", "/confirm");
+      window.history.replaceState({}, "", routes.confirmation);
     } else {
       token = sessionStorage.getItem(CONFIRM_TOKEN_KEY);
     }

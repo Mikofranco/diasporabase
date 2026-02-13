@@ -36,6 +36,7 @@ import { encryptUserToJWT } from "@/lib/jwt";
 import { GoogleSignUpButton } from "./signinwithGoogleBtn";
 import Logo from "./logo";
 import DiasporaBaseModal from "./diasporabase-modal";
+import { routes } from "@/lib/routes";
 
 const formSchema = z
   .object({
@@ -220,7 +221,7 @@ export default function VolunteerRegistrationForm() {
         "24h", // ← Now 24 hours
       );
 
-      const confirmationUrl = `${origin}/confirm?token=${token}`;
+      const confirmationUrl = `${origin}${routes.confirmation}?token=${token}`;
 
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
@@ -462,7 +463,7 @@ export default function VolunteerRegistrationForm() {
           <p className="text-center text-sm text-muted-foreground pt-4">
             Already have an account?{" "}
             <Link
-              href="/login"
+              href={routes.login}
               className="font-semibold text-[#0ea5e9] hover:underline"
             >
               Sign in

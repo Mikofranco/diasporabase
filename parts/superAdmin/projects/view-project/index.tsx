@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import ProjectRecommendation from '@/parts/agency/projects/project-recommendation';
+import { routes } from '@/lib/routes';
 
 interface Project {
   id: string;
@@ -38,7 +39,7 @@ const ViewProject: React.FC = () => {
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          router.push('/login');
+          router.push(routes.login);
           return;
         }
 

@@ -28,6 +28,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Project, ProjectStatus } from "@/lib/types";
+import { routes } from "@/lib/routes";
 
 // Update status variant to match your actual statuses
 const statusVariant: Record<
@@ -123,10 +124,10 @@ export default function VolunteerProjectsManagement() {
     date ? format(new Date(date), "MMM d, yyyy") : "TBD";
 
   const goToProjectDetails = (projectId: string) => {
-    router.push(`/volunteer/projects/${projectId}`);
+    router.push(routes.volunteerViewProject(projectId));
   };
   const handleRouteToViewProject = () => {
-    router.push("/volunteer/find-opportunity");
+    router.push(routes.volunteerFindOpportunity);
   };
 
   // Loading State

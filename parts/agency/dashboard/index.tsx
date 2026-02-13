@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import SmallCard from "./small-card";
 import RecentProjects from "./recent-projects";
 import AgencyRequestFromVolunteer from "./requests";
+import { routes } from "@/lib/routes";
 
 const AgencyDashboard = () => {
   const [isActive, setIsActive] = useState<boolean | null>(null);
@@ -133,13 +134,13 @@ const AgencyDashboard = () => {
         setIsActive(profile.is_active);
 
         if (!profile.tax_id) {
-          router.replace("/onboarding/agency");
+          router.replace(routes.agencyOnboarding);
           return;
         }
 
         if (!profile.is_active) {
           toast.error("Your agency is pending approval.");
-          router.replace("/approval-pending");
+          router.replace(routes.approvalPending);
           return;
         }
 

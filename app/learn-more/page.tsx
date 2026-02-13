@@ -20,6 +20,7 @@ import {
 import NavBar from "@/components/navbar";
 import Footer from "@/parts/landingPage/footer";
 import SelectSignUpType from "@/components/modals/select-signup-type";
+import { routes } from "@/lib/routes";
 
 const LearnMore = () => {
   return (
@@ -223,14 +224,14 @@ const LearnMore = () => {
               asChild
               className="bg-green-500 hover:bg-green-600 text-white"
             >
-              <a href="/register-volunteer">Sign Up as a Volunteer</a>
+              <a href={routes.registerVolunteer}>Sign Up as a Volunteer</a>
             </Button>
             <Button
               asChild
               variant="outline"
               className="text-black border-white hover:bg-blue-700/20 hover:border-white hover:text-white"
             >
-              <a href="/contact">Contact Us</a>
+              <a href={routes.contact}>Contact Us</a>
             </Button>
           </div>
         </div>

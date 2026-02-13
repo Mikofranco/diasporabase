@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -57,7 +58,7 @@ const ProjectReviewPage: React.FC = () => {
         .eq("id", projectId);
       if (error) throw error;
       toast.success(`Project ${status === "active" ? "approved" : "rejected"} successfully`);
-      router.push("/super-admin/notifications");
+      router.push(routes.superAdminNotifications);
     } catch (err: any) {
       toast.error(`Error updating project: ${err.message}`);
     }

@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { routes } from '@/lib/routes';
 
 interface Volunteer {
   id: string;
@@ -32,7 +33,7 @@ const VolunteersManagement: React.FC = () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          router.push('/login');
+          router.push(routes.login);
           return;
         }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "./lib/supabase/client";
+import { routes } from "./lib/routes";
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
@@ -20,8 +21,8 @@ export async function middleware(req: NextRequest) {
 
   // Allow public routes
   if (
-    path === "/" ||
-    path === "/projects" ||
+    path === routes.home ||
+    path === routes.generalProjectsView ||
     path.startsWith("/auth/callback")
   ) {
     return res;
@@ -42,7 +43,7 @@ export async function middleware(req: NextRequest) {
   // If no session, redirect to login for protected routes
   if (!session && isProtectedDashboardRoute) {
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    redirectUrl.pathname = routes.login;
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -66,14 +67,14 @@ export async function middleware(req: NextRequest) {
         profileError?.message
       );
       const redirectUrl = req.nextUrl.clone();
-      redirectUrl.pathname = "/login";
+      redirectUrl.pathname = routes.login;
       return NextResponse.redirect(redirectUrl); // Redirect to login if profile fetch fails
     }
     userRole = profileData.role;
   } catch (error) {
     console.error("Middleware profile fetch error:", error);
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    redirectUrl.pathname = routes.login;
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -88,9 +89,9 @@ export async function middleware(req: NextRequest) {
 
   // If logged in and accessing auth pages, redirect to their dashboard
   if (
-    path === "/login" ||
-    path === "/register-agency" ||
-    path === "/register-volunteer"
+    path === routes.login ||
+    path === routes.registerAgency ||
+    path === routes.registerVolunteer
   ) {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = `/${rolePath}/dashboard`;
@@ -98,7 +99,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Handle generic /dashboard redirect
-  if (path === "/dashboard") {
+  if (path === routes.dashboard) {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = `/${rolePath}/dashboard`;
     return NextResponse.redirect(redirectUrl);

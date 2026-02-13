@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { useSendMail } from "@/services/mail";
 import { RatingForm } from "./rating-form";
 import { formatLocation } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 const statusConfig: Record<
   ProjectStatus,
@@ -112,7 +113,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   };
 
   const handleLeaveSuccess = () => {
-    router.push("/volunteer/projects");
+    router.push(routes.volunteerProjects);
     router.refresh();
   };
 
@@ -121,7 +122,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   const handleContactOrganizer = () => {
     if (!onboardingComplete) {
       toast.info("Complete your profile first to contact organizers.", {
-        action: { label: "Complete profile", onClick: () => router.push("/onboarding/volunteer") },
+        action: { label: "Complete profile", onClick: () => router.push(routes.volunteerOnboarding) },
       });
       return;
     }
@@ -131,7 +132,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   const handleVolunteerRequest = async () => {
     if (!onboardingComplete) {
       toast.info("Complete your profile to apply. Add your skills so organizers can match you.", {
-        action: { label: "Complete profile", onClick: () => router.push("/onboarding/volunteer") },
+        action: { label: "Complete profile", onClick: () => router.push(routes.volunteerOnboarding) },
       });
       return;
     }
@@ -242,7 +243,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                           className="w-full text-base py-6"
                           onClick={() =>
                             router.push(
-                              `/volunteer/project_management/${project.id}`
+                              `${routes.volunteerProjectManagement}/${project.id}`
                             )
                           }
                         >
@@ -268,7 +269,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                       variant="secondary"
                       size="lg"
                       className="w-full text-base py-6 border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800"
-                      onClick={() => router.push("/onboarding/volunteer")}
+                      onClick={() => router.push(routes.volunteerOnboarding)}
                     >
                       <Sparkles className="h-5 w-5 mr-2" />
                       Complete profile to apply

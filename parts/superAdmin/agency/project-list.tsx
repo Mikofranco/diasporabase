@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { formatLocation } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -115,7 +116,7 @@ export default function ProjectsList({ agencyId }: ProjectsListProps) {
           return (
             <Link
               key={project.id}
-              href={`/agency/projects/${project.id}`}
+              href={routes.agencyViewProject(project.id)}
               className="group block"
             >
               <Card className="h-full transition-all hover:shadow-md hover:border-primary/20">

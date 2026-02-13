@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminSupabase } from "../supabase/client";
+import { routes } from "../routes";
 
 export async function deleteUser(userId: string) {
 
@@ -27,7 +28,7 @@ export async function deleteUser(userId: string) {
 
     if (authError) throw authError;
 
-    revalidatePath("/super-admin/users");
+    revalidatePath(routes.superAdminUsers);
     return { success: true };
   } catch (error) {
     console.error("Error deleting user:", error);

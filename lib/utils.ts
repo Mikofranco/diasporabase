@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Database } from "./database/types";
 import { Country, State, City } from 'country-state-city';
 import { africanLocations } from "@/data/african-locations";
+import { routes } from "./routes";
 
 export type LocationData = {
   country?: string | null;  // e.g., "NG" (ISO code) or full name "Nigeria"
@@ -107,25 +108,25 @@ export async function handleEmailConfirmationRedirect() {
     if (profile && profile.role) {
       switch (profile.role) {
         case "admin":
-          window.location.href = "/admin/dashboard";
+          window.location.href = routes.adminDashboard;
           break;
         case "super_admin":
-          window.location.href = "/super-admin/dashboard";
+          window.location.href = routes.superAdminDashboard;
           break;
         case "volunteer":
-          window.location.href = "/volunteer/dashboard";
+          window.location.href = routes.volunteerDashboard;
           break;
         case "agency":
-          window.location.href = "/onboarding/agency";
+          window.location.href = routes.agencyOnboarding as string;
           break;
         default:
-          window.location.href = "/login";
+          window.location.href = routes.login;
       }
     } else {
-      window.location.href = "/login";
+      window.location.href = routes.login;
     }
   } else {
-    window.location.href = "/login";
+    window.location.href = routes.login;
   }
 }
 

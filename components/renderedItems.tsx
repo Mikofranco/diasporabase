@@ -17,7 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-interface Item {
+export interface Item {
   id: string;
   label: string;
   children?: Item[];

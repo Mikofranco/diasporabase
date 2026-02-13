@@ -30,6 +30,7 @@ import SkillsSelector, {
   SkillsSelectorHandle,
   SelectedSkillsData,
 } from "@/components/skill-selector";
+import { routes } from "@/lib/routes";
 // import { LocationSelectorHandle, SelectedData } from "@/app/dashboard/volunteer/profile/page";
 
 const onboardingSchema = z
@@ -106,7 +107,7 @@ export function VolunteerOnboardingForm() {
       } = await supabase.auth.getUser();
       if (!user) {
         console.error("User not authenticated");
-        router.push("/login");
+        router.push(routes.login);
         return;
       }
 

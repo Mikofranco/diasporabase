@@ -8,6 +8,7 @@ import MatchingProjects from "./matching-projects";
 import { getFirstWordShort, getUserId } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -68,7 +69,7 @@ const VolunteerDashBoard = () => {
         const { data: userId, error: uidErr } = await getUserId();
         if (uidErr || !userId) {
           toast.error("Please log in to continue.");
-          router.push("/login");
+          router.push(routes.login);
           return;
         }
 

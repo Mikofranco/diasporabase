@@ -51,6 +51,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useCallback, useState } from "react";
 import { toast } from "./ui/use-toast";
+import { routes } from "@/lib/routes";
 
 type UserRole = "admin" | "volunteer" | "agency" | "super_admin" | null;
 
@@ -61,41 +62,41 @@ interface Profile {
 
 const ROUTES = {
   admin: {
-    dashboard: "/admin/dashboard",
-    projects: "/admin/projects",
-    volunteers: "/admin/volunteers",
-    agencies: "/admin/agencies",
-    settings: "/admin/settings",
-    profile: "/admin/profile",
+    dashboard: routes.adminDashboard,
+    projects: routes.adminProjects,
+    volunteers: routes.adminVolunteers,
+    agencies: routes.adminAgencies,
+    settings: routes.adminSettings,
+    profile: routes.adminProfile,
   },
   super_admin: {
-    dashboard: "/super-admin/dashboard",
-    projects: "/super-admin/projects",
-    volunteers: "/super-admin/volunteers",
-    agencies: "/super-admin/agencies",
-    settings: "/super-admin/settings",
-    profile: "/super-admin/profile",
-    invite_admin: "/super-admin/invite_admin",
-    users: "/super-admin/users",
+    dashboard: routes.superAdminDashboard,
+    projects: routes.superAdminProjects,
+    volunteers: routes.superAdminVolunteers,
+    agencies: routes.superAdminAgencies,
+    settings: routes.superAdminSettings,
+    profile: routes.superAdminProfile,
+    invite_admin: routes.superAdminInviteAdmin,
+    users: routes.superAdminUsers,
   },
   volunteer: {
-    dashboard: "/volunteer/dashboard/",
-    projects: "/volunteer/projects",
-    profile: "/volunteer/profile",
-    findOpportunity: "/volunteer/find-opportunity",
-    settings: "/volunteer/settings",
-    requests: "/volunteer/requests",
+    dashboard: routes.volunteerDashboard,
+    projects: routes.volunteerProjects,
+    profile: routes.volunteerProfile,
+    findOpportunity: routes.volunteerFindOpportunity,
+    settings: routes.volunteerSettings,
+    requests: routes.volunteerRequests,
   },
   agency: {
-    dashboard: "/agency/dashboard",
-    projects: "/agency/projects",
-    profile: "/agency/profile",
-    analytics: "/agency/analytics",
-    settings: "/agency/settings",
+    dashboard: routes.agencyDashboard,
+    projects: routes.agencyProjects,
+    profile: routes.agencyProfile,
+    analytics: routes.agencyAnalytics,
+    settings: routes.agencySettings,
   },
   guest: {
-    home: "/",
-    login: "/login",
+    home: routes.home,
+    login: routes.login,
   },
 };
 

@@ -11,6 +11,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -53,7 +54,7 @@ export default function SuperAdminSignup() {
           data: {
             full_name: data.fullName,
             role: "super_admin",
-            email: data.email
+            email: data.email,
           },
         },
       });
@@ -76,7 +77,7 @@ export default function SuperAdminSignup() {
 
       if (profileError) {
         throw new Error(
-          "Failed to assign super_admin role. Contact an existing super admin."
+          "Failed to assign super_admin role. Contact an existing super admin.",
         );
       }
 
@@ -84,10 +85,10 @@ export default function SuperAdminSignup() {
         title: "Success",
         description: "Super admin account created. Please verify your email.",
       });
-      router.push("/super-admin/verify-email");
+      router.push(routes.superAdminVerifyEmail);
     } catch (error) {
       toast({
-        title: "Error",//@ts-ignore
+        title: "Error", //@ts-ignore
         description: error.message || "An error occurred during signup.",
         variant: "destructive",
       });

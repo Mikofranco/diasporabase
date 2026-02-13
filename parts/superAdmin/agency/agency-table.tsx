@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { routes } from '@/lib/routes';
 
 // Initialize Supabase client
 const supabase = createClient();
@@ -53,7 +54,7 @@ const AgencyList: React.FC = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login');
+        router.push(routes.login);
         return;
       }
 
