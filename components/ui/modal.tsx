@@ -207,9 +207,9 @@ const Modal: ModalComponent<RouteParams> = <T extends RouteParams>({
       id={id}
       className={`
         fixed inset-0 flex items-center justify-center
-        ${isOpen ? "animate-fade-in blur-sm" : "animate-fade-out"}
+        ${isOpen ? "animate-fade-in" : "animate-fade-out"}
         ${layer === "primary" ? "z-50" : "z-[60]"}
-        bg-black bg-opacity-50 transition-opacity duration-300 backdrop-blur-sm
+        bg-black/50 transition-opacity duration-300 backdrop-blur-sm
       `}
       onClick={handleClose}
       style={{

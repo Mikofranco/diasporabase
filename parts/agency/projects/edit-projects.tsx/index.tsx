@@ -54,6 +54,7 @@ import * as z from "zod";
 import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
 import { expertiseData } from "@/data/expertise";
 import { Badge } from "@/components/ui/badge";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -235,7 +236,7 @@ const EditProject: React.FC = () => {
         throw new Error("Error updating project: " + updateError.message);
 
       toast.success("Project updated successfully!");
-      router.push(`/agency/projects/${project.id}`);
+      router.push(routes.agencyViewProject(project.id));
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -272,7 +273,7 @@ const EditProject: React.FC = () => {
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
               onClick={() =>
-                router.push(`/agency/projects/${projectId}`)
+                router.push(routes.agencyViewProject(projectId as string))
               }
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -300,7 +301,7 @@ const EditProject: React.FC = () => {
             <Button
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => router.push("/agency/dashboard")}
+              onClick={() => router.push(routes.agencyDashboard)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Dashboard
@@ -321,7 +322,7 @@ const EditProject: React.FC = () => {
           <Button
             variant="outline"
             onClick={() =>
-              router.push(`/agency/projects/${project.id}`)
+              router.push(routes.agencyViewProject(project.id))
             }
             className="border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors duration-200 rounded-lg"
           >
@@ -657,7 +658,7 @@ const EditProject: React.FC = () => {
                     type="button"
                     variant="outline"
                     onClick={() =>
-                      router.push(`/agency/projects/${project.id}`)
+                      router.push(routes.agencyViewProject(project.id))
                     }
                     className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 text-lg py-6 rounded-lg"
                   >

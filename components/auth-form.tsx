@@ -18,6 +18,7 @@ import Link from "next/link";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { SignInWithGoogle } from "./loginWithGoogle";
+import { routes } from "@/lib/routes";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -60,15 +61,15 @@ export default function LoginForm() {
               localStorage.setItem("diaspobase_userId", session.user.id);
 
               if (profile.role === "super_admin") {
-                router.replace("/super-admin/dashboard");
+                router.replace(routes.superAdminDashboard);
               } else if (profile.role === "admin") {
-                router.replace("/admin/dashboard");
+                router.replace(routes.adminDashboard);
               } else if (profile.role === "agency") {
-                router.replace("/agency/dashboard");
+                router.replace(routes.agencyDashboard);
               } else if (profile.role === "volunteer") {
-                router.replace("/volunteer/dashboard");
+                router.replace(routes.volunteerDashboard);
               } else {
-                router.replace("/login");
+                router.replace(routes.login);
               }
             });
         }
@@ -199,11 +200,11 @@ export default function LoginForm() {
           )}
           <div className="mt-4 text-xs text-center">
             Don&apos;t have an account? <br />
-            <Link href="/register-volunteer" className="underline">
+            <Link href={routes.registerVolunteer} className="underline">
               Register as Volunteer
             </Link>{" "}
             or{" "}
-            <Link href="/register-agency" className="underline">
+            <Link href={routes.registerAgency} className="underline">
               Register as Agency
             </Link>
           </div>

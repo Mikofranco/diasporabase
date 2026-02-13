@@ -9,6 +9,7 @@ import StatsSection from "@/parts/landingPage/stats";
 import TestimonialsSection from "@/parts/landingPage/testimonials";
 import AboutUsSection from "@/parts/landingPage/about-us";
 import SelectSignUpType from "@/components/modals/select-signup-type";
+import { routes } from "@/lib/routes";
 
 const heroVariants = {
   hidden: { opacity: 0, y: 50 },
@@ -118,7 +119,7 @@ export default function LandingPage() {
                 transition={{ delay: 0.8, duration: 0.7 }}
                 className="mt-12 flex flex-col sm:flex-row gap-5 justify-center items-center"
               >
-                <Link href="/projects">
+                <Link href={routes.generalProjectsView}>
                   <Button
                     size="default"
                     className="
@@ -272,7 +273,7 @@ export default function LandingPage() {
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/register-volunteer"
+                  href={routes.registerVolunteer}
                   aria-label="Start volunteering"
                 >
                   <Button size="lg" className="min-w-[200px] action-btn">
@@ -280,7 +281,7 @@ export default function LandingPage() {
                   </Button>
                 </Link>
                 <Link
-                  href="/register-agency"
+                  href={routes.registerAgency}
                   aria-label="Register your organization"
                 >
                   <Button

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
 import { X, Sparkles, Target, Users, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { routes } from "@/lib/routes";
 
 const DISMISS_KEY = "volunteer_onboarding_reminder_dismissed";
 
@@ -53,7 +54,7 @@ export default function VolunteerOnboardingReminder() {
 
   const handleComplete = () => {
     sessionStorage.removeItem(DISMISS_KEY);
-    router.push("/onboarding/volunteer");
+    router.push(routes.volunteerOnboarding);
   };
 
   if (onboardingRequired !== true || isDismissed) return null;

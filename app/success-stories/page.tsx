@@ -32,6 +32,7 @@ import {
   MessageCircle,
   Heart,
 } from "lucide-react";
+import { routes } from "@/lib/routes";
 
 const SuccessStoriesPage = () => {
   const stories = [
@@ -112,7 +113,7 @@ const SuccessStoriesPage = () => {
                 </p>
                 <CardFooter className="mt-auto justify-center pt-0">
                   <Button asChild className="action-btn">
-                    <a href="/contact">Tell Your Story</a>
+                    <a href={routes.contact}>Tell Your Story</a>
                   </Button>
                 </CardFooter>
               </Card>
@@ -125,7 +126,7 @@ const SuccessStoriesPage = () => {
                 </p>
                 <CardFooter className="mt-auto justify-center pt-0">
                   <Button variant="outline" asChild>
-                    <a href="/register-volunteer">Join Now</a>
+                    <a href={routes.registerVolunteer}>Join Now</a>
                   </Button>
                 </CardFooter>
               </Card>
@@ -140,7 +141,7 @@ const SuccessStoriesPage = () => {
                 </p>
                 <CardFooter className="mt-auto justify-center pt-0">
                   <Button variant="outline" asChild>
-                    <a href="/register-agency">Start Now</a>
+                    <a href={routes.registerAgency}>Start Now</a>
                   </Button>
                 </CardFooter>
               </Card>

@@ -1,6 +1,7 @@
 import React from "react";
 import Modal from "../ui/modal";
 import { Button } from "../ui/button";
+import { routes } from "@/lib/routes";
 
 const SelectSignUpType = () => {
   const [open, setOpen] = React.useState(false);
@@ -33,7 +34,7 @@ const SelectSignUpType = () => {
 
         <div className="grid grid-cols-1 gap-6 items-stretch w-full">
           <a
-            href="/register-volunteer"
+            href={routes.registerVolunteer}
             className="flex items-center gap-4 bg-white hover:bg-blue-50 text-blue-800 border-2 border-blue-100 shadow transition rounded-xl px-5 py-4 focus-visible:ring-2 focus-visible:ring-blue-300 duration-150 group"
           >
             <span className="flex items-center justify-center bg-blue-100 group-hover:bg-blue-200 rounded-full h-12 w-12 transition">
@@ -52,7 +53,7 @@ const SelectSignUpType = () => {
             </div>
           </a>
           <a
-            href="/register-agency"
+            href={routes.registerAgency}
             className="flex items-center gap-4 bg-white hover:bg-green-50 text-green-800 border-2 border-green-100 shadow transition rounded-xl px-5 py-4 focus-visible:ring-2 focus-visible:ring-green-300 duration-150 group"
           >
             <span className="flex items-center justify-center bg-green-100 group-hover:bg-green-200 rounded-full h-12 w-12 transition">

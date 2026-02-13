@@ -1,3 +1,4 @@
+import { routes } from "@/lib/routes";
 import { useRouter } from "next/navigation";
 import React from "react";
 
@@ -26,7 +27,7 @@ const OngoingProjectItem: React.FC<OngoingProjectItemItemsProps> = ({
 
   const handleRouting = (id: string | number | undefined) => {
     console.log(`Routing to project with ID: ${id}`);
-    router.push(`/volunteer/projects/${id}`)
+    router.push(routes.volunteerViewProject(id as string));
   };
   return (
     <div

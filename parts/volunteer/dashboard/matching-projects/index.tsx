@@ -1,5 +1,6 @@
 import ProjectCard from "@/components/project-card";
 import { Button } from "@/components/ui/button";
+import { routes } from "@/lib/routes";
 import { Project } from "@/lib/types";
 import { useFetchSkillMatchedProjects } from "@/services/volunteer/dashboard";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -15,11 +16,11 @@ const MatchingProjects = () => {
   const router = useRouter();
 
   const handleProjectSelect = (projectId: string) => {
-    router.push(`/volunteer/projects/${projectId}`);
+    router.push(routes.volunteerViewProject(projectId));
   };
 
   const handleViewAll = () => {
-    router.push(`/volunteer/matching-projects`);
+    router.push(routes.volunteerMatchingProjects);
   };
 
   return (

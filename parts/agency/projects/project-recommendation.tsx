@@ -41,6 +41,7 @@ import { matchVolunteersToProjectLocation } from "@/lib/utils/matchvolunteersToP
 import { Volunteer } from "@/lib/types";
 import { checkIfVolunteerHasRequested } from "@/services/requests";
 import DiasporaBaseModal from "@/components/diasporabase-modal";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -253,7 +254,7 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
       const origin =
         typeof window !== "undefined" ? window.location.origin : "";
-      const volunteerDashboardUrl = `${origin}/volunteer/dashboard`;
+      const volunteerDashboardUrl = `${origin}${routes.volunteerDashboard}`;
 
       const html = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f9fafb;">

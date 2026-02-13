@@ -153,7 +153,7 @@ export function RecentProjectsTable({ data, onEdit, onView, onRefresh }: TablePr
       <div className="flex items-center py-4 justify-between">
         <h2 className="font-semibold text-xl">Recent Projects</h2>
         <Button className="action-btn font-semibold" onClick={handleCreateProjectClick}>
-          {/* <Plus className="h-4 w-4 mr-2" /> Add New Project */}
+          <Plus className="h-4 w-4 mr-2" /> Add New Project
         </Button>
       </div>
       {showCreateForm && (

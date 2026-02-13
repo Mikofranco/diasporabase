@@ -16,6 +16,7 @@ import { Calendar, Plus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CreateProjectForm from "../create-project";
 import { Badge } from "@/components/ui/badge";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -97,7 +98,7 @@ const OrganizationsProjects: React.FC = () => {
   };
 
   const handleProjectSelect = (project: Project) => {
-    router.push(`/agency/projects/${project.id}`);
+    router.push(routes.agencyViewProject(project.id));
   };
 
   return (

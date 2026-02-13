@@ -42,6 +42,7 @@ import DocumentViewer from "@/components/document-viewer";
 import OverviewSection from "./overview";
 import { de } from "date-fns/locale";
 import type { AgencyProfile } from "@/lib/types";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -312,7 +313,7 @@ const AgencyProfile = () => {
         <p class="message">
           Congratulations! Your agency is now <strong>verified</strong> and can start posting projects.
         </p>
-        <a href="${process.env.NEXT_PUBLIC_APP_URL}/agency/projects" class="btn">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL}${routes.agencyDashboard}" class="btn">
           Go to Dashboard
         </a>
       `

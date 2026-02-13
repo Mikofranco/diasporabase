@@ -1,6 +1,7 @@
 "use client";
 import SelectSignUpType from "@/components/modals/select-signup-type";
 import NavBar from "@/components/navbar";
+import { routes } from "@/lib/routes";
 import Footer from "@/parts/landingPage/footer";
 import React from "react";
 
@@ -32,7 +33,7 @@ const AboutUs = () => {
               Get Started
             </button>
             <a
-              href="/learn-more"
+              href={routes.LearnMore}
               className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-full font-inter font-semibold hover:bg-white hover:text-teal-900 transition duration-300"
             >
               Learn More
@@ -187,7 +188,7 @@ const AboutUs = () => {
             Get Started Now
           </button>
           <a
-            href="/learn-more"
+            href={routes.LearnMore}
             className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-full font-inter font-semibold hover:bg-white hover:text-[#0F172A] transition duration-300"
           >
             Learn More

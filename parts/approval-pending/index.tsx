@@ -16,6 +16,7 @@ import Footer from "../landingPage/footer";
 import { getUserId } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { routes } from "@/lib/routes";
 
 interface Profile {
   organization_name: string | null;
@@ -60,7 +61,7 @@ const ApprovalPending = () => {
 
   const handleGoHome = () => {
     handleLogout();
-    router.push("/");
+    router.push(routes.home);
   };
    const handleLogout = async () => {
       const { error } = await supabase.auth.signOut();
@@ -75,7 +76,7 @@ const ApprovalPending = () => {
        // Optionally log or handle error but don't block logout
        console.error("Error clearing storage after sign out", err);
      }
-   router.push("/login")
+   router.push(routes.login)
     };
 
   return (

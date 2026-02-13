@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { CheckboxReactHookFormMultiple } from '@/components/renderedItems';
 import { expertiseData } from '@/data/expertise';
+import { routes } from '@/lib/routes';
 
 interface Volunteer {
   id: string;
@@ -45,7 +46,7 @@ const AdminVolunteerDetails: React.FC = () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          router.push('/login');
+          router.push(routes.login);
           return;
         }
 

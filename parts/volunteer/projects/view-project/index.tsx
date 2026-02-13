@@ -20,6 +20,7 @@ import ProjectManagementScreen from "../project-management";
 import { checkAgencyRequestsToVolunteer, checkIfUserIsProjectManager, checkUserInProject } from "@/services/projects";
 import Comments from "../comments";
 import { MilestonesSection } from "@/parts/agency/projects/view-projects.tsx/milestone-section";
+import { routes } from "@/lib/routes";
 
 export default function ViewProjectDetails() {
   const { id } = useParams<{ id: string }>();
@@ -215,7 +216,7 @@ export default function ViewProjectDetails() {
   }, [id]);
 
   const handleLeaveSuccess = () => {
-    router.push("/volunteer/projects");
+    router.push(routes.volunteerProjects);
     router.refresh();
   };
 
