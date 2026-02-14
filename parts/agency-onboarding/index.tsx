@@ -593,7 +593,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter organization name"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -612,7 +612,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter display name"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -632,7 +632,7 @@ const AgencyOnboarding: React.FC = () => {
                               onValueChange={field.onChange}
                               value={field.value}
                             >
-                              <SelectTrigger className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg">
+                              <SelectTrigger className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg">
                                 <SelectValue placeholder="Select organization type" />
                               </SelectTrigger>
                               <SelectContent>
@@ -660,7 +660,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter tax ID"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -684,7 +684,7 @@ const AgencyOnboarding: React.FC = () => {
                                 field.onChange(e.target.value || null)
                               }
                               placeholder="Enter website URL"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -707,7 +707,7 @@ const AgencyOnboarding: React.FC = () => {
                                 field.onChange(e.target.value || null)
                               }
                               placeholder="Enter CAC number"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -730,7 +730,7 @@ const AgencyOnboarding: React.FC = () => {
                                 field.onChange(e.target.value || null)
                               }
                               placeholder="Enter organization description"
-                              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y transition-shadow duration-200 hover:shadow-sm"
+                              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y transition-shadow duration-200 hover:shadow-sm"
                               rows={6}
                             />
                           </FormControl>
@@ -758,7 +758,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter first name"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -777,7 +777,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter surname"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -797,7 +797,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter contact email"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -817,7 +817,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter contact phone"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -844,7 +844,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter address"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -904,7 +904,7 @@ const AgencyOnboarding: React.FC = () => {
                               type="file"
                               accept="image/*"
                               onChange={handleProfilePictureChange}
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           {profile.profile_picture && (
