@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TermsModal, AgencyTermsContent } from "./terms-modal";
 import Link from "next/link";
 import {
   Loader2,
@@ -34,8 +36,6 @@ import { z } from "zod";
 import { useSendMail } from "@/services/mail";
 import { welcomeHtmlAgency } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
-import { GoogleSignUpButton } from "./signinwithGoogleBtn";
-import DiasporaBaseModal from "./diasporabase-modal";
 import { routes } from "@/lib/routes";
 
 const formSchema = z
@@ -81,6 +81,10 @@ export default function AgencyRegistrationForm() {
     Partial<Record<keyof FormData, boolean>>
   >({});
 
+  // Terms agreement
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+
   // Modal & Resend
   const [modalOpen, setModalOpen] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -113,17 +117,50 @@ export default function AgencyRegistrationForm() {
     }
   }, [formData, touched]);
 
-  useEffect(() => {
-    if (!modalOpen) return;
-    const timer = setTimeout(
-      () => {
-        setModalOpen(false);
-      },
-      1 * 60 * 1000,
-    );
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHoveringRef = useRef(false);
+  const AUTO_CLOSE_MS = 6000;
 
-    return () => clearTimeout(timer);
-  }, [modalOpen]);
+  const handleCloseModal = useCallback(() => {
+    setModalOpen(false);
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const startAutoCloseTimer = useCallback(() => {
+    if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    autoCloseTimerRef.current = setTimeout(() => {
+      if (!isHoveringRef.current) handleCloseModal();
+      autoCloseTimerRef.current = null;
+    }, AUTO_CLOSE_MS);
+  }, [handleCloseModal]);
+
+  const clearAutoCloseTimer = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (modalOpen) {
+      isHoveringRef.current = false;
+      startAutoCloseTimer();
+    }
+    return () => clearAutoCloseTimer();
+  }, [modalOpen, startAutoCloseTimer, clearAutoCloseTimer]);
+
+  const handleModalMouseEnter = () => {
+    isHoveringRef.current = true;
+    clearAutoCloseTimer();
+  };
+
+  const handleModalMouseLeave = () => {
+    isHoveringRef.current = false;
+    startAutoCloseTimer();
+  };
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -289,10 +326,6 @@ export default function AgencyRegistrationForm() {
             projects
           </CardDescription>
         </CardHeader>
-        <div className="flex items-center justify-center mb-2 p-2">
-          <GoogleSignUpButton role="agency" />
-        </div>
-
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Organization Name */}
@@ -410,9 +443,42 @@ export default function AgencyRegistrationForm() {
               </div>
             </div>
 
+            {/* Terms & Conditions */}
+            <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/30">
+              <Checkbox
+                id="agency-terms"
+                checked={agreedToTerms}
+                onCheckedChange={(checked) =>
+                  setAgreedToTerms(checked === true)
+                }
+                disabled={loading}
+                className="mt-0.5"
+              />
+              <label
+                htmlFor="agency-terms"
+                className="text-sm leading-relaxed text-muted-foreground cursor-pointer select-none"
+              >
+                I agree to the{" "}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setTermsModalOpen(true);
+                  }}
+                  className="font-medium text-[#0ea5e9] hover:underline focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/30 rounded"
+                >
+                  Agency Agreement
+                </button>
+              </label>
+            </div>
+
             <Button
               type="submit"
-              disabled={loading || Object.keys(errors).length > 0}
+              disabled={
+                loading ||
+                !agreedToTerms ||
+                Object.keys(errors).length > 0
+              }
               className="w-full h-12 text-lg font-semibold action-btn shadow-lg"
             >
               {loading ? (
@@ -438,95 +504,78 @@ export default function AgencyRegistrationForm() {
         </CardContent>
       </Card>
 
-      {/* Success Modal with Resend */}
-      {/* <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md ">
-          <DialogHeader className="text-center">
-            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-              <Mail className="h-10 w-10 text-green-600" />
-            </div>
-            <DialogTitle className="text-2xl text-center">
-              Check Your Email
-            </DialogTitle>
-            <DialogDescription className="text-base mt-3 text-center">
-              A confirmation link has been sent to
-              <br />
-              <strong className="text-foreground break-all">
-                {pendingConfirmation?.email || "your email"}
-              </strong>
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="mt-6 space-y-3 justify-center flex flex-col items-center">
-            <Button
-              onClick={handleResend}
-              disabled={resendLoading || !canResend}
-              variant="outline"
-              className="w-fit"
-            >
-              {resendLoading ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Resending...
-                </>
-              ) : canResend ? (
-                "Resend Confirmation Email"
-              ) : (
-                <>Resend in {resendCountdown}s</>
-              )}
-            </Button>
-          </div>
-
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            The confirmation link is valid for 24 hours.
-          </p>
-        </DialogContent>
-      </Dialog> */}
-
-      <DiasporaBaseModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="Check Your Email"
-        size="sm"
+      <TermsModal
+        open={termsModalOpen}
+        onOpenChange={setTermsModalOpen}
+        title="DiasporaBase Agency Terms"
+        onAgree={() => setAgreedToTerms(true)}
       >
-        <div className="text-base mt-3 text-center">
-          A confirmation link has been sent to
-          <br />
-          <strong className="text-foreground break-all">
-            {pendingConfirmation?.email || "your email"}
-          </strong>
-        </div>
-        <div className="mt-6 space-y-3 justify-center flex flex-col items-center">
-          <Button
-            onClick={handleResend}
-            disabled={resendLoading || !canResend}
-            variant="outline"
-            className="w-fit"
+        <AgencyTermsContent />
+      </TermsModal>
+
+      {/* Success Modal with Resend — auto-dismiss, overlay close, hover to pause */}
+      <Dialog
+        open={modalOpen}
+        onOpenChange={(open) =>
+          open ? setModalOpen(true) : handleCloseModal()
+        }
+      >
+        <DialogContent className="sm:max-w-md">
+          <div
+            onMouseEnter={handleModalMouseEnter}
+            onMouseLeave={handleModalMouseLeave}
+            className="rounded-lg"
           >
-            {resendLoading ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Resending...
-              </>
-            ) : canResend ? (
-              "Resend Confirmation Email"
-            ) : (
-              <>Resend in {resendCountdown}s</>
-            )}
-          </Button>
+            <DialogHeader>
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100">
+                <Mail className="h-8 w-8 text-emerald-600" />
+              </div>
+              <DialogTitle className="text-center text-xl font-semibold">
+                Check Your Email
+              </DialogTitle>
+              <DialogDescription className="mt-2 text-center text-[15px]">
+                A confirmation link has been sent to
+                <br />
+                <strong className="break-all text-foreground">
+                  {pendingConfirmation?.email || "your email"}
+                </strong>
+              </DialogDescription>
+            </DialogHeader>
 
-          {/* <Button
-              onClick={() => setModalOpen(false)}
-              className="w-full"
-            >
-              OK, I'll check my email
-            </Button> */}
-        </div>
+            <div className="mt-6 flex flex-col items-center justify-center space-y-3">
+              <Button
+                onClick={handleResend}
+                disabled={resendLoading || !canResend}
+                variant="outline"
+                className="w-full max-w-[280px]"
+              >
+                {resendLoading ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Resending...
+                  </>
+                ) : canResend ? (
+                  "Resend Confirmation Email"
+                ) : (
+                  <>Resend in {resendCountdown}s</>
+                )}
+              </Button>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          The confirmation link is valid for 24 hours.
-        </p>
-      </DiasporaBaseModal>
+              <Button
+                variant="secondary"
+                onClick={handleCloseModal}
+                className="w-full max-w-[280px]"
+              >
+                OK, I&apos;ll check my email
+              </Button>
+            </div>
+
+            <p className="mt-6 text-center text-xs text-muted-foreground">
+              The confirmation link is valid for 24 hours.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -34,8 +34,8 @@ import { useSendMail } from "@/services/mail";
 import { welcomeHtml } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
 import { GoogleSignUpButton } from "./signinwithGoogleBtn";
-import Logo from "./logo";
-import DiasporaBaseModal from "./diasporabase-modal";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TermsModal, VolunteerTermsContent } from "./terms-modal";
 import { routes } from "@/lib/routes";
 
 const formSchema = z
@@ -77,6 +77,10 @@ export default function VolunteerRegistrationForm() {
   const [touched, setTouched] = useState<
     Partial<Record<keyof FormData, boolean>>
   >({});
+
+  // Terms agreement
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
 
   // Modal & Resend state
   const [modalOpen, setModalOpen] = useState(false);
@@ -441,11 +445,44 @@ export default function VolunteerRegistrationForm() {
               />
             </div>
 
+            {/* Terms & Conditions */}
+            <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/30">
+              <Checkbox
+                id="volunteer-terms"
+                checked={agreedToTerms}
+                onCheckedChange={(checked) =>
+                  setAgreedToTerms(checked === true)
+                }
+                disabled={loading}
+                className="mt-0.5"
+              />
+              <label
+                htmlFor="volunteer-terms"
+                className="text-sm leading-relaxed text-muted-foreground cursor-pointer select-none"
+              >
+                I agree to the{" "}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setTermsModalOpen(true);
+                  }}
+                  className="font-medium text-[#0ea5e9] hover:underline focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/30 rounded"
+                >
+                  Volunteer Agreement
+                </button>
+              </label>
+            </div>
+
             <div className="flex justify-center pt-4">
               <Button
                 type="submit"
                 size="lg"
-                disabled={loading || Object.keys(errors).length > 0}
+                disabled={
+                  loading ||
+                  !agreedToTerms ||
+                  Object.keys(errors).length > 0
+                }
                 className="w-fit h-12 px-10 text-lg font-semibold action-btn shadow-lg"
               >
                 {loading ? (
@@ -471,6 +508,15 @@ export default function VolunteerRegistrationForm() {
           </p>
         </CardContent>
       </Card>
+
+      <TermsModal
+        open={termsModalOpen}
+        onOpenChange={setTermsModalOpen}
+        title="DiasporaBase Volunteer Terms"
+        onAgree={() => setAgreedToTerms(true)}
+      >
+        <VolunteerTermsContent />
+      </TermsModal>
 
       {/* Success Modal with Resend */}
       <Dialog

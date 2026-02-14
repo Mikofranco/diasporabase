@@ -63,7 +63,6 @@ import MultipleImageUploader, {
   MultipleImageUploaderRef,
 } from "@/components/multi-image-uploader";
 import { SkillSet } from "@/lib/types";
-import { is } from "date-fns/locale";
 import { routes } from "@/lib/routes";
 
 const supabase = createClient();
@@ -481,16 +480,17 @@ const AgencyOnboarding: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-8 space-y-8 max-w-4xl min-h-screen bg-gradient-to-b from-blue-950 to-blue-900">
-        <Skeleton className="h-12 w-1/3 rounded-lg" />
-        <Card className="shadow-xl border-0">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl min-h-0">
+        <Skeleton className="h-8 w-48 rounded-lg mb-6" />
+        <Card className="shadow-xl border-0 rounded-2xl overflow-hidden">
           <CardHeader>
-            <Skeleton className="h-8 w-1/2 rounded-lg" />
+            <Skeleton className="h-7 w-2/3 rounded-lg" />
+            <Skeleton className="h-4 w-full rounded-lg mt-2" />
           </CardHeader>
           <CardContent className="space-y-6">
-            <Skeleton className="h-10 w-full rounded-lg" />
-            <Skeleton className="h-20 w-full rounded-lg" />
-            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-20 w-full rounded-xl" />
+            <Skeleton className="h-10 w-full rounded-xl" />
           </CardContent>
         </Card>
       </div>
@@ -499,9 +499,11 @@ const AgencyOnboarding: React.FC = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto p-8 max-w-4xl min-h-screen bg-gradient-to-b from-blue-950 to-blue-900">
-        <Card className="border-red-200 bg-red-50 shadow-md">
-          <CardContent className="pt-6 text-red-600">{error}</CardContent>
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl min-h-screen">
+        <Card className="border-red-200 bg-red-50/80 shadow-lg rounded-2xl">
+          <CardContent className="pt-6 pb-6 text-red-700 font-medium">
+            {error}
+          </CardContent>
         </Card>
       </div>
     );
@@ -509,9 +511,9 @@ const AgencyOnboarding: React.FC = () => {
 
   if (!profile) {
     return (
-      <div className="container mx-auto p-8 max-w-4xl min-h-screen bg-gradient-to-b from-blue-950 to-blue-900">
-        <Card className="shadow-md">
-          <CardContent className="pt-6 text-gray-600">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl min-h-screen">
+        <Card className="shadow-lg rounded-2xl">
+          <CardContent className="pt-6 pb-6 text-gray-600">
             Profile not found.
           </CardContent>
         </Card>
@@ -519,38 +521,65 @@ const AgencyOnboarding: React.FC = () => {
     );
   }
 
+  const stepTitles = [
+    "General Information",
+    "Contact Details",
+    "Operational Details",
+    "Upload Documents",
+  ];
+  const stepDescriptions = [
+    "Tell us about your organization.",
+    "Provide contact information for your organization.",
+    "Specify your operational scope and focus areas.",
+    "Upload a profile picture and important documents for your organization.",
+  ];
+
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-8 space-y-8 max-w-4xl min-h-screen bg-gradient-to-b from-blue-950 to-blue-900">
-        <h1 className="text-3xl font-bold text-white">Agency Onboarding</h1>
-        <Progress value={(step / 4) * 100} className="h-2 bg-blue-200" />
-        <p className="text-sm text-blue-200">Step {step} of 4</p>
+      <div className="container mx-auto px-4 sm:px-6 pt-4 pb-6 sm:pt-6 sm:pb-8 max-w-4xl">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Agency Onboarding
+          </h1>
+          <p className="mt-1 text-sm text-blue-200/90">
+            Step {step} of 4
+          </p>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/25">
+            <Progress
+              value={(step / 4) * 100}
+              className="h-full bg-transparent transition-all duration-500 ease-out"
+              indicatorClassName="bg-[#0ea5e9]"
+            />
+          </div>
+          <div className="mt-1.5 flex justify-between text-xs font-medium text-white drop-shadow-sm">
+            <span>General</span>
+            <span>Contact</span>
+            <span>Operations</span>
+            <span>Documents</span>
+          </div>
+        </div>
 
-        <Card className="shadow-xl border-0 bg-white">
-          <CardHeader>
-            <CardTitle className="text-2xl text-gray-900">
-              {step === 1 && "General Information"}
-              {step === 2 && "Contact Details"}
-              {step === 3 && "Operational Details"}
-              {step === 4 && "Upload Documents"}
-            </CardTitle>
-            <CardDescription className="text-gray-600">
-              {step === 1 && "Tell us about your organization."}
-              {step === 2 &&
-                "Provide contact information for your organization."}
-              {step === 3 && "Specify your operational scope and focus areas."}
-              {step === 4 &&
-                "Upload a profile picture and important documents for your organization."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
+        <div className="flex flex-col max-h-[calc(95vh-18rem)] min-h-0">
+          <Card className="shadow-xl border-0 bg-white rounded-2xl overflow-hidden flex-1 min-h-0 flex flex-col">
+            <CardHeader className="pb-4 sm:pb-6 shrink-0">
+              <CardTitle className="text-xl sm:text-2xl text-gray-900 font-semibold">
+                {stepTitles[step - 1]}
+              </CardTitle>
+              <CardDescription className="text-gray-600 text-sm sm:text-base mt-1">
+                {stepDescriptions[step - 1]}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8 flex-1 min-h-0 overflow-y-auto scrollbar-hide p-6 pt-0">
             <Form {...form}>
               <form
                 onSubmit={form.handleSubmit(handleSubmit)}
                 className="space-y-8"
               >
-                {step === 1 && (
-                  <div className="grid gap-6 sm:grid-cols-2">
+                {/* Step 1: always in DOM for form state; use grid so layout is correct */}
+                <div
+                  className="grid gap-x-6 gap-y-8 sm:grid-cols-2"
+                  style={{ display: step === 1 ? "grid" : "none" }}
+                >
                     <FormField
                       control={form.control}
                       name="organization_name"
@@ -709,11 +738,13 @@ const AgencyOnboarding: React.FC = () => {
                         </FormItem>
                       )}
                     />
-                  </div>
-                )}
+                </div>
 
-                {step === 2 && (
-                  <div className="grid gap-6 sm:grid-cols-2">
+                {/* Step 2 */}
+                <div
+                  className="grid gap-x-6 gap-y-8 sm:grid-cols-2"
+                  style={{ display: step === 2 ? "grid" : "none" }}
+                >
                     <FormField
                       control={form.control}
                       name="first_name"
@@ -793,11 +824,13 @@ const AgencyOnboarding: React.FC = () => {
                         </FormItem>
                       )}
                     />
-                  </div>
-                )}
+                </div>
 
-                {step === 3 && (
-                  <div className="grid gap-6 sm:grid-cols-2">
+                {/* Step 3 */}
+                <div
+                  className="grid gap-x-6 gap-y-8 sm:grid-cols-2"
+                  style={{ display: step === 3 ? "grid" : "none" }}
+                >
                     <FormField
                       control={form.control}
                       name="address"
@@ -851,11 +884,13 @@ const AgencyOnboarding: React.FC = () => {
                         </FormItem>
                       )}
                     />
-                  </div>
-                )}
+                </div>
 
-                {step === 4 && (
-                  <div className="grid gap-6">
+                {/* Step 4: kept in DOM so image/doc selection persists when navigating back */}
+                <div
+                  className="grid gap-6 gap-y-7"
+                  style={{ display: step === 4 ? "grid" : "none" }}
+                >
                     {/* <FormField
                       control={form.control}
                       name="profile_picture"
@@ -887,44 +922,42 @@ const AgencyOnboarding: React.FC = () => {
                         </FormItem>
                       )}
                     /> */}
-                    <div>
-                      <h3 className="text-gray-700 font-medium mb-2">
+                    <div className="space-y-2">
+                      <h3 className="text-gray-800 font-semibold">
                         Profile Picture (Business Logo)
                       </h3>
-                      <p className="text-xs text-gray-600 mb-4">
-                        Upload a clear logo or photo of your organization
+                      <p className="text-sm text-gray-600">
+                        Upload a clear logo or photo of your organization. Your selection is saved as you move between steps.
                       </p>
                       <SingleImageUploader ref={singleRef} title="" />
                     </div>
 
-                    <div>
-                      <h3 className="text-gray-700 font-medium mb-2">
+                    <div className="space-y-2">
+                      <h3 className="text-gray-800 font-semibold">
                         Supporting Documents
-                        <span className="text-red-500 text-sm ml-1 font-light">
+                        <span className="text-red-500 text-sm ml-1 font-normal">
                           (at least one recommended)
                         </span>
                       </h3>
-                      <p className="text-xs text-gray-600 mb-4">
-                        Upload CAC certificate, registration documents, or other
-                        relevant files (PDF, JPG, PNG)
+                      <p className="text-sm text-gray-600">
+                        Upload CAC certificate, registration documents, or other relevant files (PDF, JPG, PNG). Selections are kept when you go back to previous steps.
                       </p>
                       <MultipleImageUploader ref={multipleRef} title="" />
                     </div>
                     {documentsError && (
-                      <div className="mt-2 text-red-500 text-[10px]">
+                      <div className="mt-2 text-red-500 text-sm">
                         {documentsError}
                       </div>
                     )}
-                  </div>
-                )}
+                </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-3 pt-2">
                   {step > 1 && (
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handlePrevious}
-                      className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg py-2"
+                      className="min-w-[100px] border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl py-2.5 transition-colors"
                     >
                       Previous
                     </Button>
@@ -934,13 +967,15 @@ const AgencyOnboarding: React.FC = () => {
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="w-full action-btn text-white font-semibold rounded-lg transition-colors duration-200 py-2"
+                        className="flex-1 action-btn text-white font-semibold rounded-xl py-2.5 transition-all duration-200 hover:opacity-95 disabled:opacity-70"
                         disabled={loading}
                       >
                         {isCompleting || loading ? (
                           <>
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            {step === 4 ? "Completing..." : "Processing..."}
+                            <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                            <span className="ml-2">
+                              {step === 4 ? "Completing..." : "Processing..."}
+                            </span>
                           </>
                         ) : step === 4 ? (
                           "Complete Onboarding"
@@ -960,6 +995,7 @@ const AgencyOnboarding: React.FC = () => {
             </Form>
           </CardContent>
         </Card>
+        </div>
       </div>
     </TooltipProvider>
   );

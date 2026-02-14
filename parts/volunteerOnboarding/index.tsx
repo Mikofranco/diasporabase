@@ -16,7 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
@@ -205,18 +205,30 @@ export function VolunteerOnboardingForm() {
   }, []);
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <StepIndicator currentStep={step} totalSteps={totalSteps} />
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+          Volunteer Onboarding
+        </h1>
+        <p className="mt-1 text-sm text-blue-200/90">
+          Step {step} of {totalSteps}
+        </p>
+        <StepIndicator currentStep={step} totalSteps={totalSteps} />
+      </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Step 1: Skills */}
-        {step === 1 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-4">Select Your Skills</h2>
-            <CheckboxReactHookFormMultiple
-              items={expertiseData}
-              onChange={(selected) => setValue("skills", selected)}
-            />
+      <div className="rounded-2xl border-0 bg-white shadow-xl overflow-hidden max-h-[calc(100vh-14rem)] flex flex-col">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1 min-h-0">
+          {/* Step 1: Skills */}
+          {step === 1 && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Select Your Skills
+              </h2>
+              <CheckboxReactHookFormMultiple
+                items={expertiseData}
+                initialValues={watch("skills") ?? []}
+                onChange={(selected) => setValue("skills", selected)}
+              />
             {errors.skills && (
               <p className="text-red-500 text-sm mt-1">
                 {errors.skills.message}
@@ -238,12 +250,12 @@ export function VolunteerOnboardingForm() {
           </div>
         )}
 
-        {/* Step 2: Availability */}
-        {step === 2 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-4">
-              Select Your Availability
-            </h2>
+          {/* Step 2: Availability */}
+          {step === 2 && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Select Your Availability
+              </h2>
 
             <RadioGroup
               value={availabilityType}
@@ -254,7 +266,7 @@ export function VolunteerOnboardingForm() {
                   setValue("availabilityEndDate", undefined);
                 }
               }}
-              className="flex items-center space-x-6 mb-4"
+              className="flex items-center space-x-6"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="full-time" id="full-time" />
@@ -267,8 +279,8 @@ export function VolunteerOnboardingForm() {
             </RadioGroup>
 
             {availabilityType === "specific-period" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+              <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-x-6">
+                <div className="space-y-2">
                   <Label htmlFor="start-date">Start Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -307,7 +319,7 @@ export function VolunteerOnboardingForm() {
                   )}
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="end-date">End Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -347,82 +359,71 @@ export function VolunteerOnboardingForm() {
           </div>
         )}
 
-        {/* Step 3: Location */}
-        {step === 3 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-4">
-              Select Volunteer Location
-            </h2>
-            <LocationSelector
-              ref={locationSelectorRef}
-              onSelectionChange={handleLocationChange}
-            />
-            {selectedLocations.selectedCountries.length === 0 && step === 3 && (
-              <p className="text-diaspora-blue text-sm mt-1">
-                Choose your volunteer area in Nigeria (LGA, state, or nationwide)
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between mt-8">
-          {step > 1 && (
-            <Button type="button" variant="outline" onClick={handleBack}>
-              Back
-            </Button>
+          {/* Step 3: Location - scrolls inside card (same as Skills); multiple states/LGAs supported */}
+          {step === 3 && (
+            <div className="space-y-6 min-h-0">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Select Volunteer Location
+              </h2>
+              <div className="max-h-[min(55vh,480px)] min-h-0 overflow-y-auto rounded-xl border border-gray-200">
+                <LocationSelector
+                  ref={locationSelectorRef}
+                  initialSelected={selectedLocations}
+                  noInternalScroll
+                  onSelectionChange={handleLocationChange}
+                />
+              </div>
+              {selectedLocations.selectedCountries.length === 0 && (
+                <p className="text-diaspora-blue text-sm mt-2">
+                  Choose your volunteer area in Nigeria (LGA, state, or nationwide)
+                </p>
+              )}
+            </div>
           )}
 
-          <Button
-            type={step === totalSteps ? "submit" : "button"}
-            onClick={step < totalSteps ? handleNext : undefined}
-            disabled={
-              isLoading ||
-              (step === 1 && watch("skills").length === 0) ||
-              (step === 2 && !availabilityType) ||
-              (step === 2 &&
-                availabilityType === "specific-period" &&
-                (!watch("availabilityStartDate") ||
-                  !watch("availabilityEndDate"))) ||
-              (step === 3 && selectedLocations.selectedCountries.length === 0)
-            }
-            className={cn(
-              "min-w-[120px]",
-              "action-btn",
+          {/* Navigation Buttons */}
+          <div className="flex gap-3 pt-4 sm:pt-6">
+            {step > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBack}
+                className="min-w-[100px] rounded-xl border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Back
+              </Button>
             )}
-          >
-            {isLoading ? (
-              <div className="flex items-center">
-                <svg
-                  className="animate-spin h-5 w-5 mr-2"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-                Submitting...
-              </div>
-            ) : step === totalSteps ? (
-              "Complete Onboarding"
-            ) : (
-              "Next"
-            )}
-          </Button>
-        </div>
-      </form>
+            <Button
+              type={step === totalSteps ? "submit" : "button"}
+              onClick={step < totalSteps ? handleNext : undefined}
+              disabled={
+                isLoading ||
+                (step === 1 && watch("skills").length === 0) ||
+                (step === 2 && !availabilityType) ||
+                (step === 2 &&
+                  availabilityType === "specific-period" &&
+                  (!watch("availabilityStartDate") ||
+                    !watch("availabilityEndDate"))) ||
+                (step === 3 && selectedLocations.selectedCountries.length === 0)
+              }
+              className={cn(
+                "flex-1 min-w-[120px] rounded-xl action-btn font-semibold py-2.5",
+              )}
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin shrink-0 mr-2" />
+                  Submitting...
+                </span>
+              ) : step === totalSteps ? (
+                "Complete Onboarding"
+              ) : (
+                "Next"
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

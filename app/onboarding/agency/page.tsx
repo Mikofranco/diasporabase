@@ -1,10 +1,12 @@
-import AgencyOnboarding from '@/parts/agency-onboarding'
-import React from 'react'
+import AgencyOnboarding from "@/parts/agency-onboarding";
+import React from "react";
 
 const OnboardingPage = () => {
   return (
-    <div><AgencyOnboarding/></div>
-  )
-}
+    <div className="w-full">
+      <AgencyOnboarding />
+    </div>
+  );
+};
 
-export default OnboardingPage
+export default OnboardingPage;
