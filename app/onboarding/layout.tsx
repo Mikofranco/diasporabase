@@ -1,6 +1,8 @@
 "use client";
 
 import BackButton from "@/components/back-button";
+import { routes } from "@/lib/routes";
+import { usePathname } from "next/navigation";
 import React, { ReactNode } from "react";
 
 interface OnboardingLayoutProps {
@@ -8,6 +10,9 @@ interface OnboardingLayoutProps {
 }
 
 const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({ children }) => {
+  const pathname = usePathname();
+  const isAgencyOnboarding = pathname?.startsWith("/onboarding/agency");
+
   return (
     <div
       className="relative flex h-screen flex-col items-center overflow-hidden bg-gray-50 px-4 pt-6 pb-4 sm:px-6 sm:pt-8 sm:pb-6"
@@ -25,7 +30,11 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({ children }) => {
         .onboarding-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
       `}</style>
       <div className="absolute left-4 top-6 z-10 sm:left-6 sm:top-8">
-        <BackButton size="lg" className="h-11 px-5 rounded-xl font-medium" />
+        <BackButton
+          size="lg"
+          className="h-11 px-5 rounded-xl font-medium"
+          fallbackHref={isAgencyOnboarding ? routes.login : undefined}
+        />
       </div>
       <main
         className="onboarding-scroll w-full max-w-4xl flex-1 min-h-0 overflow-y-auto pt-12 sm:pt-14"

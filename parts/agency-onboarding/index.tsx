@@ -172,6 +172,11 @@ const AgencyOnboarding: React.FC = () => {
   const multipleRef = useRef<MultipleImageUploaderRef>(null);
   const router = useRouter();
   const [documentsError, setDocumentsError] = useState<string | null>(null);
+  const [profileImageError, setProfileImageError] = useState<string | null>(null);
+  const [hasProfileImageSelected, setHasProfileImageSelected] = useState(false);
+  const [documentsSelectedCount, setDocumentsSelectedCount] = useState(0);
+  const [organizationEmail, setOrganizationEmail] = useState<string>("");
+  const [organizationPhone, setOrganizationPhone] = useState<string>("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -243,6 +248,10 @@ const AgencyOnboarding: React.FC = () => {
           throw new Error("Error fetching profile: " + profileError.message);
         if (!profileData)
           throw new Error("Profile not found or you are not an agency.");
+
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        setOrganizationEmail(profileData.email || authUser?.email || "");
+        setOrganizationPhone((authUser?.user_metadata?.phone as string) || "");
 
         setProfile(profileData);
         form.reset({
@@ -349,15 +358,25 @@ const AgencyOnboarding: React.FC = () => {
     } else if (step === 3) {
       isValid = await form.trigger(["address", "focus_areas"]);
     } else if (step === 4) {
+      setDocumentsError(null);
+      setProfileImageError(null);
+      if (!hasProfileImageSelected) {
+        setProfileImageError("Please upload a business logo (profile picture).");
+        return;
+      }
+      if (documentsSelectedCount < 1) {
+        setDocumentsError("Please upload at least one supporting document.");
+        return;
+      }
       isValid = await form.trigger(["profile_picture"]);
-      isValid = await form.trigger(["documents"]) && isValid;
+      isValid = (await form.trigger(["documents"])) && isValid;
     }
 
     if (isValid && step < 4) {
       setStep(step + 1);
     } else if (isValid && step === 4) {
       form.handleSubmit(handleSubmit)();
-    } else {
+    } else if (step !== 4) {
       toast.error("Please fill out all required fields correctly.");
     }
   };
@@ -619,6 +638,27 @@ const AgencyOnboarding: React.FC = () => {
                         </FormItem>
                       )}
                     />
+                    <div className="space-y-2">
+                      <label className="text-gray-700 font-medium text-sm">
+                        Organization Email{" "}
+                        <Mail className="inline h-4 w-4 text-gray-500 ml-1" />
+                      </label>
+                      <Input
+                        value={organizationEmail}
+                        readOnly
+                        className="border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-gray-700 font-medium text-sm">
+                        Organization Phone {" "}
+                        <Phone className="inline h-4 w-4 text-gray-500 ml-1" />
+                      </label>
+                      <Input
+                        value={organizationPhone}
+                        className="border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed rounded-lg"
+                      />
+                    </div>
                     <FormField
                       control={form.control}
                       name="organization_type"
@@ -790,13 +830,13 @@ const AgencyOnboarding: React.FC = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-gray-700 font-medium">
-                            Contact Email{" "}
+                            Contact Person Email{" "}
                             <Mail className="inline h-4 w-4 text-gray-500 ml-1" />
                           </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
-                              placeholder="Enter contact email"
+                              placeholder="Enter contact person email"
                               className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
@@ -810,13 +850,13 @@ const AgencyOnboarding: React.FC = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-gray-700 font-medium">
-                            Contact Phone{" "}
+                            Contact Person Phone{" "}
                             <Phone className="inline h-4 w-4 text-gray-500 ml-1" />
                           </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
-                              placeholder="Enter contact phone"
+                              placeholder="Enter contact person phone"
                               className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
@@ -929,7 +969,17 @@ const AgencyOnboarding: React.FC = () => {
                       <p className="text-sm text-gray-600">
                         Upload a clear logo or photo of your organization. Your selection is saved as you move between steps.
                       </p>
-                      <SingleImageUploader ref={singleRef} title="" />
+                      <SingleImageUploader
+                        ref={singleRef}
+                        title=""
+                        onFileSelected={(file) => {
+                          setHasProfileImageSelected(!!file);
+                          if (file) setProfileImageError(null);
+                        }}
+                      />
+                      {profileImageError && (
+                        <p className="text-red-500 text-sm">{profileImageError}</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -942,13 +992,18 @@ const AgencyOnboarding: React.FC = () => {
                       <p className="text-sm text-gray-600">
                         Upload CAC certificate, registration documents, or other relevant files (PDF, JPG, PNG). Selections are kept when you go back to previous steps.
                       </p>
-                      <MultipleImageUploader ref={multipleRef} title="" />
+                      <MultipleImageUploader
+                        ref={multipleRef}
+                        title=""
+                        onFilesChange={(files) => {
+                          setDocumentsSelectedCount(files?.length ?? 0);
+                          if ((files?.length ?? 0) > 0) setDocumentsError(null);
+                        }}
+                      />
+                      {documentsError && (
+                        <p className="text-red-500 text-sm">{documentsError}</p>
+                      )}
                     </div>
-                    {documentsError && (
-                      <div className="mt-2 text-red-500 text-sm">
-                        {documentsError}
-                      </div>
-                    )}
                 </div>
 
                 <div className="flex gap-3 pt-2">
@@ -967,8 +1022,8 @@ const AgencyOnboarding: React.FC = () => {
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="flex-1 action-btn text-white font-semibold rounded-xl py-2.5 transition-all duration-200 hover:opacity-95 disabled:opacity-70"
-                        disabled={loading}
+                        className="flex-1 action-btn text-white font-semibold rounded-xl py-2.5 transition-all duration-200 hover:opacity-95 disabled:opacity-70 disabled:pointer-events-none"
+                        disabled={loading || isCompleting}
                       >
                         {isCompleting || loading ? (
                           <>
