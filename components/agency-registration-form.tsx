@@ -30,6 +30,7 @@ import {
   RefreshCw,
   AlertCircle,
   Building2,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -520,29 +521,30 @@ export default function AgencyRegistrationForm() {
           open ? setModalOpen(true) : handleCloseModal()
         }
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md border-0 p-0 overflow-hidden shadow-xl">
           <div
             onMouseEnter={handleModalMouseEnter}
             onMouseLeave={handleModalMouseLeave}
-            className="rounded-lg"
+            className="rounded-2xl border border-border/80 bg-card p-6 sm:p-8"
           >
-            <DialogHeader>
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100">
-                <Mail className="h-8 w-8 text-emerald-600" />
+            <DialogHeader className="space-y-4">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#0ea5e9]/10 ring-4 ring-[#0ea5e9]/20">
+                <CheckCircle2 className="h-10 w-10 text-[#0ea5e9]" strokeWidth={2.25} />
               </div>
-              <DialogTitle className="text-center text-xl font-semibold">
+              <DialogTitle className="text-center text-xl font-semibold tracking-tight">
                 Check Your Email
               </DialogTitle>
-              <DialogDescription className="mt-2 text-center text-[15px]">
+              <DialogDescription className="mt-1 text-center text-[15px] leading-relaxed">
                 A confirmation link has been sent to
                 <br />
-                <strong className="break-all text-foreground">
+                <strong className="break-all text-foreground font-medium">
                   {pendingConfirmation?.email || "your email"}
                 </strong>
               </DialogDescription>
             </DialogHeader>
 
             <div className="mt-6 flex flex-col items-center justify-center space-y-3">
+              {/* Resend Confirmation Email — commented out for now
               <Button
                 onClick={handleResend}
                 disabled={resendLoading || !canResend}
@@ -560,11 +562,12 @@ export default function AgencyRegistrationForm() {
                   <>Resend in {resendCountdown}s</>
                 )}
               </Button>
+              */}
 
               <Button
-                variant="secondary"
+                variant="default"
                 onClick={handleCloseModal}
-                className="w-full max-w-[280px]"
+                className="w-full max-w-[280px] bg-[#0ea5e9] hover:bg-[#0284c7] text-white font-medium"
               >
                 OK, I&apos;ll check my email
               </Button>
