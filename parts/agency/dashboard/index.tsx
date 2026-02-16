@@ -133,16 +133,16 @@ const AgencyDashboard = () => {
         setUserId(currentUserId);
         setIsActive(profile.is_active);
 
-        if (!profile.tax_id) {
-          router.replace(routes.agencyOnboarding);
-          return;
-        }
+        // if (!profile.tax_id) {
+        //   router.replace(routes.agencyOnboarding);
+        //   return;
+        // }
 
-        if (!profile.is_active) {
-          toast.error("Your agency is pending approval.");
-          router.replace(routes.approvalPending);
-          return;
-        }
+        // if (!profile.is_active) {
+        //   toast.error("Your agency is pending approval.");
+        //   router.replace(routes.approvalPending);
+        //   return;
+        // }
 
         // Now we have the real userId → fetch projects with it
         await fetchAllProjects(currentUserId);
