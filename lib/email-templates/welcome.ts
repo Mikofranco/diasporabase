@@ -1,15 +1,27 @@
+/** Server-safe HTML escape (no DOM). Use in API routes. */
+export function escapeHtmlServer(text: string): string {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export const welcomeHtml = (
   firstName: string,
-  confirmationLink: string
+  confirmationLink: string,
+  options?: { serverEscape?: boolean }
 ): string => {
-  // Safely escape the first name
-  const escapeHtml = (text: string): string => {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-  };
-
-  const safeFirstName = escapeHtml(firstName);
+  const safeFirstName =
+    options?.serverEscape === true
+      ? escapeHtmlServer(firstName)
+      : (() => {
+          if (typeof document === "undefined") return escapeHtmlServer(firstName);
+          const div = document.createElement("div");
+          div.textContent = firstName;
+          return div.innerHTML;
+        })();
 
   return `
 <!DOCTYPE html>
@@ -121,16 +133,18 @@ export const welcomeHtml = (
 
 export const welcomeHtmlAgency = (
   firstName: string,
-  confirmationLink: string
+  confirmationLink: string,
+  options?: { serverEscape?: boolean }
 ): string => {
-  // Safely escape the first name
-  const escapeHtml = (text: string): string => {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-  };
-
-  const safeFirstName = escapeHtml(firstName);
+  const safeFirstName =
+    options?.serverEscape === true
+      ? escapeHtmlServer(firstName)
+      : (() => {
+          if (typeof document === "undefined") return escapeHtmlServer(firstName);
+          const div = document.createElement("div");
+          div.textContent = firstName;
+          return div.innerHTML;
+        })();
 
   return `
 <!DOCTYPE html>

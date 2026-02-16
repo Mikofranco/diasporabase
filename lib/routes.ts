@@ -20,6 +20,7 @@ export const routes = {
   // Authentication routes
   login: "/login",
   confirmation: "/confirm",
+  confirmEmail: "/confirm-email",
   forgotPassword: "/forgot-password",
   agencyCheckMail: "/agency-checkmail",
   approvalPending: "/approval-pending",
@@ -84,6 +85,7 @@ export const routes = {
     adminViewProject: (projectId: string) => `/admin/projects/${projectId}`,
     adminEditProject: (projectId: string) => `/admin/projects/${projectId}/edit`,
     adminNotifications: "/admin/notifications",
+    adminEmailConfirmations: "/admin/email-confirmations",
     adminSettings: "/admin/settings",
     adminProfile: "/admin/profile",
 
