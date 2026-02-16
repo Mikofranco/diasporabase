@@ -44,7 +44,7 @@ export default function LoginForm() {
         if (event === "SIGNED_IN" && session?.user) {
           supabase
             .from("profiles")
-            .select("role")
+            .select("role, is_active, tax_id")
             .eq("id", session.user.id)
             .single()
             //@ts-ignore
@@ -66,6 +66,14 @@ export default function LoginForm() {
               } else if (profile.role === "admin") {
                 router.replace(routes.adminDashboard);
               } else if (profile.role === "agency") {
+                if (!profile.tax_id) {
+                  router.replace(routes.agencyOnboarding);
+                  return;
+                }
+                if (!profile.is_active) {
+                  router.replace(routes.approvalPending);
+                  return;
+                }
                 router.replace(routes.agencyDashboard);
               } else if (profile.role === "volunteer") {
                 router.replace(routes.volunteerDashboard);
