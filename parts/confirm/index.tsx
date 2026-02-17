@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { routes } from "@/lib/routes";
+import { signOutUser } from "@/lib/utils";
 
 const CONFIRM_TOKEN_KEY = "diasporabase_confirm_token";
 const REDIRECT_DELAY_SEC = 3;
@@ -176,13 +177,9 @@ export default function ConfirmEmailPage() {
         setUserRole(role);
         setUserTaxId(profile?.tax_id ?? null);
       } else {
-        await supabase.auth.signOut();
-
-        try {
-          localStorage.clear();
-          sessionStorage.clear();
-        } catch (err) {
-          console.error("Error clearing storage after sign out", err);
+        const result = await signOutUser();
+        if (!result.success) {
+          console.error("Error clearing session after token mismatch:", result.error);
         }
         setCurrentUserId(null);
       }

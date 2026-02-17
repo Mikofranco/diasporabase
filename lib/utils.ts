@@ -21,8 +21,52 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Reusable client-side sign-out helper.
+ * - Signs out via Supabase
+ * - Clears local/session storage
+ * - Returns a boolean success flag and any error message
+ *
+ * Routing is left to the caller (so components can decide push/replace),
+ * but all sign-out flows share the same core behavior.
+ */
+export async function signOutUser(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (err) {
+      console.error("Error clearing storage after sign out", err);
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message ?? "Unexpected error while signing out",
+    };
+  }
+}
+
 export async function getUserId() {
   try {
+    // Prefer the cached user id from localStorage when running in the browser.
+    if (typeof window !== "undefined") {
+      try {
+        const cachedId = localStorage.getItem("diaspobase_userId");
+        if (cachedId) {
+          return { data: cachedId, error: null };
+        }
+      } catch {
+        // Ignore storage errors and fall back to Supabase
+      }
+    }
+
     // Get the current session
     const {
       data: { user },
