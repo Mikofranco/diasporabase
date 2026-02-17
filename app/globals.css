@@ -170,3 +170,12 @@ select:focus-visible {
   width: 0;
   height: 0;
 }
+
+/* Subtle hero wave drift – CSS-only, low cost */
+@keyframes hero-wave-drift {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(6px); }
+}
+.hero-wave-drift {
+  animation: hero-wave-drift 10s ease-in-out infinite;
+}
