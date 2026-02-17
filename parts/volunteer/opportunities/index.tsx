@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { MapPin, Briefcase, Calendar, Users } from "lucide-react";
 import Link from "next/link";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -299,7 +300,7 @@ const Opportunities: React.FC = () => {
                 {" "}
                 {/* ← key change here */}
                 <Button asChild className="w-full action-btn">
-                  <Link href={`/volunteer/projects/${project.id}`}>
+                  <Link href={routes.volunteerViewProject(project.id)}>
                     View Details
                   </Link>
                 </Button>

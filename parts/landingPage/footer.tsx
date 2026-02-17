@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
+import { routes } from "@/lib/routes";
 
 const Footer = () => {
   const footerLinks = {
@@ -9,19 +10,19 @@ const Footer = () => {
       // { label: "Find Opportunities", href: "/opportunities" },
       // { label: "Post Projects", href: "/post-projects" },
       // { label: "Join Community", href: "/community" },
-      { label: "Success Stories", href: "/success-stories" },
+      { label: "Success Stories", href: routes.successStories },
     ],
     Support: [
-      { label: "Help Center", href: "/help" },
-      { label: "Contact Us", href: "/contact" },
-      { label: "Safety Guidelines", href: "/safety" },
-      { label: "Report Issue", href: "/report" },
+      { label: "Help Center", href: routes.help },
+      { label: "Contact Us", href: routes.contact },
+      { label: "Safety Guidelines", href: routes.safetyAndGuidelines },
+      { label: "Report Issue", href: routes.report },
     ],
     Legal: [
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Service", href: "/terms" },
-      { label: "Cookie Policy", href: "/cookies" },
-      { label: "Accessibility", href: "/accessibility" },
+      { label: "Privacy Policy", href: routes.privacy },
+      { label: "Terms of Service", href: routes.terms },
+      { label: "Cookie Policy", href: routes.cookies },
+      { label: "Accessibility", href: routes.accessibility },
     ],
   };
 

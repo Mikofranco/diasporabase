@@ -1,10 +1,12 @@
-import { VolunteerOnboardingForm } from '@/parts/volunteerOnboarding'
-import React from 'react'
+import { VolunteerOnboardingForm } from "@/parts/volunteerOnboarding";
+import React from "react";
 
 const OnboardingPage = () => {
   return (
-    <div><VolunteerOnboardingForm/></div>
-  )
-}
+    <div className="w-full">
+      <VolunteerOnboardingForm />
+    </div>
+  );
+};
 
-export default OnboardingPage
+export default OnboardingPage;

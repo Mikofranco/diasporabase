@@ -23,8 +23,10 @@ import {
 } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Trash2, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Item } from "@/app/(dashboard)/(volunteer)/volunteer/profile/page";
+// import { Item } from "@/app/(dashboard)/(volunteer)/volunteer/profile/page";
 import { getSkillsets } from "@/lib/utils";
+import { routes } from "@/lib/routes";
+import { Item } from "@/components/renderedItems";
 
 const supabase = createClient();
 
@@ -50,7 +52,7 @@ export default function SkillsetManagementPage() {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error || !user) {
         toast.error("Please log in to access this page.");
-        router.push("/login");
+        router.push(routes.login);
         return;
       }
 
@@ -62,13 +64,13 @@ export default function SkillsetManagementPage() {
 
       if (profileError) {
         toast.error("Error fetching user role.");
-        router.push("/super-admin/dashboard");
+        router.push(routes.superAdminDashboard);
         return;
       }
 
       if (!["admin", "super_admin"].includes(data.role)) {
         toast.error("You are not authorized to access this page.");
-        router.push("/super-admin/dashboard");
+        router.push(routes.superAdminDashboard);
         return;
       }
 
@@ -116,15 +118,15 @@ export default function SkillsetManagementPage() {
     const flatItems = skillsets.flatMap((i) => [
       i,
       ...(i.children || []),
-      ...(i.children?.flatMap((c) => c.subChildren || []) || []),
+      ...(i.children?.flatMap((c: any) => c.subChildren || []) || []),
     ]);
     const item = flatItems.find((i) => i.id === id);
     if (!item) return null;
 
     const parent = flatItems.find(
       (i) =>
-        i.children?.some((child) => child.id === id) ||
-        i.subChildren?.some((subChild) => subChild.id === id)
+        i.children?.some((child: any) => child.id === id) ||
+        i.subChildren?.some((subChild: any) => subChild.id === id)
     );
     return parent ? parent.id : null;
   };
@@ -247,9 +249,9 @@ export default function SkillsetManagementPage() {
         {(item.children || item.subChildren) && expanded[item.id] && (
           <div className="ml-2.5">
             {item.children && renderSkillsets(item.children, level + 1)}
-            {item.children?.some((child) => child.subChildren) &&
+            {item.children?.some((child: any) => child.subChildren) &&
               item.children.map(
-                (child) =>
+                (child: any) =>
                   child.subChildren &&
                   expanded[child.id] && (
                     <div key={child.id} className="ml-2.5">
@@ -269,7 +271,7 @@ export default function SkillsetManagementPage() {
     const flatItems = skillsets.flatMap((i) => [
       i,
       ...(i.children || []),
-      ...(i.children?.flatMap((c) => c.subChildren || []) || []),
+      ...(i.children?.flatMap((c: any) => c.subChildren || []) || []),
     ]);//@ts-ignore
     return flatItems.filter((item) => item.children || item.subChildren || !item.parent_id); // Allow top-level and parents
   };

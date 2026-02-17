@@ -27,6 +27,7 @@ import {
   Mail,
   RefreshCw,
   AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -34,8 +35,9 @@ import { useSendMail } from "@/services/mail";
 import { welcomeHtml } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
 import { GoogleSignUpButton } from "./signinwithGoogleBtn";
-import Logo from "./logo";
-import DiasporaBaseModal from "./diasporabase-modal";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TermsModal, VolunteerTermsContent } from "./terms-modal";
+import { routes } from "@/lib/routes";
 
 const formSchema = z
   .object({
@@ -76,6 +78,10 @@ export default function VolunteerRegistrationForm() {
   const [touched, setTouched] = useState<
     Partial<Record<keyof FormData, boolean>>
   >({});
+
+  // Terms agreement
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
 
   // Modal & Resend state
   const [modalOpen, setModalOpen] = useState(false);
@@ -220,7 +226,7 @@ export default function VolunteerRegistrationForm() {
         "24h", // ← Now 24 hours
       );
 
-      const confirmationUrl = `${origin}/confirm?token=${token}`;
+      const confirmationUrl = `${origin}${routes.confirmation}?token=${token}`;
 
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
@@ -440,11 +446,44 @@ export default function VolunteerRegistrationForm() {
               />
             </div>
 
+            {/* Terms & Conditions */}
+            <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/30">
+              <Checkbox
+                id="volunteer-terms"
+                checked={agreedToTerms}
+                onCheckedChange={(checked) =>
+                  setAgreedToTerms(checked === true)
+                }
+                disabled={loading}
+                className="mt-0.5"
+              />
+              <label
+                htmlFor="volunteer-terms"
+                className="text-sm leading-relaxed text-muted-foreground cursor-pointer select-none"
+              >
+                I agree to the{" "}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setTermsModalOpen(true);
+                  }}
+                  className="font-medium text-[#0ea5e9] hover:underline focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/30 rounded"
+                >
+                  Volunteer Agreement
+                </button>
+              </label>
+            </div>
+
             <div className="flex justify-center pt-4">
               <Button
                 type="submit"
                 size="lg"
-                disabled={loading || Object.keys(errors).length > 0}
+                disabled={
+                  loading ||
+                  !agreedToTerms ||
+                  Object.keys(errors).length > 0
+                }
                 className="w-fit h-12 px-10 text-lg font-semibold action-btn shadow-lg"
               >
                 {loading ? (
@@ -462,7 +501,7 @@ export default function VolunteerRegistrationForm() {
           <p className="text-center text-sm text-muted-foreground pt-4">
             Already have an account?{" "}
             <Link
-              href="/login"
+              href={routes.login}
               className="font-semibold text-[#0ea5e9] hover:underline"
             >
               Sign in
@@ -471,34 +510,44 @@ export default function VolunteerRegistrationForm() {
         </CardContent>
       </Card>
 
+      <TermsModal
+        open={termsModalOpen}
+        onOpenChange={setTermsModalOpen}
+        title="DiasporaBase Volunteer Terms"
+        onAgree={() => setAgreedToTerms(true)}
+      >
+        <VolunteerTermsContent />
+      </TermsModal>
+
       {/* Success Modal with Resend */}
       <Dialog
         open={modalOpen}
         onOpenChange={(open) => (open ? setModalOpen(true) : handleCloseModal())}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md border-0 p-0 overflow-hidden shadow-xl">
           <div
             onMouseEnter={handleModalMouseEnter}
             onMouseLeave={handleModalMouseLeave}
-            className="rounded-lg"
+            className="rounded-2xl border border-border/80 bg-card p-6 sm:p-8"
           >
-            <DialogHeader>
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100">
-                <Mail className="h-8 w-8 text-emerald-600" />
+            <DialogHeader className="space-y-4">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#0ea5e9]/10 ring-4 ring-[#0ea5e9]/20">
+                <CheckCircle2 className="h-10 w-10 text-[#0ea5e9]" strokeWidth={2.25} />
               </div>
-              <DialogTitle className="text-center text-xl font-semibold">
+              <DialogTitle className="text-center text-xl font-semibold tracking-tight">
                 Check Your Email
               </DialogTitle>
-              <DialogDescription className="mt-2 text-center text-[15px]">
+              <DialogDescription className="mt-1 text-center text-[15px] leading-relaxed">
                 We sent a confirmation link to
                 <br />
-                <strong className="break-all text-foreground">
+                <strong className="break-all text-foreground font-medium">
                   {pendingConfirmation?.email || "your email"}
                 </strong>
               </DialogDescription>
             </DialogHeader>
 
             <div className="mt-6 flex flex-col items-center justify-center space-y-3">
+              {/* Resend Confirmation Email — commented out for now
               <Button
                 onClick={handleResend}
                 disabled={resendLoading || !canResend}
@@ -516,11 +565,12 @@ export default function VolunteerRegistrationForm() {
                   <>Resend in {resendCountdown}s</>
                 )}
               </Button>
+              */}
 
               <Button
-                variant="secondary"
+                variant="default"
                 onClick={handleCloseModal}
-                className="w-full max-w-[280px]"
+                className="w-full max-w-[280px] bg-[#0ea5e9] hover:bg-[#0284c7] text-white font-medium"
               >
                 OK, I&apos;ll check my email
               </Button>

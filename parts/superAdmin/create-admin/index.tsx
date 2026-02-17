@@ -26,6 +26,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase, adminSupabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useSendMail } from "@/services/mail";
+import { routes } from "@/lib/routes";
 
 const ROLES = {
   SUPER_ADMIN: "super_admin",
@@ -94,13 +95,13 @@ export default function AdminManagement() {
         } = await supabase.auth.getUser();
         if (userError || !user) {
           toast.error("Authentication error");
-          router.push("/login");
+          router.push(routes.login);
           return;
         }
 
         if (user.user_metadata.role !== ROLES.SUPER_ADMIN) {
           toast.error("Super admin access required");
-          router.push("/super-admin/dashboard");
+          router.push(routes.superAdminDashboard);
           return;
         }
 

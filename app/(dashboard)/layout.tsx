@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -95,8 +96,16 @@ export default function DashboardLayout({
     if (error) {
       toast.error("Error signing out: " + error.message);
     } else {
-      toast.success("Logged out successfully");
-      router.push("/login");
+      // Clear local and session storage after sign out
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (err) {
+        // Optionally log or handle error but don't block logout
+        console.error("Error clearing storage after sign out", err);
+      }
+      // toast.success("Logged out successfully");
+      router.push(routes.home);
     }
   };
 

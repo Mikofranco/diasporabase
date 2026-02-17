@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { getFirstTwoWordsShort } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 export default function AuthSuccessAgency() {
   const router = useRouter();
@@ -59,14 +60,14 @@ export default function AuthSuccessAgency() {
           profile.organization_name?.trim(); 
 
         if (isOnboarded) {
-          router.replace("/agency/dashboard");
+          router.replace(routes.agencyDashboard);
         } else {
-          router.replace("/onboarding/agency");
+          router.replace(routes.agencyOnboarding);
         }
       } catch (err: any) {
         console.error("Agency setup error:", err);
         setStatus("Something went wrong. Please try again.");
-        setTimeout(() => router.replace("/login?error=agency_setup_failed"), 4000);
+        setTimeout(() => router.replace(routes.login + "?error=agency_setup_failed"), 4000);
       }
     };
 

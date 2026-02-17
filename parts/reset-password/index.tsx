@@ -14,6 +14,7 @@ import Logo from "@/components/logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { routes } from "@/lib/routes";
 
 export default function ResetPasswordForm() {
   const [password, setPassword] = useState("");
@@ -107,7 +108,7 @@ export default function ResetPasswordForm() {
 
             <Button
               className="w-full action-btn"
-              onClick={() => router.push("/forgot-password")}
+              onClick={() => router.push(routes.forgotPassword)}
             >
               Request new reset link
             </Button>
@@ -125,7 +126,7 @@ export default function ResetPasswordForm() {
 
             <Button
               className="w-full action-btn"
-              onClick={() => router.push("/login")}
+              onClick={() => router.push(routes.login)}
             >
               Go to login
             </Button>

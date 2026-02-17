@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import ProjectCard, { Project } from '@/components/project-card';
 import { useRouter } from 'next/navigation';
+import { routes } from '@/lib/routes';
 
 
 const supabase = createClient();
@@ -27,7 +28,7 @@ const AdminProjectsScreen: React.FC = () => {
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          router.replace('/login');
+          router.replace(routes.login);
           return;
         }
 

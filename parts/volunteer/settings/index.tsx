@@ -45,6 +45,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -222,7 +223,15 @@ const VolunteerSettings: React.FC = () => {
 
       await supabase.auth.signOut();
       toast.success("Account deleted successfully.");
-      router.push("/login");
+      // Clear local and session storage after sign out
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (err) {
+        // Optionally log or handle error but don't block logout
+        console.error("Error clearing storage after sign out", err);
+      }
+      router.push(routes.login);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -232,8 +241,17 @@ const VolunteerSettings: React.FC = () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw new Error("Error signing out: " + error.message);
-      toast.success("Signed out successfully.");
-      router.push("/login");
+      // toast.success("Signed out successfully.");
+      // Clear local and session storage after sign out
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (err) {
+        // Optionally log or handle error but don't block logout
+        console.error("Error clearing storage after sign out", err);
+      }
+
+      router.push(routes.login);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -290,7 +308,7 @@ if (loading) {
               <Button
                 variant="outline"
                 className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                onClick={() => router.push("/volunteer/dashboard")}
+                onClick={() => router.push(routes.volunteerDashboard)}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
@@ -310,7 +328,7 @@ if (loading) {
         <Button
           variant="outline"
           className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          onClick={() => router.push("/volunteer/dashboard")}
+          onClick={() => router.push(routes.volunteerDashboard)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard

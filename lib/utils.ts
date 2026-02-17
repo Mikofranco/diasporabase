@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Database } from "./database/types";
 import { Country, State, City } from 'country-state-city';
 import { africanLocations } from "@/data/african-locations";
+import { routes } from "./routes";
 
 export type LocationData = {
   country?: string | null;  // e.g., "NG" (ISO code) or full name "Nigeria"
@@ -107,25 +108,25 @@ export async function handleEmailConfirmationRedirect() {
     if (profile && profile.role) {
       switch (profile.role) {
         case "admin":
-          window.location.href = "/admin/dashboard";
+          window.location.href = routes.adminDashboard;
           break;
         case "super_admin":
-          window.location.href = "/super-admin/dashboard";
+          window.location.href = routes.superAdminDashboard;
           break;
         case "volunteer":
-          window.location.href = "/volunteer/dashboard";
+          window.location.href = routes.volunteerDashboard;
           break;
         case "agency":
-          window.location.href = "/onboarding/agency";
+          window.location.href = routes.agencyOnboarding as string;
           break;
         default:
-          window.location.href = "/login";
+          window.location.href = routes.login;
       }
     } else {
-      window.location.href = "/login";
+      window.location.href = routes.login;
     }
   } else {
-    window.location.href = "/login";
+    window.location.href = routes.login;
   }
 }
 
@@ -137,7 +138,7 @@ interface Item {
   subChildren?: Item[];
 }
 
-interface Skillset {
+export interface SkillSet {
   id: string;
   label: string;
   parent_id: string | null;
@@ -155,16 +156,16 @@ export async function getSkillsets(): Promise<Item[]> {
     }
 
     // Transform flat skillsets into hierarchical structure
-    const topLevel = data.filter((s: Skillset) => s.parent_id === null);
-    const transformedItems: Item[] = topLevel.map((top: Skillset) => {
+    const topLevel = data.filter((s: SkillSet) => s.parent_id === null);
+    const transformedItems: Item[] = topLevel.map((top: SkillSet) => {
       const children = data
-        .filter((s: Skillset) => s.parent_id === top.id)
-        .map((child: Skillset) => ({
+        .filter((s: SkillSet) => s.parent_id === top.id)
+        .map((child: SkillSet) => ({
           id: child.id,
           label: child.label,
           subChildren: data
-            .filter((s: Skillset) => s.parent_id === child.id)
-            .map((subChild: Skillset) => ({
+            .filter((s: SkillSet) => s.parent_id === child.id)
+            .map((subChild: SkillSet) => ({
               id: subChild.id,
               label: subChild.label,
             })),

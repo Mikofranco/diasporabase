@@ -20,6 +20,7 @@ import { AlertCircle, Eye, Trash, Search } from "lucide-react";
 import { toast } from "sonner";
 import { deleteUser } from "@/lib/superAdmin";
 import DeleteUserDialog from "@/components/modals/delete-user";
+import { routes } from "@/lib/routes";
 
 interface User {
   id: string;
@@ -106,7 +107,7 @@ export default function UserManagement() {
   }, [users, searchQuery, selectedRole]);
 
   const handleRowClick = (userId: string) => {
-    router.push(`/super-admin/users/${userId}`);
+    router.push(routes.superAdminViewUser(userId));
   };
 
   const handleDeleteClick = (e: React.MouseEvent, userId: string) => {

@@ -5,6 +5,7 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useRef,
   forwardRef,
   useImperativeHandle,
   useCallback,
@@ -58,12 +59,23 @@ export interface LocationSelectorHandle {
 
 interface LocationSelectorProps {
   onSelectionChange?: (data: SelectedData) => void;
+  /** Restore selection when navigating back to this step */
+  initialSelected?: SelectedData;
+  /** When true, list flows with page scroll instead of having its own scrollbar */
+  noInternalScroll?: boolean;
 }
 
+const emptySelectedData: SelectedData = {
+  selectedCountries: [],
+  selectedStates: [],
+  selectedLgas: [],
+};
+
 const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProps>(
-  ({ onSelectionChange }, ref) => {
+  ({ onSelectionChange, initialSelected, noInternalScroll }, ref) => {
     const [expanded, setExpanded] = useState<ExpandedState>({});
     const [selected, setSelected] = useState<SelectedState>({});
+    const initialAppliedRef = useRef(false);
 
     const buildSelectedState = useCallback((data: SelectedData): SelectedState => {
       const newState: SelectedState = {};
@@ -100,6 +112,18 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
         setSelected(newState);
       },
     }), [buildSelectedState]);
+
+    // Restore selection only once on mount when returning to step (avoids overwriting multi-select)
+    useEffect(() => {
+      const data = initialSelected || emptySelectedData;
+      const hasData =
+        data.selectedCountries?.length > 0 ||
+        data.selectedStates?.length > 0 ||
+        data.selectedLgas?.length > 0;
+      if (!hasData || initialAppliedRef.current) return;
+      initialAppliedRef.current = true;
+      setSelected(buildSelectedState(data));
+    }, [initialSelected, buildSelectedState]);
 
     // Notify parent when internal selection changes
     useEffect(() => {
@@ -174,23 +198,34 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
           };
         }
 
-        // Cleanup empty branches
+        // Cleanup empty branches; build new states object to avoid mutating shared refs (keeps multi-select stable)
         if (newSelected[country]) {
-          const hasSelectedStates = Object.values(newSelected[country].states).some(
-            (s) => s.checked || Object.values(s.lgas).some((l) => l)
-          );
-          newSelected[country].checked = hasSelectedStates;
+          const statesObj = newSelected[country].states;
+          const hasSelectedStates =
+            statesObj &&
+            typeof statesObj === "object" &&
+            Object.values(statesObj).some(
+              (s) => s && (s.checked || (s.lgas && Object.values(s.lgas).some((l) => l)))
+            );
+          newSelected[country].checked = !!hasSelectedStates;
           if (!hasSelectedStates) {
             delete newSelected[country];
-          } else {
-            Object.keys(newSelected[country].states).forEach((s) => {
-              const hasSelectedLgas = Object.values(newSelected[country].states[s].lgas).some((l) => l);
-              newSelected[country].states[s].checked =
-                hasSelectedLgas || newSelected[country].states[s].checked;
-              if (!newSelected[country].states[s].checked && !hasSelectedLgas) {
-                delete newSelected[country].states[s];
+          } else if (statesObj && typeof statesObj === "object") {
+            const newStates: {
+              [state: string]: { checked: boolean; lgas: { [lga: string]: boolean } };
+            } = {};
+            Object.keys(statesObj).forEach((s) => {
+              const stateEntry = statesObj[s];
+              if (!stateEntry) return;
+              const lgasObj = stateEntry.lgas;
+              const hasSelectedLgas =
+                lgasObj && typeof lgasObj === "object" && Object.values(lgasObj).some((l) => l);
+              const keepChecked = hasSelectedLgas || stateEntry.checked;
+              if (keepChecked || hasSelectedLgas) {
+                newStates[s] = { ...stateEntry, checked: keepChecked };
               }
             });
+            newSelected[country].states = newStates;
           }
         }
 
@@ -229,12 +264,21 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
       const lgas: string[] = [];
 
       Object.keys(selected).forEach((country) => {
-        if (selected[country].checked) countries.push(country);
-        Object.keys(selected[country].states).forEach((state) => {
-          if (selected[country].states[state].checked) states.push(state);
-          Object.keys(selected[country].states[state].lgas).forEach((lga) => {
-            if (selected[country].states[state].lgas[lga]) lgas.push(lga);
-          });
+        const countryData = selected[country];
+        if (!countryData?.checked) return;
+        countries.push(country);
+        const countryStates = countryData.states;
+        if (!countryStates || typeof countryStates !== "object") return;
+        Object.keys(countryStates).forEach((state) => {
+          const stateData = countryStates[state];
+          if (!stateData) return;
+          if (stateData.checked) states.push(state);
+          const stateLgas = stateData.lgas;
+          if (stateLgas && typeof stateLgas === "object") {
+            Object.keys(stateLgas).forEach((lga) => {
+              if (stateLgas[lga]) lgas.push(lga);
+            });
+          }
         });
       });
 
@@ -262,7 +306,13 @@ const LocationSelector = forwardRef<LocationSelectorHandle, LocationSelectorProp
             </div> */}
           </div>
 
-          <div className="max-h-[500px] overflow-y-auto pr-2 space-y-3">
+          <div
+            className={
+              noInternalScroll
+                ? "pr-2 space-y-3"
+                : "max-h-[500px] overflow-y-auto pr-2 space-y-3"
+            }
+          >
             {africanLocations.map((countryData: Location) => {
               const countryKey = countryData.country;
               const isCountryExpanded = expanded[countryKey];

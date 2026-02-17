@@ -12,6 +12,7 @@ import EditProjectDialogue from "@/components/dialogues/edit-project";
 import ViewProjectDialogue from "@/components/dialogues/view-project";
 import { ro } from "date-fns/locale";
 import { useRouter } from "next/navigation";
+import { routes } from "@/lib/routes";
 
 
 const RecentProjects = ({ userId }: { userId: string }) => {
@@ -71,7 +72,7 @@ const RecentProjects = ({ userId }: { userId: string }) => {
   };
   const redirectToCreateProject =()=>{
      toast.info("Redirecting to create a new project...");
-    router.replace("/agency/projects")
+    router.replace(routes.agencyProjects)
   }
 
   return (

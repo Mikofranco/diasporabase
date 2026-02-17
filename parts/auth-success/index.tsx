@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { routes } from "@/lib/routes";
 
 export default function AuthSuccessContent() {
   const router = useRouter();
@@ -63,7 +64,7 @@ export default function AuthSuccessContent() {
         if (profileError || !profile) {
           console.error("Profile error:", profileError);
           setStatus("Profile not found – redirecting to setup...");
-          router.replace("/onboarding/profile");
+          router.replace(`${routes.onboarding}/profile`);
           return;
         }
 
@@ -72,19 +73,19 @@ export default function AuthSuccessContent() {
         setStatus(`Welcome! Redirecting as ${role}...`);
 
         if (role === 'super_admin') {
-          router.replace('/super-admin/dashboard');
+          router.replace(routes.superAdminDashboard);
         } else if (role === 'admin') {
-          router.replace('/admin/dashboard');
+          router.replace(routes.adminDashboard);
         } else if (role === 'agency') {
           if (!profile.tax_id || profile.tax_id.trim() === '') {
-            router.replace('/onboarding/agency');
+            router.replace(routes.agencyOnboarding);
           } else {
-            router.replace('/agency/dashboard');
+            router.replace(routes.agencyDashboard);
           }
         } else if (role === 'volunteer') {
-          router.replace('/volunteer/dashboard');
+          router.replace(routes.volunteerDashboard);
         } else {
-          router.replace('/login');
+          router.replace(routes.login);
         }
       } catch (err) {
         console.error("Finalization error:", err);
@@ -92,7 +93,7 @@ export default function AuthSuccessContent() {
           "An error occurred during finalization. Redirecting to login...",
         );
         setTimeout(
-          () => router.replace("/login?error=finalization_failed"),
+          () => router.replace(routes.login + "?error=finalization_failed"),
           3000,
         );
       }

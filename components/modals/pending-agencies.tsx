@@ -190,7 +190,7 @@ export function PendingAgenciesModal() {
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-3xl font-bold flex items-center gap-4">
-              <Building2 className="h-10 w-10 text-blue-600" />
+              <Building2 className="h-10 w-10 text-diaspora-blue" />
               Pending Agency Approvals
             </DialogTitle>
             <DialogDescription className="text-lg mt-2">
@@ -237,7 +237,7 @@ export function PendingAgenciesModal() {
                           {agency.organization_name}
                         </p>
                         {agency.description && (
-                          <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
+                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                             {agency.description}
                           </p>
                         )}
@@ -251,7 +251,7 @@ export function PendingAgenciesModal() {
                           </p>
                           <a
                             href={`mailto:${agency.contact_person_email}`}
-                            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                            className="text-sm text-diaspora-darkBlue hover:underline flex items-center gap-1"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Mail className="h-3.5 w-3.5" />
@@ -278,7 +278,7 @@ export function PendingAgenciesModal() {
                               href={agency.website}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline flex items-center gap-1"
+                              className="text-diaspora-darkBlue hover:underline flex items-center gap-1"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <Globe className="h-3.5 w-3.5" />

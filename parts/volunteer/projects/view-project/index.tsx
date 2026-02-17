@@ -20,6 +20,7 @@ import ProjectManagementScreen from "../project-management";
 import { checkAgencyRequestsToVolunteer, checkIfUserIsProjectManager, checkUserInProject } from "@/services/projects";
 import Comments from "../comments";
 import { MilestonesSection } from "@/parts/agency/projects/view-projects.tsx/milestone-section";
+import { routes } from "@/lib/routes";
 
 export default function ViewProjectDetails() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +39,7 @@ export default function ViewProjectDetails() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isUserProjectManager, setIsUserProjectManager] = useState(false);
   const [agencyHasSentRequest, setAgencyHasSentRequest] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(true); // assume complete until we check
 
   const [organizationDetails, setOrganizationDetails] =
     useState<OrganizationContact>({
@@ -161,6 +163,14 @@ export default function ViewProjectDetails() {
 
         // 5. User-specific checks (only if logged in)
         if (userId) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("skills")
+            .eq("id", userId)
+            .single();
+          const skills = profile?.skills ?? [];
+          setOnboardingComplete(skills.length > 0);
+
           const [requestRes, ratingRes] = await Promise.all([
             supabase
               .from("volunteer_requests")
@@ -206,7 +216,7 @@ export default function ViewProjectDetails() {
   }, [id]);
 
   const handleLeaveSuccess = () => {
-    router.push("/volunteer/projects");
+    router.push(routes.volunteerProjects);
     router.refresh();
   };
 
@@ -244,7 +254,7 @@ export default function ViewProjectDetails() {
           volunteersRegistered={volunteers.length}
           agencyHasSentRequest={agencyHasSentRequest}
           setHasRated={setHasRated}
-          // onLeaveSuccess={handleLeaveSuccess}
+          onboardingComplete={onboardingComplete}
         />
       </section>
 

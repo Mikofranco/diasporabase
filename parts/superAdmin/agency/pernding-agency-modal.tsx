@@ -42,6 +42,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useSendMail } from "@/services/mail";
 import { getAgencyStatusEmailHtml } from "@/lib/email-templates/agenyStatusEmail";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -169,7 +170,7 @@ export function PendingAgenciesModal() {
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-3xl font-bold flex items-center gap-4">
-              <Building2 className="h-10 w-10 text-blue-600" />
+              <Building2 className="h-10 w-10 text-diaspora-blue" />
               Pending Agency Approvals
             </DialogTitle>
             <DialogDescription className="text-lg mt-2">
@@ -201,7 +202,7 @@ export function PendingAgenciesModal() {
                     <TableRow
                       key={agency.id}
                       className="hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => router.push(`/super-admin/agencies/${agency.id}`)}
+                      onClick={() => router.push(routes.superAdminViewAgency(agency.id))}
                     >
                       <TableCell className="font-medium max-w-sm">
                         <p className="font-semibold text-lg">{agency.organization_name}</p>

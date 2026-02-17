@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import SkillsetManagementPage from './skillSetManagent';
+import { routes } from '@/lib/routes';
 
 interface Profile {
   id: string;
@@ -71,7 +72,7 @@ const AdminSettings: React.FC = () => {
       try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) {
-          router.push('/login');
+          router.push(routes.login);
           return;
         }
 

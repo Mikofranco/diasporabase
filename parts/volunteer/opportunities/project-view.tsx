@@ -19,6 +19,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -262,7 +263,7 @@ const VolunteerProjectDetails: React.FC = () => {
             <Button
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => router.push("/volunteer/opportunities")}
+              onClick={() => router.push(routes.volunteerFindOpportunity)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Opportunities
@@ -285,7 +286,7 @@ const VolunteerProjectDetails: React.FC = () => {
             <Button
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => router.push("/volunteer/opportunities")}
+              onClick={() => router.push(routes.volunteerFindOpportunity)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Opportunities
@@ -303,7 +304,7 @@ const VolunteerProjectDetails: React.FC = () => {
         <Button
           variant="outline"
           className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          onClick={() => router.push("/volunteer/opportunities")}
+          onClick={() => router.push(routes.volunteerFindOpportunity)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Opportunities

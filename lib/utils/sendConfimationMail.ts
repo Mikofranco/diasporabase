@@ -1,6 +1,7 @@
 // utils/sendConfirmationEmailWithBrevo.ts
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { routes } from "../routes";
 
 // Your full HTML template (cleaned, dynamic)
 const CONFIRMATION_TEMPLATE = (name: string, url: string) => `<!DOCTYPE html>
@@ -62,7 +63,7 @@ export async function sendConfirmationEmailWithBrevo(
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   const supabase = createClient();
   const origin = typeof window !== "undefined" ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL || "";
-  const finalRedirect = redirectTo || `${origin}/onboarding`;
+  const finalRedirect = redirectTo || `${origin}${routes.onboarding}`;
 
   try {
     // 1. Get confirmation URL from Supabase

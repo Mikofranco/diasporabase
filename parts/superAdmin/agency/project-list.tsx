@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { formatLocation } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -93,9 +94,9 @@ export default function ProjectsList({ agencyId }: ProjectsListProps) {
         <CardContent className="py-12 text-center text-muted-foreground">
           <Briefcase className="mx-auto h-12 w-12 text-gray-300 mb-4" />
           <p className="text-lg font-medium">No Projects Yet</p>
-          <p className="mt-2 text-sm">
+          {/* <p className="mt-2 text-sm">
             Create your first project to get started.
-          </p>
+          </p> */}
         </CardContent>
       </Card>
     );
@@ -115,7 +116,7 @@ export default function ProjectsList({ agencyId }: ProjectsListProps) {
           return (
             <Link
               key={project.id}
-              href={`/agency/projects/${project.id}`}
+              href={routes.agencyViewProject(project.id)}
               className="group block"
             >
               <Card className="h-full transition-all hover:shadow-md hover:border-primary/20">
