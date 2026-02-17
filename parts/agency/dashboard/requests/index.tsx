@@ -20,10 +20,13 @@ interface VolunteerRequest {
 
 interface AgencyRequestFromVolunteerProps {
   className?: string;
+  /** Optional organization/user id; when provided we avoid extra getUserId() calls */
+  userId?: string;
 }
 
 const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
   className = "",
+  userId,
 }) => {
   const [requests, setRequests] = useState<VolunteerRequest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -81,11 +84,20 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
 
   const handleAccept = async (requestId: string) => {
     try {
+      // Prefer the userId passed from parent; fall back to getUserId only if needed
+      const orgId =
+        userId ?? (await getUserId()).data ??
+        undefined;
+
+      if (!orgId) {
+        throw new Error("Failed to identify organization");
+      }
+
       const { error } = await supabase
         .from("volunteer_requests")
         .update({ status: "accepted", updated_at: new Date().toISOString() })
         .eq("id", requestId)
-        .eq("organization_id", (await getUserId()).data);
+        .eq("organization_id", orgId);
 
       if (error) {
         throw new Error("Error accepting request: " + error.message);
@@ -139,11 +151,19 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
 
   const handleDecline = async (requestId: string) => {
     try {
+      const orgId =
+        userId ?? (await getUserId()).data ??
+        undefined;
+
+      if (!orgId) {
+        throw new Error("Failed to identify organization");
+      }
+
       const { error } = await supabase
         .from("volunteer_requests")
         .update({ status: "declined", updated_at: new Date().toISOString() })
         .eq("id", requestId)
-        .eq("organization_id", (await getUserId()).data);
+        .eq("organization_id", orgId);
 
       if (error) {
         throw new Error("Error declining request: " + error.message);
@@ -193,8 +213,14 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
 
   useEffect(() => {
     const initialize = async () => {
-      const { data: userId, error: userError } = await getUserId();
-      if (userError || !userId) {
+      // If parent already passed userId, use it directly
+      if (userId) {
+        await fetchRequests(userId);
+        return;
+      }
+
+      const { data: resolvedUserId, error: userError } = await getUserId();
+      if (userError || !resolvedUserId) {
         setError("Failed to authenticate user");
         toast.error("Please log in to view requests", {
           position: "top-right",
@@ -202,10 +228,10 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
         setIsLoading(false);
         return;
       }
-      await fetchRequests(userId);
+      await fetchRequests(resolvedUserId);
     };
     initialize();
-  }, []);
+  }, [userId]);
 
   const formatDate = (isoString: string) => {
     const date = new Date(isoString);

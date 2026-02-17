@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getUserId } from "@/lib/utils";
+import { getUserId, signOutUser } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -221,15 +221,10 @@ const VolunteerSettings: React.FC = () => {
 
       if (error) throw new Error("Error deleting account: " + error.message);
 
-      await supabase.auth.signOut();
+      const result = await signOutUser();
       toast.success("Account deleted successfully.");
-      // Clear local and session storage after sign out
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch (err) {
-        // Optionally log or handle error but don't block logout
-        console.error("Error clearing storage after sign out", err);
+      if (!result.success) {
+        console.error("Error during post-delete sign out:", result.error);
       }
       router.push(routes.login);
     } catch (err: any) {
@@ -237,24 +232,19 @@ const VolunteerSettings: React.FC = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw new Error("Error signing out: " + error.message);
-      // toast.success("Signed out successfully.");
-      // Clear local and session storage after sign out
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch (err) {
-        // Optionally log or handle error but don't block logout
-        console.error("Error clearing storage after sign out", err);
-      }
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
-      router.push(routes.login);
-    } catch (err: any) {
-      toast.error(err.message);
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    const result = await signOutUser();
+    if (!result.success) {
+      toast.error(result.error ?? "Error signing out. Please try again.");
+    } else {
+      // toast.success("Signed out successfully.");
     }
+    router.push(routes.login);
+    setIsSigningOut(false);
   };
 if (loading) {
   return (
