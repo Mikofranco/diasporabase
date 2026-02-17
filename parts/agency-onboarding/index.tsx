@@ -482,7 +482,7 @@ const AgencyOnboarding: React.FC = () => {
             }
           : null,
       );
-      router.push(routes.agencyDashboard);
+      router.push(routes.approvalPending);
     } catch (err: any) {
       setIsCompleting(false);
       setError(err.message);
