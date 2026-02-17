@@ -6,6 +6,7 @@ import LoadingBar from "@/components/loading-bar";
 import GlobalLoading from "@/components/GlobalLoading";
 import { ModalSetup } from "@/components/ui/modal";
 import AuthListenerProvider from "@/provider/auth-provider";
+import SelectSignUpType from "@/components/modals/select-signup-type";
 
 
 export const metadata: Metadata = {
@@ -119,6 +120,7 @@ export default function RootLayout({
         {/* <GlobalLoading /> */}
         <LoadingBar />
         <ModalSetup />
+        <SelectSignUpType />
         {/* <AuthListenerProvider>{children}</AuthListenerProvider> */}
         {children}
 
