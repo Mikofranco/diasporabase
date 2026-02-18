@@ -13,7 +13,7 @@ import {
 import { CircleAlertIcon } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import Footer from "../landingPage/footer";
-import { getUserId } from "@/lib/utils";
+import { getUserId, signOutUser } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { routes } from "@/lib/routes";
@@ -26,6 +26,8 @@ const ApprovalPending = () => {
   const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
   const router = useRouter();
 
   const getOrganizationName = async () => {
@@ -59,25 +61,17 @@ const ApprovalPending = () => {
     getOrganizationName();
   }, []);
 
-  const handleGoHome = () => {
-    handleLogout();
-    router.push(routes.home);
+
+  const handleGoHome = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    const result = await signOutUser();
+    if (!result.success) {
+      console.error("Error signing out:", result.error);
+    }
+    router.push(routes.login);
+    setIsSigningOut(false);
   };
-   const handleLogout = async () => {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Error signing out: " + error.message)
-      }
-     // Clear local and session storage after sign ou
-     try {
-       localStorage.clear();
-       sessionStorage.clear();
-     } catch (err) {
-       // Optionally log or handle error but don't block logout
-       console.error("Error clearing storage after sign out", err);
-     }
-   router.push(routes.login)
-    };
 
   return (
     <div className="min-h-screen bg-[#F0F9FF] flex flex-col space-y-8 px-4 py-8">
@@ -95,10 +89,14 @@ const ApprovalPending = () => {
           </p>
           <Button
             className="bg-[#F0F9FF] hover:bg-[#EFF6FF] text-[#0C4A6E] border rounded-lg px-4 py-2 w-full"
-            disabled={isLoading}
+            disabled={isLoading || isSigningOut}
           >
             <OrganisationIcon aria-hidden="true" />
-            {isLoading ? "Loading..." : organizationName || "Organization Name"}
+            {isLoading
+              ? "Loading..."
+              : isSigningOut
+              ? "Signing out..."
+              : organizationName || "Organization Name"}
           </Button>
           {error && (
             <p className="text-red-500 text-sm" role="alert">
@@ -197,8 +195,10 @@ const ApprovalPending = () => {
           onClick={handleGoHome}
           className="w-full bg-[#0C4A6E] hover:bg-[#0A3A5A] text-white font-medium"
           aria-label="Go to home page"
+          type="button"
+          disabled={isSigningOut}
         >
-         Home
+         {isSigningOut ? "Signing out..." : "Signout"}
         </Button>
       </div>
 

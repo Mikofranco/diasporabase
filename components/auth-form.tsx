@@ -38,17 +38,23 @@ export default function LoginForm() {
   const isValidPassword = (password: string) => password.length >= 8;
 
   useEffect(() => {
-    //@ts-ignore
+    // Centralized post-login routing based on Supabase session + profile.
+    // This handles both email/password and OAuth (Google) sign-ins.
+    // @ts-ignore - Supabase typing for onAuthStateChange is more specific
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event: any, session: any) => {
         if (event === "SIGNED_IN" && session?.user) {
+          const user = session.user as any;
+          const metadata = user.user_metadata || {};
+
+          // Fetch profile once to get authoritative role + agency fields
           supabase
             .from("profiles")
-            .select("role, is_active, tax_id")
-            .eq("id", session.user.id)
+            .select("role, tax_id, is_active, full_name, email, phone")
+            .eq("id", user.id)
             .single()
-            //@ts-ignore
-            .then(({ data: profile, error: profileError }) => {
+            .then((result: { data: any; error: any }) => {
+              const { data: profile, error: profileError } = result;
               if (profileError || !profile?.role) {
                 setMessage({
                   text: "Profile not found. Please contact support.",
@@ -57,15 +63,50 @@ export default function LoginForm() {
                 setLoading(false);
                 return;
               }
-              // toast.success("Logged in successfully!");
-              localStorage.setItem("diaspobase_role", profile.role);
-              localStorage.setItem("diaspobase_userId", session.user.id);
 
-              if (profile.role === "super_admin") {
+              const role =
+                profile.role || (metadata.role as string | undefined);
+
+              if (!role) {
+                setMessage({
+                  text: "Profile role missing. Please contact support.",
+                  isError: true,
+                });
+                setLoading(false);
+                return;
+              }
+
+              // Build a safe user snapshot for reuse on dashboards (no tokens).
+              const safeUser = {
+                id: user.id as string,
+                email: profile.email ?? (user.email as string | null) ?? null,
+                role,
+                full_name:
+                  profile.full_name ?? (metadata.full_name as string | null) ??
+                  null,
+                phone:
+                  profile.phone ?? (metadata.phone as string | null) ?? null,
+                tax_id: profile.tax_id ?? null,
+                is_active: profile.is_active ?? null,
+              };
+
+              try {
+                localStorage.setItem(
+                  "diasporabase_user",
+                  JSON.stringify(safeUser),
+                );
+                localStorage.setItem("diaspobase_role", role);
+                localStorage.setItem("diaspobase_userId", user.id);
+              } catch {
+                // Swallow storage errors; do not block login
+              }
+
+              // Route to the correct dashboard, including agency gating.
+              if (role === "super_admin") {
                 router.replace(routes.superAdminDashboard);
-              } else if (profile.role === "admin") {
+              } else if (role === "admin") {
                 router.replace(routes.adminDashboard);
-              } else if (profile.role === "agency") {
+              } else if (role === "agency") {
                 if (!profile.tax_id) {
                   router.replace(routes.agencyOnboarding);
                   return;
@@ -75,7 +116,7 @@ export default function LoginForm() {
                   return;
                 }
                 router.replace(routes.agencyDashboard);
-              } else if (profile.role === "volunteer") {
+              } else if (role === "volunteer") {
                 router.replace(routes.volunteerDashboard);
               } else {
                 router.replace(routes.login);

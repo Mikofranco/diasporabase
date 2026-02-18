@@ -9,6 +9,7 @@ import {
   getFirstTwoWordsShort,
   getUnreadNotificationCount,
   getUserId,
+  signOutUser,
 } from "@/lib/utils";
 import {
   SidebarProvider,
@@ -17,13 +18,28 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, LogOut } from "lucide-react";
+import { Bell, LogOut, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { routes } from "@/lib/routes";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const supabase = createClient();
 
@@ -91,27 +107,24 @@ export default function DashboardLayout({
     }
   };
 
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error("Error signing out: " + error.message);
-    } else {
-      // Clear local and session storage after sign out
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch (err) {
-        // Optionally log or handle error but don't block logout
-        console.error("Error clearing storage after sign out", err);
-      }
-      // toast.success("Logged out successfully");
-      router.push(routes.home);
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    const result = await signOutUser();
+    if (!result.success) {
+      toast.error("Error signing out: " + (result.error ?? "Please try again."));
     }
+    router.push(routes.login);
+    setIsSigningOut(false);
   };
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <AppSidebar />
+      <AppSidebar onSignOutClick={() => setShowLogoutDialog(true)} />
       <SidebarInset>
         {/* ← Key change here */}
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-white px-4 lg:h-[60px] lg:px-6">
@@ -141,32 +154,49 @@ export default function DashboardLayout({
                   )}
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                      {getFirstTwoWordsShort(profile.full_name)}
-                    </span>
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={profile.profile_picture || ""}
-                        alt={profile.full_name}
-                      />
-                      <AvatarFallback>
-                        {getFirstTwoWordsShort(profile.full_name.charAt(0).toUpperCase())}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="text-red-600 hover:text-red-600 hover:bg-red-50"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span className="ml-1 hidden sm:inline">Sign out</span>
-                  </Button>
-                </div>
+                <DropdownMenu
+                  open={isUserMenuOpen}
+                  onOpenChange={setIsUserMenuOpen}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 rounded-full border border-gray-200 px-2 py-1 hover:bg-gray-50 transition"
+                    >
+                      <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                        {getFirstTwoWordsShort(profile.full_name)}
+                      </span>
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={profile.profile_picture || ""}
+                          alt={profile.full_name}
+                        />
+                        <AvatarFallback>
+                          {getFirstTwoWordsShort(
+                            profile.full_name.charAt(0).toUpperCase(),
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+                      {isUserMenuOpen ? (
+                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      )}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuItem
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        setShowLogoutDialog(true);
+                      }}
+                      className="flex items-center gap-2 text-red-600"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <span className="text-sm text-gray-500">Guest</span>
@@ -177,6 +207,76 @@ export default function DashboardLayout({
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-[#F0F9FF]">
           {children}
         </main>
+
+        {/* Shared sign-out confirmation (matches sidebar experience) */}
+        <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+          <AlertDialogContent className="max-w-sm sm:max-w-md rounded-xl border border-gray-200 shadow-lg bg-white py-7 px-7">
+            <AlertDialogHeader>
+              <div className="flex flex-col items-center gap-2 w-full">
+                <div className="bg-gradient-to-tr from-red-100 to-pink-100 rounded-full p-3 shadow-inner mb-3">
+                  {/* Modernized LogOut SVG, color-matched for red brand consistency */}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-7 w-7 text-red-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                  >
+                    <path d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M18 12H9" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M15 15l3-3-3-3" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <AlertDialogTitle className="text-xl font-semibold text-gray-900 text-center">
+                  Ready to log out?
+                </AlertDialogTitle>
+              </div>
+              <AlertDialogDescription className="mt-1 text-gray-600 text-center max-w-xs mx-auto">
+                You’ll be safely signed out and redirected to the login page. Your session will end securely.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-6 flex flex-row gap-3 w-full">
+              <AlertDialogCancel
+                disabled={isSigningOut}
+                className="flex-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition text-gray-700 font-medium py-2 shadow-sm"
+              >
+                Stay logged in
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleLogout}
+                disabled={isSigningOut}
+                className="flex-1 rounded-lg bg-red-600 hover:bg-red-700 transition text-white font-semibold py-2 shadow-sm"
+              >
+                {isSigningOut ? (
+                  <span className="flex items-center justify-center">
+                    <svg
+                      className="inline-block mr-2 w-4 h-4 animate-spin text-white opacity-70"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-20"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-70"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8z"
+                      />
+                    </svg>
+                    Logging out...
+                  </span>
+                ) : (
+                  "Log out"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SidebarInset>
     </SidebarProvider>
   );

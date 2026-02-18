@@ -36,21 +36,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { createClient } from "@/lib/supabase/client";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useCallback, useState } from "react";
-import { toast } from "./ui/use-toast";
+import { useState } from "react";
 import { routes } from "@/lib/routes";
 
 type UserRole = "admin" | "volunteer" | "agency" | "super_admin" | null;
@@ -58,6 +47,10 @@ type UserRole = "admin" | "volunteer" | "agency" | "super_admin" | null;
 interface Profile {
   role: UserRole;
   full_name: string | null;
+}
+
+interface AppSidebarProps {
+  onSignOutClick?: () => void;
 }
 
 const ROUTES = {
@@ -133,13 +126,10 @@ const MENU_ITEMS = {
     { path: ROUTES.agency.analytics, label: "Analytics", icon: BarChart },
     { path: ROUTES.agency.settings, label: "Settings", icon: Settings },
   ],
-  guest: [
-    // { path: ROUTES.guest.home, label: "Home", icon: Home },
-    // { path: ROUTES.guest.login, label: "Login", icon: LogOut },
-  ],
+  guest: [],
 };
 
-export function AppSidebar() {
+export function AppSidebar({ onSignOutClick }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -147,8 +137,7 @@ export function AppSidebar() {
   const [userRole, setUserRole] = React.useState<UserRole>(null);
   const [userName, setUserName] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -193,40 +182,6 @@ export function AppSidebar() {
 
     return () => authListener.subscription.unsubscribe();
   }, [supabase]);
-
-  const handleLogout = useCallback(async () => {
-    if (isSigningOut) return;
-
-    setIsSigningOut(true);
-    setShowLogoutDialog(false);
-
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error; 
-
-      // Clear local and session storage after sign out
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch (err) {
-        // Optionally log or handle error but don't block logout
-        console.error("Error clearing storage after sign out", err);
-      }
-      // setUserRole(null);
-      // setUserName(null);
-      router.replace(ROUTES.guest.login);
-      toast({ title: "Signed out", description: "See you soon!" });
-    } catch (err: any) {
-      console.error("Logout error:", err);
-      toast({
-        title: "Logout failed",
-        description: err.message ?? "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSigningOut(false);
-    }
-  }, [supabase, router, isSigningOut]);
 
   const isActive = (itemPath: string, currentPath: string) => {
     if (itemPath.includes("dashboard")) return currentPath === itemPath;
@@ -330,14 +285,18 @@ export function AppSidebar() {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <DropdownMenu>
+              <DropdownMenu open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton className="text-sm">
                     <User className="h-4 w-4 mr-2 text-[#0284C7] dark:text-blue-400" />
                     <span className="text-sm text-gray-900 dark:text-gray-100">
                       {userName || "Guest"}
                     </span>
-                    <ChevronUp className="h-4 w-4 ml-auto text-gray-500 dark:text-gray-400" />
+                    <ChevronUp
+                      className={`h-4 w-4 ml-auto text-gray-500 dark:text-gray-400 transition-transform ${
+                        isUserMenuOpen ? "rotate-180" : ""
+                      }`}
+                    />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width] text-xs">
@@ -349,7 +308,10 @@ export function AppSidebar() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onSelect={() => setShowLogoutDialog(true)}
+                        onSelect={(event) => {
+                          event.preventDefault();
+                          onSignOutClick?.();
+                        }}
                         className="flex items-center gap-2 text-red-600 dark:text-red-400"
                         role="menuitem"
                       >
@@ -371,38 +333,6 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-
-      {/* Confirmation Dialog */}
-      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Sign out of DiasporaBase?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You will be logged out and redirected to the homepage.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleLogout}
-              disabled={isSigningOut}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {isSigningOut ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.3" />
-                    <path fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Signing out...
-                </>
-              ) : (
-                "Sign out"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

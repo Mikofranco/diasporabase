@@ -107,7 +107,7 @@ const AgencyDashboard = () => {
     }
   };
 
-  // Main initialization effect
+  // Main initialization effect – fetch user, profile and all dependent data once
   useEffect(() => {
     let isMounted = true;
 
@@ -133,16 +133,16 @@ const AgencyDashboard = () => {
         setUserId(currentUserId);
         setIsActive(profile.is_active);
 
-        // if (!profile.tax_id) {
-        //   router.replace(routes.agencyOnboarding);
-        //   return;
-        // }
+        if (!profile.tax_id) {
+          router.replace(routes.agencyOnboarding);
+          return;
+        }
 
-        // if (!profile.is_active) {
-        //   toast.error("Your agency is pending approval.");
-        //   router.replace(routes.approvalPending);
-        //   return;
-        // }
+        if (!profile.is_active) {
+          toast.error("Your agency is pending approval.");
+          router.replace(routes.approvalPending);
+          return;
+        }
 
         // Now we have the real userId → fetch projects with it
         await fetchAllProjects(currentUserId);
@@ -163,14 +163,6 @@ const AgencyDashboard = () => {
       isMounted = false;
     };
   }, []);
-
-  // Optional: Refetch when userId changes (extra safety)
-  useEffect(() => {
-    if (userId && isActive) {
-      fetchAllProjects(userId);
-      getTotalVolunteersForOrganization(userId).then(setTotalVolunteers);
-    }
-  }, [userId, isActive]);
 
   if (isActive === null) {
     return (
@@ -227,7 +219,7 @@ const AgencyDashboard = () => {
 
           <div className="space-y-10">
             <RecentProjects userId={userId || ""} />
-            <AgencyRequestFromVolunteer />
+            <AgencyRequestFromVolunteer userId={userId || ""} />
           </div>
         </>
       )}
