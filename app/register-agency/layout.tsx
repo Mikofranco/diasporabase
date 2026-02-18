@@ -8,7 +8,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div>
       {/* <NavBar /> */}
       <div className="absolute top-10 left-10">
-        <BackButton fallbackHref="/"/>
+        <BackButton />
       </div>  
       {children}
       {/* <Footer /> */}

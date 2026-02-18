@@ -96,7 +96,40 @@ export default function VolunteerRegistrationForm() {
     confirmationUrl: string;
   } | null>(null);
 
+  // Email send retry feedback: 'idle' | 'sending' | 'retry_1' | 'retry_2' | 'success' | 'failed'
+  const [emailSendStatus, setEmailSendStatus] = useState<
+    "idle" | "sending" | "retry_1" | "retry_2" | "success" | "failed"
+  >("idle");
+
   const supabase = createClient();
+
+  const sendConfirmationWithRetry = async (
+    to: string,
+    subject: string,
+    html: string,
+    maxAttempts = 3,
+    delayMs = 3000
+  ): Promise<{ success: boolean; error?: string }> => {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (attempt === 1) setEmailSendStatus("sending");
+      else if (attempt === 2) setEmailSendStatus("retry_1");
+      else if (attempt === 3) setEmailSendStatus("retry_2");
+
+      const result = await useSendMail({ to, subject, html });
+      if (result.success) {
+        setEmailSendStatus("success");
+        return { success: true };
+      }
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, delayMs));
+      } else {
+        setEmailSendStatus("failed");
+        return { success: false, error: result.error };
+      }
+    }
+    setEmailSendStatus("failed");
+    return { success: false };
+  };
 
   // Real-time validation
   useEffect(() => {
@@ -240,12 +273,20 @@ export default function VolunteerRegistrationForm() {
         is_resent: false,
       });
 
-      // Send welcome confirmation email
-      await useSendMail({
-        to: formData.email,
-        subject: "Welcome to DiasporaBase – Confirm Your Email",
-        html: welcomeHtml(formData.firstName.trim(), confirmationUrl),
-      });
+      // Send welcome confirmation email with retry (up to 2 retries, 3s apart)
+      const sendResult = await sendConfirmationWithRetry(
+        formData.email,
+        "Welcome to DiasporaBase – Confirm Your Email",
+        welcomeHtml(formData.firstName.trim(), confirmationUrl),
+        3,
+        3000
+      );
+
+      if (!sendResult.success) {
+        toast.error(
+          sendResult.error || "Could not send confirmation email. You can resend it from the next screen."
+        );
+      }
 
       // Save for resend functionality
       setPendingConfirmation({
@@ -254,12 +295,12 @@ export default function VolunteerRegistrationForm() {
         confirmationUrl,
       });
 
-      // toast.success("Account created! Please check your email to confirm.");
       setModalOpen(true);
       resetForm();
       localStorage.setItem("diasporabase-email", formData.email);
     } catch (err: any) {
       toast.error(err.message || "Registration failed. Please try again.");
+      setEmailSendStatus("idle");
     } finally {
       setLoading(false);
     }
@@ -489,13 +530,26 @@ export default function VolunteerRegistrationForm() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Creating Account...
+                    {emailSendStatus === "sending"
+                      ? "Sending confirmation email..."
+                      : emailSendStatus === "retry_1"
+                        ? "Retrying (1/2)..."
+                        : emailSendStatus === "retry_2"
+                          ? "Retrying (2/2)..."
+                          : "Creating Account..."}
                   </>
                 ) : (
                   "Register with Email"
                 )}
               </Button>
             </div>
+            {loading && emailSendStatus !== "idle" && emailSendStatus !== "success" && emailSendStatus !== "failed" && (
+              <p className="text-center text-sm text-muted-foreground pt-2">
+                {emailSendStatus === "sending" && "Sending confirmation email..."}
+                {emailSendStatus === "retry_1" && "First retry in 3 seconds..."}
+                {emailSendStatus === "retry_2" && "Second retry..."}
+              </p>
+            )}
           </form>
 
           <p className="text-center text-sm text-muted-foreground pt-4">
@@ -543,6 +597,12 @@ export default function VolunteerRegistrationForm() {
                 <strong className="break-all text-foreground font-medium">
                   {pendingConfirmation?.email || "your email"}
                 </strong>
+                {emailSendStatus === "failed" && (
+                  <span className="mt-2 block text-amber-600 dark:text-amber-400 text-sm">
+                    The email could not be sent. You can resend it from the{" "}
+                    <Link href={routes.confirmEmail} className="underline font-medium">confirm email</Link> page.
+                  </span>
+                )}
               </DialogDescription>
             </DialogHeader>
 

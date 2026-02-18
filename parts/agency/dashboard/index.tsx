@@ -133,13 +133,19 @@ const AgencyDashboard = () => {
         setUserId(currentUserId);
         setIsActive(profile.is_active);
 
-        // Fetch all dashboard aggregates in parallel once we have a valid org ID
-        await Promise.all([
-          fetchAllProjects(currentUserId),
-          getTotalVolunteersForOrganization(currentUserId).then(
-            setTotalVolunteers,
-          ),
-        ]);
+        if (!profile.tax_id) {
+          router.replace(routes.agencyOnboarding);
+          return;
+        }
+
+        if (!profile.is_active) {
+          toast.error("Your agency is pending approval.");
+          router.replace(routes.approvalPending);
+          return;
+        }
+
+        // Now we have the real userId → fetch projects with it
+        await fetchAllProjects(currentUserId);
       } catch (error) {
         if (!isMounted) return;
         toast.error(

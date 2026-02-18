@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { SignInWithGoogle } from "./loginWithGoogle";
 import { routes } from "@/lib/routes";
@@ -27,6 +27,7 @@ export default function LoginForm() {
   const [message, setMessage] = useState<{
     text: string;
     isError: boolean;
+    unconfirmedEmail?: string;
   } | null>(null);
   const [showPassword, setShowPassword] = useState(false); // NEW: toggle state
   const router = useRouter();
@@ -160,8 +161,14 @@ export default function LoginForm() {
     );
 
     if (signInError) {
-      // toast.error(signInError.message);
-      setMessage({ text: signInError.message, isError: true });
+      const isUnconfirmed =
+        signInError.message?.toLowerCase().includes("email not confirmed") ||
+        signInError.message?.toLowerCase().includes("email_not_confirmed");
+      setMessage({
+        text: signInError.message,
+        isError: true,
+        ...(isUnconfirmed ? { unconfirmedEmail: email } : {}),
+      });
       setLoading(false);
       return;
     }
@@ -240,12 +247,24 @@ export default function LoginForm() {
             )}
           </Button>
           {message && (
-            <p
-              className={`text-center text-sm ${message.isError ? "text-red-500" : "text-green-500"}`}
-              aria-live="assertive"
-            >
-              {message.text}
-            </p>
+            <div className="space-y-2" aria-live="assertive">
+              <p
+                className={`text-center text-sm ${message.isError ? "text-red-500" : "text-green-500"}`}
+              >
+                {message.text}
+              </p>
+              {message.unconfirmedEmail && (
+                <div className="flex flex-col items-center gap-2">
+                  <Link
+                    href={`${routes.confirmEmail}?email=${encodeURIComponent(message.unconfirmedEmail)}`}
+                    className="inline-flex items-center gap-2 rounded-md border border-[#0ea5e9] bg-[#0ea5e9]/5 px-3 py-2 text-sm font-medium text-[#0ea5e9] hover:bg-[#0ea5e9]/10"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Resend confirmation email
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
           <div className="mt-4 text-xs text-center">
             Don&apos;t have an account? <br />
