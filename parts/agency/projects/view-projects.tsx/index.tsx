@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, Trash2, Edit } from "lucide-react";
+import { Calendar, MapPin, Users, Trash2, Edit, FileText, ImageIcon, ExternalLink } from "lucide-react";
 import ProjectRecommendation from "../project-recommendation";
 import {
   Tooltip,
@@ -72,6 +72,16 @@ import {
 import Link from "next/link";
 
 const supabase = createClient();
+
+const DOC_IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp)(\?|$)/i;
+const DOC_PDF_EXT = /\.pdf(\?|$)/i;
+
+function getDocType(url: string): "pdf" | "image" | "other" {
+  if (!url) return "other";
+  if (DOC_PDF_EXT.test(url)) return "pdf";
+  if (DOC_IMAGE_EXT.test(url)) return "image";
+  return "other";
+}
 
 interface Project {
   id: string;
@@ -141,6 +151,10 @@ const ProjectDetails: React.FC = () => {
   const [isProjectEditModalOpen, setIsProjectEditModalOpen] = useState(false);
   const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
   const [isDeliverableModalOpen, setIsDeliverableModalOpen] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<{
+    title: string;
+    url: string;
+  } | null>(null);
 
   // Editing States
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(
@@ -506,7 +520,14 @@ const ProjectDetails: React.FC = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            <Button variant="outline" size="sm" onClick={openProjectEditModal}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openProjectEditModal}
+              disabled={["pending", "cancelled", "completed"].includes(
+                (project.status || "").toLowerCase()
+              )}
+            >
               <Edit className="h-4 w-4 sm:mr-1.5" />
               Edit Project
             </Button>
@@ -622,23 +643,98 @@ const ProjectDetails: React.FC = () => {
               <CardTitle className="text-lg">Supporting documents</CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm">
-                {project.documents.map((doc, i) => (
-                  <li key={i}>
-                    <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-diaspora-blue hover:underline"
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {project.documents.map((doc, i) => {
+                  const docType = getDocType(doc.url);
+                  const label = doc.title || `Document ${i + 1}`;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setPreviewDocument({ title: label, url: doc.url })}
+                      className="flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-gray-50/80 p-4 text-center transition hover:border-diaspora-blue/50 hover:bg-diaspora-blue/5 focus:outline-none focus:ring-2 focus:ring-diaspora-blue/30"
                     >
-                      {doc.title || `Document ${i + 1}`}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+                      {docType === "image" ? (
+                        <div className="relative mb-2 h-16 w-full overflow-hidden rounded border border-gray-200 bg-white">
+                          <img
+                            src={doc.url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-lg bg-white border border-gray-200">
+                          {docType === "pdf" ? (
+                            <FileText className="h-8 w-8 text-red-600" />
+                          ) : (
+                            <ImageIcon className="h-8 w-8 text-gray-500" />
+                          )}
+                        </div>
+                      )}
+                      <span className="text-xs font-medium text-gray-700 line-clamp-2">
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         )}
+
+        {/* Document preview modal */}
+        <Dialog
+          open={!!previewDocument}
+          onOpenChange={(open) => !open && setPreviewDocument(null)}
+        >
+          <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+            {previewDocument && (
+              <>
+                <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+                  <DialogTitle className="text-base font-medium truncate pr-8">
+                    {previewDocument.title}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 min-h-0 flex flex-col px-6 pb-6">
+                  {getDocType(previewDocument.url) === "pdf" && (
+                    <iframe
+                      src={previewDocument.url}
+                      title={previewDocument.title}
+                      className="w-full flex-1 min-h-[60vh] rounded border border-gray-200 bg-gray-100"
+                    />
+                  )}
+                  {getDocType(previewDocument.url) === "image" && (
+                    <div className="flex-1 min-h-0 flex items-center justify-center bg-gray-100 rounded border border-gray-200 overflow-auto">
+                      <img
+                        src={previewDocument.url}
+                        alt={previewDocument.title}
+                        className="max-w-full max-h-[70vh] object-contain"
+                      />
+                    </div>
+                  )}
+                  {getDocType(previewDocument.url) === "other" && (
+                    <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+                      <FileText className="h-12 w-12 text-gray-400" />
+                      <p className="text-sm text-muted-foreground">
+                        This file cannot be previewed in the browser.
+                      </p>
+                      <Button asChild variant="outline" size="sm">
+                        <a
+                          href={previewDocument.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Open in new tab
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Milestones */}
         <Card>
