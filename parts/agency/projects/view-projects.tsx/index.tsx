@@ -60,6 +60,15 @@ import { ClosingRemarksModal } from "@/components/closing-remarks";
 import { ProjectStatus } from "@/lib/types";
 import { routes } from "@/lib/routes";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 const supabase = createClient();
 
@@ -69,16 +78,20 @@ interface Project {
   description: string;
   organization_id: string;
   organization_name: string;
-  location: string;
+  location?: { country?: string; state?: string; lga?: string } | string | null;
+  country?: string | null;
+  state?: string | null;
+  lga?: string | null;
   start_date: string;
   end_date: string;
-  volunteers_needed: number;
+  volunteers_needed?: number;
   volunteers_registered: number;
   status: string;
   category: string;
   created_at: string;
   required_skills: string[];
   project_manager_id: string | null;
+  documents?: Array<{ title: string; url: string }>;
 }
 
 interface Volunteer {
@@ -89,7 +102,10 @@ interface Volunteer {
   availability: string;
   residence_country: string;
   volunteer_states: string[];
+  volunteer_countries: string[];
+  volunteer_lgas: string[];
   average_rating: number;
+  joined_at: string;
 }
 
 interface Milestone {
@@ -167,13 +183,15 @@ const ProjectDetails: React.FC = () => {
 
         const { data: projectData, error: projErr } = await supabase
           .from("projects")
-          .select("*, required_skills")
+          .select(
+            "id, title, description, organization_id, organization_name, location, country, state, lga, start_date, end_date, volunteers_needed, volunteers_registered, status, category, created_at, required_skills, project_manager_id, documents"
+          )
           .eq("id", projectId)
           .eq("organization_id", userId)
           .single();
 
         if (projErr || !projectData) throw new Error("Project not found.");
-        setProject(projectData);
+        setProject(projectData as Project);
 
         const { data: miles } = await supabase
           .from("milestones")
@@ -202,8 +220,6 @@ const ProjectDetails: React.FC = () => {
           )
           .eq("project_id", projectId);
 
-        console.log("Assigned Volunteers Data:", vols);
-
         setAssignedVolunteers(
           (vols || []).map((v: any) => ({
             volunteer_id: v.volunteer_id,
@@ -213,7 +229,10 @@ const ProjectDetails: React.FC = () => {
             availability: v.profiles.availability || "N/A",
             residence_country: v.profiles.residence_country || "N/A",
             volunteer_states: v.profiles.volunteer_states || [],
+            volunteer_countries: v.profiles.volunteer_countries || [],
+            volunteer_lgas: v.profiles.volunteer_lgas || [],
             average_rating: 0,
+            joined_at: v.joined_at ?? "",
           })),
         );
       } catch (err: any) {
@@ -228,10 +247,20 @@ const ProjectDetails: React.FC = () => {
 
   const openProjectEditModal = () => {
     if (project) {
+      const loc =
+        project.location && typeof project.location === "object"
+          ? project.location
+          : project.country
+            ? {
+                country: project.country,
+                state: project.state ?? undefined,
+                lga: project.lga ?? undefined,
+              }
+            : null;
       setProjectEditForm({
         title: project.title,
         description: project.description,
-        location: project.location,
+        location: formatLocation(loc),
         start_date: project.start_date,
         end_date: project.end_date,
         category: project.category,
@@ -244,9 +273,10 @@ const ProjectDetails: React.FC = () => {
     if (!project) return;
     try {
       const { data: userId } = await getUserId();
+      const { location: _loc, ...rest } = projectEditForm;
       const { error } = await supabase
         .from("projects")
-        .update(projectEditForm)
+        .update(rest)
         .eq("id", project.id)
         .eq("organization_id", userId);
       if (error) throw error;
@@ -429,33 +459,56 @@ const ProjectDetails: React.FC = () => {
       </div>
     );
 
+  const locationForDisplay =
+    project.location && typeof project.location === "object"
+      ? project.location
+      : project.country
+        ? { country: project.country, state: project.state ?? undefined, lga: project.lga ?? undefined }
+        : null;
+
   return (
     <TooltipProvider>
-      {project.status === "cancelled" && (<Alert className="text-red-600 bg-red-50">
-        <AlertTitle>Warning</AlertTitle>
-        <AlertDescription>
-          Project is cancelled contact admin.
-        </AlertDescription>
-      </Alert>)}
-      <div className="container mx-auto p-6 space-y-8 ">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-4xl font-bold">{project.title}</h1>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => router.push(routes.agencyProjects)}
-            >
-              Back to Projects
-            </Button>
-            <Button
-              variant="outline"
-              onClick={openProjectEditModal}
-              className="action-btn"
-            >
+      {project.status === "cancelled" && (
+        <Alert className="text-red-600 bg-red-50">
+          <AlertTitle>Warning</AlertTitle>
+          <AlertDescription>
+            Project is cancelled contact admin.
+          </AlertDescription>
+        </Alert>
+      )}
+      <div className="container mx-auto p-4 sm:p-6 space-y-6 max-w-7xl">
+        {/* Breadcrumb */}
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={routes.agencyProjects}>Projects</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="font-medium text-foreground truncate max-w-[200px] sm:max-w-md">
+                {project.title}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        {/* Page header: title + actions */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">
+              {project.title}
+            </h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              {project.organization_name}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={openProjectEditModal}>
+              <Edit className="h-4 w-4 sm:mr-1.5" />
               Edit Project
             </Button>
-            {/* <Button data-modal-trigger="assign-project-manager">Assign Project Manager</Button> */}
             <AssignProjectManager
               projectId={project.id}
               currentManagerId={project.project_manager_id}
@@ -463,72 +516,173 @@ const ProjectDetails: React.FC = () => {
           </div>
         </div>
 
+        {/* Block: Overview & description */}
         <Card>
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-2xl">{project.title}</CardTitle>
-                <CardDescription>{project.organization_name}</CardDescription>
-              </div>
+          <CardHeader className="pb-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-lg">Overview</CardTitle>
               <Badge
                 variant={project.status === "active" ? "default" : "secondary"}
-                className={`${
+                className={
                   project.status === "active"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}
+                    ? "bg-green-100 text-green-800 border-0"
+                    : "bg-yellow-100 text-yellow-800 border-0"
+                }
               >
                 {project.status}
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-8">
-            <p className="text-muted-foreground">{project.description}</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-              {/*@ts-ignore */}
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                {/*@ts-ignore*/}
-                <span>{formatLocation(project.location)}</span>
+          <CardContent className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                Description
+              </h3>
+              <div className="text-foreground whitespace-pre-line leading-relaxed">
+                {project.description}
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Block: Location & dates */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Location & dates</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+              <div className="flex items-start gap-2">
+                <MapPin className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
+                <span>{formatLocation(locationForDisplay)}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Calendar className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
                 <span>
-                  {new Date(project.start_date).toLocaleDateString()} -{" "}
+                  {new Date(project.start_date).toLocaleDateString()} –{" "}
                   {new Date(project.end_date).toLocaleDateString()}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                <span>{project.volunteers_registered} volunteers</span>
+              <div className="flex items-start gap-2">
+                <Users className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
+                <span>
+                  {project.volunteers_registered}
+                  {typeof project.volunteers_needed === "number"
+                    ? ` / ${project.volunteers_needed}`
+                    : ""}{" "}
+                  volunteers
+                </span>
               </div>
             </div>
-            {/* <MilestonesSection projectId={project.id} canEdit={true} /> */}
+          </CardContent>
+        </Card>
 
-            {/* <section>
-              <h2 className="text-2xl font-bold mb-6">
-                Assigned Volunteers ({assignedVolunteers.length})
-              </h2>
-              @ts-ignore
-              <AssignedVolunteersTable volunteers={assignedVolunteers} />
-            </section> */}
+        {/* Block: Category & skills */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Category & skills</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {project.category && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                  Category
+                </h3>
+                <p className="text-foreground">{project.category}</p>
+              </div>
+            )}
+            {Array.isArray(project.required_skills) &&
+              project.required_skills.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                    Required skills
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {project.required_skills.map((skill) => (
+                      <Badge
+                        key={skill}
+                        variant="secondary"
+                        className="font-normal"
+                      >
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+          </CardContent>
+        </Card>
 
-            {/* <ProjectRecommendation
-              projectId={projectId as string}
-              volunteersNeeded={project.volunteers_needed}
-              volunteersRegistered={project.volunteers_registered}
-            /> */}
+        {/* Block: Supporting documents */}
+        {Array.isArray(project.documents) && project.documents.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Supporting documents</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                {project.documents.map((doc, i) => (
+                  <li key={i}>
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-diaspora-blue hover:underline"
+                    >
+                      {doc.title || `Document ${i + 1}`}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
-            {/* <section className="flex justify-center items-center gap-4 flex-col p-8 border shadow-md bg-diaspora-blue/5 rounded-md">
-              <h3  className="text-diaspora-blue">Add closing remark and mark project has completed </h3>
-              <ClosingRemarksModal
-                projectId={project.id}
-                currentStatus={project.status as ProjectStatus}
-                isAuthorized={true}
-                onProjectClosed={() => router.refresh()}
-              />
-            </section> */}
+        {/* Milestones */}
+        <Card>
+          <CardContent className="pt-6">
+            <MilestonesSection
+              projectId={project.id}
+              canEdit={true}
+              volunteers={assignedVolunteers}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Assigned volunteers */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">
+              Assigned volunteers ({assignedVolunteers.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AssignedVolunteersTable volunteers={assignedVolunteers} />
+          </CardContent>
+        </Card>
+
+        <ProjectRecommendation
+          projectId={projectId as string}
+          volunteersNeeded={project.volunteers_needed ?? 0}
+          volunteersRegistered={project.volunteers_registered}
+        />
+
+        <Card className="border-diaspora-blue/20 bg-diaspora-blue/5">
+          <CardContent className="pt-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <h3 className="font-medium text-diaspora-blue">
+                Closing remark &amp; complete project
+              </h3>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Add a closing remark and mark this project as completed.
+              </p>
+            </div>
+            <ClosingRemarksModal
+              projectId={project.id}
+              currentStatus={project.status as ProjectStatus}
+              isAuthorized={true}
+              onProjectClosed={() => router.refresh()}
+            />
           </CardContent>
         </Card>
 
@@ -826,7 +980,11 @@ const ProjectDetails: React.FC = () => {
               <div>
                 <Label>Location</Label>
                 <Input
-                  value={projectEditForm.location || ""}
+                  value={
+                    typeof projectEditForm.location === "string"
+                      ? projectEditForm.location
+                      : formatLocation(locationForDisplay)
+                  }
                   onChange={(e) =>
                     setProjectEditForm({
                       ...projectEditForm,
