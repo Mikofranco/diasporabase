@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getProjectStatusStyle } from "./filters";
 
 export interface AgencyProject {
   id: string;
@@ -28,46 +29,6 @@ export interface AgencyProject {
   status: string;
   category: string;
   created_at: string;
-}
-
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; className: string }
-> = {
-  pending: {
-    label: "Pending",
-    className: "bg-amber-100 text-amber-800 border-amber-200",
-  },
-  active: {
-    label: "Active",
-    className: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  },
-  approved: {
-    label: "Approved",
-    className: "bg-blue-100 text-blue-800 border-blue-200",
-  },
-  completed: {
-    label: "Completed",
-    className: "bg-slate-100 text-slate-700 border-slate-200",
-  },
-  rejected: {
-    label: "Rejected",
-    className: "bg-red-100 text-red-800 border-red-200",
-  },
-  cancelled: {
-    label: "Cancelled",
-    className: "bg-gray-100 text-gray-600 border-gray-200",
-  },
-};
-
-function getStatusConfig(status: string) {
-  const key = (status || "pending").toLowerCase();
-  return (
-    STATUS_CONFIG[key] ?? {
-      label: status ? status.charAt(0).toUpperCase() + status.slice(1) : "Pending",
-      className: "bg-gray-100 text-gray-700 border-gray-200",
-    }
-  );
 }
 
 function formatDate(dateStr: string) {
@@ -93,7 +54,7 @@ export function ProjectCard({
   onViewDetails,
   className,
 }: ProjectCardProps) {
-  const statusConfig = getStatusConfig(project.status);
+  const statusConfig = getProjectStatusStyle(project.status);
   const volunteersNeeded = project.volunteers_needed ?? 0;
 
   return (

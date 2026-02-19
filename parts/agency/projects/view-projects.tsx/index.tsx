@@ -59,6 +59,7 @@ import { AssignedVolunteersTable } from "./assigned-volunteer";
 import { ClosingRemarksModal } from "@/components/closing-remarks";
 import { ProjectStatus } from "@/lib/types";
 import { routes } from "@/lib/routes";
+import { getProjectStatusStyle } from "../filters";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Breadcrumb,
@@ -521,16 +522,17 @@ const ProjectDetails: React.FC = () => {
           <CardHeader className="pb-2">
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle className="text-lg">Overview</CardTitle>
-              <Badge
-                variant={project.status === "active" ? "default" : "secondary"}
-                className={
-                  project.status === "active"
-                    ? "bg-green-100 text-green-800 border-0"
-                    : "bg-yellow-100 text-yellow-800 border-0"
-                }
-              >
-                {project.status}
-              </Badge>
+              {(() => {
+                const statusStyle = getProjectStatusStyle(project.status);
+                return (
+                  <Badge
+                    variant="outline"
+                    className={statusStyle.className}
+                  >
+                    {statusStyle.label}
+                  </Badge>
+                );
+              })()}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
