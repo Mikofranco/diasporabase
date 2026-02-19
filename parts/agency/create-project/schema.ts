@@ -46,10 +46,22 @@ export const baseProjectSchema = z.object({
   deliverables: z.array(deliverableSchema).optional().default([]),
 });
 
+const startDateEdit = z
+  .string()
+  .refine((v) => !isNaN(Date.parse(v)), "Invalid start date");
+
 export const projectSchema = baseProjectSchema.refine(
   (data) => new Date(data.end_date) >= new Date(data.start_date),
   { message: "End date must be after start date", path: ["end_date"] },
 );
+
+/** Use when editing existing project (allows past start date). */
+export const projectSchemaForEdit = baseProjectSchema
+  .extend({ start_date: startDateEdit })
+  .refine(
+    (data) => new Date(data.end_date) >= new Date(data.start_date),
+    { message: "End date must be after start date", path: ["end_date"] },
+  );
 
 export const stepSchemas = {
   1: z.object({
@@ -73,3 +85,16 @@ export const stepSchemas = {
   }),
   4: z.object({}),
 } as const;
+
+/** Step 2 schema for edit mode (allows past start date). */
+export const step2SchemaForEdit = z
+  .object({
+    country: baseProjectSchema.shape.country,
+    start_date: startDateEdit,
+    end_date: baseProjectSchema.shape.end_date,
+  })
+  .refine(
+    (data) =>
+      new Date(data.end_date as string) >= new Date(data.start_date as string),
+    { message: "End date must be after start date", path: ["end_date"] },
+  );

@@ -45,7 +45,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Users, Trash2, Edit, FileText, ImageIcon, ExternalLink } from "lucide-react";
-import ProjectRecommendation from "../project-recommendation";
 import {
   Tooltip,
   TooltipContent,
@@ -70,6 +69,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
+import CreateProjectForm from "@/parts/agency/create-project";
 
 const supabase = createClient();
 
@@ -103,6 +103,15 @@ interface Project {
   required_skills: string[];
   project_manager_id: string | null;
   documents?: Array<{ title: string; url: string }>;
+  cancelled_reason?: string | null;
+  cancelled_at?: string | null;
+}
+
+interface RejectionReasonRow {
+  id: string;
+  reason_text: string;
+  internal_note?: string | null;
+  created_at: string;
 }
 
 interface Volunteer {
@@ -144,11 +153,12 @@ const ProjectDetails: React.FC = () => {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [assignedVolunteers, setAssignedVolunteers] = useState<Volunteer[]>([]);
+  const [rejectionReasons, setRejectionReasons] = useState<RejectionReasonRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   // Modal States
-  const [isProjectEditModalOpen, setIsProjectEditModalOpen] = useState(false);
+  const [editProject, setEditProject] = useState<Project | null>(null);
   const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
   const [isDeliverableModalOpen, setIsDeliverableModalOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<{
@@ -172,7 +182,6 @@ const ProjectDetails: React.FC = () => {
   );
 
   // Form States
-  const [projectEditForm, setProjectEditForm] = useState<Partial<Project>>({});
   const [newMilestone, setNewMilestone] = useState({
     title: "",
     description: "",
@@ -199,7 +208,7 @@ const ProjectDetails: React.FC = () => {
         const { data: projectData, error: projErr } = await supabase
           .from("projects")
           .select(
-            "id, title, description, organization_id, organization_name, location, country, state, lga, start_date, end_date, volunteers_needed, volunteers_registered, status, category, created_at, required_skills, project_manager_id, documents"
+            "id, title, description, organization_id, organization_name, location, country, state, lga, start_date, end_date, volunteers_needed, volunteers_registered, status, category, created_at, required_skills, project_manager_id, documents, cancelled_reason, cancelled_at"
           )
           .eq("id", projectId)
           .eq("organization_id", userId)
@@ -207,6 +216,17 @@ const ProjectDetails: React.FC = () => {
 
         if (projErr || !projectData) throw new Error("Project not found.");
         setProject(projectData as Project);
+
+        if ((projectData as Project).status === "rejected") {
+          const { data: reasons } = await supabase
+            .from("rejection_reasons")
+            .select("id, reason_text, internal_note, created_at")
+            .eq("project_id", projectId)
+            .order("created_at", { ascending: false });
+          setRejectionReasons((reasons ?? []) as RejectionReasonRow[]);
+        } else {
+          setRejectionReasons([]);
+        }
 
         const { data: miles } = await supabase
           .from("milestones")
@@ -259,49 +279,6 @@ const ProjectDetails: React.FC = () => {
     };
     fetchData();
   }, [projectId]);
-
-  const openProjectEditModal = () => {
-    if (project) {
-      const loc =
-        project.location && typeof project.location === "object"
-          ? project.location
-          : project.country
-            ? {
-                country: project.country,
-                state: project.state ?? undefined,
-                lga: project.lga ?? undefined,
-              }
-            : null;
-      setProjectEditForm({
-        title: project.title,
-        description: project.description,
-        location: formatLocation(loc),
-        start_date: project.start_date,
-        end_date: project.end_date,
-        category: project.category,
-      });
-      setIsProjectEditModalOpen(true);
-    }
-  };
-
-  const handleProjectEditSubmit = async () => {
-    if (!project) return;
-    try {
-      const { data: userId } = await getUserId();
-      const { location: _loc, ...rest } = projectEditForm;
-      const { error } = await supabase
-        .from("projects")
-        .update(rest)
-        .eq("id", project.id)
-        .eq("organization_id", userId);
-      if (error) throw error;
-      setProject({ ...project, ...projectEditForm });
-      toast.success("Project updated!");
-      setIsProjectEditModalOpen(false);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-  };
 
   const handleAddMilestone = async () => {
     if (!newMilestone.title || !newMilestone.due_date)
@@ -523,7 +500,7 @@ const ProjectDetails: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={openProjectEditModal}
+              onClick={() => setEditProject(project)}
               disabled={["pending", "cancelled", "completed"].includes(
                 (project.status || "").toLowerCase()
               )}
@@ -534,6 +511,7 @@ const ProjectDetails: React.FC = () => {
             <AssignProjectManager
               projectId={project.id}
               currentManagerId={project.project_manager_id}
+              disabled={project.status !== "approved" && project.status !== "active"}
             />
           </div>
         </div>
@@ -743,6 +721,7 @@ const ProjectDetails: React.FC = () => {
               projectId={project.id}
               canEdit={true}
               volunteers={assignedVolunteers}
+              canAddMilestone={project.status === "approved" || project.status === "active"}
             />
           </CardContent>
         </Card>
@@ -750,39 +729,111 @@ const ProjectDetails: React.FC = () => {
         {/* Assigned volunteers */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">
-              Assigned volunteers ({assignedVolunteers.length})
-            </CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <CardTitle className="text-lg">
+                Assigned volunteers ({assignedVolunteers.length})
+              </CardTitle>
+              {(() => {
+                const findVolunteersEnabled =
+                  (project.status === "approved" || project.status === "active") &&
+                  assignedVolunteers.length < 10;
+                return (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-block">
+                        <Button
+                          asChild={findVolunteersEnabled}
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          disabled={!findVolunteersEnabled}
+                        >
+                          {findVolunteersEnabled ? (
+                            <Link href={routes.agencyProjectRecommendations(project.id)}>
+                              Find volunteers
+                            </Link>
+                          ) : (
+                            <>Find volunteers</>
+                          )}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {!findVolunteersEnabled
+                        ? project.status !== "approved" && project.status !== "active"
+                          ? "Only available when project is Approved or Active."
+                          : "Only available when fewer than 10 volunteers are assigned."
+                        : "Search and invite volunteers for this project."}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })()}
+            </div>
           </CardHeader>
           <CardContent>
             <AssignedVolunteersTable volunteers={assignedVolunteers} />
           </CardContent>
         </Card>
 
-        <ProjectRecommendation
-          projectId={projectId as string}
-          volunteersNeeded={project.volunteers_needed ?? 0}
-          volunteersRegistered={project.volunteers_registered}
-        />
+        {/* Rejection reasons – own block when status is rejected */}
+        {project.status === "rejected" && rejectionReasons.length > 0 && (
+          <Card className="border-red-200 bg-red-50/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg text-red-800">
+                Rejection reason{rejectionReasons.length > 1 ? "s" : ""}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3">
+                {rejectionReasons.map((r) => (
+                  <li key={r.id} className="text-sm text-red-900">
+                    <span className="font-medium">{r.reason_text}</span>
+                    {r.internal_note && (
+                      <p className="mt-1 text-red-700/90 italic">{r.internal_note}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="border-diaspora-blue/20 bg-diaspora-blue/5">
-          <CardContent className="pt-6 flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex-1">
-              <h3 className="font-medium text-diaspora-blue">
-                Closing remark &amp; complete project
-              </h3>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Add a closing remark and mark this project as completed.
+        {/* Cancellation reason – own block when status is cancelled */}
+        {project.status === "cancelled" && (
+          <Card className="border-amber-200 bg-amber-50/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg text-amber-900">
+                Cancellation reason
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-amber-900">
+                {project.cancelled_reason?.trim() || "No reason provided."}
               </p>
-            </div>
-            <ClosingRemarksModal
-              projectId={project.id}
-              currentStatus={project.status as ProjectStatus}
-              isAuthorized={true}
-              onProjectClosed={() => router.refresh()}
-            />
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
+
+        {project.status === "active" && (
+          <Card className="border-diaspora-blue/20 bg-diaspora-blue/5">
+            <CardContent className="pt-6 flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1">
+                <h3 className="font-medium text-diaspora-blue">
+                  Closing remark &amp; complete project
+                </h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Add a closing remark and mark this project as completed.
+                </p>
+              </div>
+              <ClosingRemarksModal
+                projectId={project.id}
+                currentStatus={project.status as ProjectStatus}
+                isAuthorized={true}
+                onProjectClosed={() => router.refresh()}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Milestone Modal */}
         <Dialog
@@ -1041,108 +1092,16 @@ const ProjectDetails: React.FC = () => {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Edit Project Modal */}
-        <Dialog
-          open={isProjectEditModalOpen}
-          onOpenChange={setIsProjectEditModalOpen}
-        >
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Edit Project</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Title</Label>
-                <Input
-                  value={projectEditForm.title || ""}
-                  onChange={(e) =>
-                    setProjectEditForm({
-                      ...projectEditForm,
-                      title: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label>Description</Label>
-                <Textarea
-                  value={projectEditForm.description || ""}
-                  onChange={(e) =>
-                    setProjectEditForm({
-                      ...projectEditForm,
-                      description: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label>Location</Label>
-                <Input
-                  value={
-                    typeof projectEditForm.location === "string"
-                      ? projectEditForm.location
-                      : formatLocation(locationForDisplay)
-                  }
-                  onChange={(e) =>
-                    setProjectEditForm({
-                      ...projectEditForm,
-                      location: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label>Start Date</Label>
-                <Input
-                  type="date"
-                  value={projectEditForm.start_date || ""}
-                  onChange={(e) =>
-                    setProjectEditForm({
-                      ...projectEditForm,
-                      start_date: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label>End Date</Label>
-                <Input
-                  type="date"
-                  value={projectEditForm.end_date || ""}
-                  onChange={(e) =>
-                    setProjectEditForm({
-                      ...projectEditForm,
-                      end_date: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label>Category</Label>
-                <Input
-                  value={projectEditForm.category || ""}
-                  onChange={(e) =>
-                    setProjectEditForm({
-                      ...projectEditForm,
-                      category: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsProjectEditModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleProjectEditSubmit} className="action-btn">
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {editProject && (
+          <CreateProjectForm
+            initialProject={editProject}
+            onClose={() => setEditProject(null)}
+            onProjectCreated={(p) => {
+              setProject((prev) => (prev ? { ...prev, ...p } : prev));
+              setEditProject(null);
+            }}
+          />
+        )}
       </div>
     </TooltipProvider>
   );

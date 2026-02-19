@@ -70,12 +70,15 @@ interface MilestonesSectionProps {
   projectId: string;
   canEdit?: boolean;
   volunteers: Volunteer[];
+  /** When false, Add Milestone button is disabled (e.g. when project status is not approved/active). */
+  canAddMilestone?: boolean;
 }
 
 export function MilestonesSection({
   projectId,
   canEdit = true,
   volunteers,
+  canAddMilestone = true,
 }: MilestonesSectionProps) {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
@@ -281,7 +284,7 @@ export function MilestonesSection({
                   deliverables: [],
                 })
               }
-              // onClick={() => setIsCreateModalOpen(true)}
+              disabled={!canAddMilestone}
               className="text-diaspora-darkBlue border-diaspora-darkBlue mt-5"
               variant={"outline"}
             >
@@ -310,6 +313,7 @@ export function MilestonesSection({
                 deliverables: [],
               })
             }
+            disabled={!canAddMilestone}
             className="text-diaspora-darkBlue border-diaspora-darkBlue"
             variant={"outline"}
           >

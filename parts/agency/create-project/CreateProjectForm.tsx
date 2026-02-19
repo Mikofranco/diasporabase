@@ -18,7 +18,11 @@ import { Step3CategorySkills } from "./steps/Step3CategorySkills";
 import { Step4Documents } from "./steps/Step4Documents";
 import type { CreateProjectFormProps } from "./types";
 
-export function CreateProjectForm({ onClose, onProjectCreated }: CreateProjectFormProps) {
+export function CreateProjectForm({
+  onClose,
+  onProjectCreated,
+  initialProject = null,
+}: CreateProjectFormProps) {
   const {
     formData,
     errors,
@@ -36,7 +40,21 @@ export function CreateProjectForm({ onClose, onProjectCreated }: CreateProjectFo
     runCreateProject,
     onSkillsChange,
     onDocumentsChange,
-  } = useCreateProjectForm(onClose, onProjectCreated);
+    isEditMode,
+    projectStatus,
+  } = useCreateProjectForm(onClose, onProjectCreated, initialProject);
+
+  const submitLabel = isEditMode
+    ? projectStatus === "rejected"
+      ? loading
+        ? "Submitting appeal..."
+        : "Appeal Rejection"
+      : loading
+        ? "Updating..."
+        : "Edit Project"
+    : loading
+      ? "Creating..."
+      : "Create Project";
 
   const renderStep = () => {
     switch (currentStep) {
@@ -101,7 +119,7 @@ export function CreateProjectForm({ onClose, onProjectCreated }: CreateProjectFo
           <div className="px-6 pt-5 pb-3 border-b bg-gradient-to-r from-sky-50 to-sky-100">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold text-sky-900">
-                Create New Project
+                {isEditMode ? "Edit Project" : "Create New Project"}
               </DialogTitle>
             </DialogHeader>
           </div>
@@ -156,7 +174,7 @@ export function CreateProjectForm({ onClose, onProjectCreated }: CreateProjectFo
                       onClick={runCreateProject}
                       className="bg-diaspora-blue hover:bg-diaspora-blue/90 text-white font-semibold rounded-xl px-5 py-2.5 shadow-sm"
                     >
-                      {loading ? "Creating..." : "Create Project"}
+                      {submitLabel}
                     </Button>
                   )}
                 </div>

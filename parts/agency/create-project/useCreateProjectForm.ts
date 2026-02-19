@@ -16,14 +16,58 @@ import {
   INITIAL_FORM_DATA,
   type CreateProjectFormData,
   type Project,
+  type ProjectForEdit,
   TOTAL_STEPS,
 } from "./types";
-import { projectSchema, stepSchemas } from "./schema";
+import {
+  projectSchema,
+  projectSchemaForEdit,
+  stepSchemas,
+  step2SchemaForEdit,
+} from "./schema";
 
 const supabase = createClient();
 
-export function useCreateProjectForm(onClose: () => void, onProjectCreated: (p: Project) => void) {
-  const [formData, setFormData] = useState<CreateProjectFormData>(INITIAL_FORM_DATA);
+function projectToFormData(p: ProjectForEdit): CreateProjectFormData {
+  const country =
+    p.country ??
+    (p.location && typeof p.location === "object" ? p.location.country : null) ??
+    "NG";
+  const state =
+    p.state ??
+    (p.location && typeof p.location === "object" ? p.location.state : null) ??
+    "";
+  const lga =
+    p.lga ??
+    (p.location && typeof p.location === "object" ? p.location.lga : null) ??
+    "";
+  const start = p.start_date?.slice(0, 10) ?? "";
+  const end = p.end_date?.slice(0, 10) ?? "";
+  return {
+    title: p.title ?? "",
+    description: p.description ?? "",
+    country: country || "NG",
+    state: state || "",
+    lga: lga || "",
+    start_date: start,
+    end_date: end,
+    category: (p.category as CreateProjectFormData["category"]) ?? ("" as any),
+    required_skills: Array.isArray(p.required_skills) ? p.required_skills : [],
+    milestones: [],
+    deliverables: [],
+    documents: Array.isArray(p.documents) ? p.documents : [],
+  };
+}
+
+export function useCreateProjectForm(
+  onClose: () => void,
+  onProjectCreated: (p: Project) => void,
+  initialProject?: ProjectForEdit | null
+) {
+  const isEditMode = !!initialProject;
+  const [formData, setFormData] = useState<CreateProjectFormData>(() =>
+    initialProject ? projectToFormData(initialProject) : INITIAL_FORM_DATA
+  );
   const [errors, setErrors] = useState<
     z.inferFlattenedErrors<typeof projectSchema>["fieldErrors"]
   >({});
@@ -35,6 +79,38 @@ export function useCreateProjectForm(onClose: () => void, onProjectCreated: (p: 
   const [documentsError, setDocumentsError] = useState<string | null>(null);
   const multipleRef = useRef<MultipleImageUploaderRef>(null);
   const skillsSelectorRef = useRef<SkillsSelectorHandle>(null!);
+  const initialSkillsAppliedRef = useRef(false);
+
+  useEffect(() => {
+    if (initialProject) {
+      setFormData(projectToFormData(initialProject));
+    }
+  }, [initialProject?.id]);
+
+  // Prefill SkillsSelector when in edit mode and user reaches step 3 (once per open)
+  useEffect(() => {
+    if (currentStep !== 3 || !isEditMode || !formData.required_skills?.length)
+      return;
+    if (initialSkillsAppliedRef.current) return;
+    const skills = [...formData.required_skills];
+    const apply = () => {
+      if (skillsSelectorRef.current && !initialSkillsAppliedRef.current) {
+        skillsSelectorRef.current.setSelected({
+          selectedCategories: [],
+          selectedSubCategories: [],
+          selectedSkills: skills,
+        });
+        initialSkillsAppliedRef.current = true;
+      }
+    };
+    apply();
+    const t = setTimeout(apply, 50);
+    return () => clearTimeout(t);
+  }, [currentStep, isEditMode, formData.required_skills]);
+
+  useEffect(() => {
+    if (!initialProject) initialSkillsAppliedRef.current = false;
+  }, [initialProject?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,11 +192,14 @@ export function useCreateProjectForm(onClose: () => void, onProjectCreated: (p: 
   };
 
   const validateStep = (step: number): boolean => {
-    const schema = stepSchemas[step as keyof typeof stepSchemas];
+    const schema =
+      isEditMode && step === 2
+        ? step2SchemaForEdit
+        : stepSchemas[step as keyof typeof stepSchemas];
     if (!schema) return false;
     const result = schema.safeParse(formData);
     if (!result.success) {
-      setErrors(result.error.flatten().fieldErrors);
+      setErrors(result.error.flatten().fieldErrors as typeof errors);
       toast.error("Please correct the errors in the form.");
       return false;
     }
@@ -149,13 +228,14 @@ export function useCreateProjectForm(onClose: () => void, onProjectCreated: (p: 
   const runCreateProject = async () => {
     setServerError(null);
     setErrors({});
-    const result = projectSchema.safeParse(formData);
+    const schema = isEditMode ? projectSchemaForEdit : projectSchema;
+    const result = schema.safeParse(formData);
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors);
       toast.error("Please correct the errors in the form.");
       return;
     }
-    if (!organizationId) {
+    if (!isEditMode && !organizationId) {
       toast.error("Organization ID is missing.");
       return;
     }
@@ -166,75 +246,116 @@ export function useCreateProjectForm(onClose: () => void, onProjectCreated: (p: 
       const documents =
         multipleUrls && multipleUrls.length > 0
           ? multipleUrls.map((url, i) => ({ title: `Document ${i + 1}`, url }))
-          : [];
+          : (isEditMode && formData.documents?.length
+              ? formData.documents
+              : []);
 
-      const { data: projectData, error: projectError } = await supabase
-        .from("projects")
-        .insert({
-          title: formData.title,
-          description: formData.description,
-          organization_id: organizationId,
-          organization_name: organizationName,
-          country: formData.country,
-          state: formData.state || null,
-          lga: formData.lga || null,
-          start_date: formData.start_date,
-          end_date: formData.end_date,
-          location: {
+      if (isEditMode && initialProject) {
+        const isRejected =
+          (initialProject.status || "").toLowerCase() === "rejected";
+        const { data: projectData, error: projectError } = await supabase
+          .from("projects")
+          .update({
+            title: formData.title,
+            description: formData.description,
             country: formData.country,
-            state: formData.state,
-            lga: formData.lga,
-          },
-          volunteers_registered: 0,
-          status: "pending",
-          category: formData.category,
-          required_skills: formData.required_skills,
-          documents,
-        })
-        .select()
-        .single();
+            state: formData.state || null,
+            lga: formData.lga || null,
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+            location: {
+              country: formData.country,
+              state: formData.state,
+              lga: formData.lga,
+            },
+            category: formData.category,
+            required_skills: formData.required_skills,
+            documents,
+            status: "pending",
+          })
+          .eq("id", initialProject.id)
+          .select()
+          .single();
 
-      if (projectError || !projectData)
-        throw new Error(projectError?.message || "Failed to create project");
+        if (projectError || !projectData)
+          throw new Error(projectError?.message || "Failed to update project");
 
-      const milestoneMap = new Map<string, string>();
-      if (formData.milestones.length > 0) {
-        const { data: milestoneData, error: milestoneError } = await supabase
-          .from("milestones")
-          .insert(
-            formData.milestones.map((m) => ({
-              project_id: projectData.id,
-              title: m.title,
-              description: m.description,
-              due_date: m.due_date,
-              status: m.status,
-            })),
-          )
-          .select();
-        if (milestoneError) throw new Error(milestoneError.message);
-        formData.milestones.forEach((m, i) => {
-          milestoneMap.set(m.id, milestoneData[i].id);
-        });
-      }
-
-      if (formData.deliverables.length > 0) {
-        await supabase.from("deliverables").insert(
-          formData.deliverables.map((d) => ({
-            project_id: projectData.id,
-            milestone_id: d.milestone_id
-              ? milestoneMap.get(d.milestone_id)
-              : null,
-            title: d.title,
-            description: d.description,
-            due_date: d.due_date,
-            status: d.status,
-          })),
+        onProjectCreated(projectData as Project);
+        toast.success(
+          isRejected
+            ? "Appeal submitted. Your project will be reviewed again."
+            : "Project updated. It has been sent for admin review again."
         );
-      }
+        onClose();
+      } else {
+        const { data: projectData, error: projectError } = await supabase
+          .from("projects")
+          .insert({
+            title: formData.title,
+            description: formData.description,
+            organization_id: organizationId,
+            organization_name: organizationName,
+            country: formData.country,
+            state: formData.state || null,
+            lga: formData.lga || null,
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+            location: {
+              country: formData.country,
+              state: formData.state,
+              lga: formData.lga,
+            },
+            volunteers_registered: 0,
+            status: "pending",
+            category: formData.category,
+            required_skills: formData.required_skills,
+            documents,
+          })
+          .select()
+          .single();
 
-      onProjectCreated(projectData);
-      toast.success("Project created successfully!");
-      onClose();
+        if (projectError || !projectData)
+          throw new Error(projectError?.message || "Failed to create project");
+
+        const milestoneMap = new Map<string, string>();
+        if (formData.milestones.length > 0) {
+          const { data: milestoneData, error: milestoneError } = await supabase
+            .from("milestones")
+            .insert(
+              formData.milestones.map((m) => ({
+                project_id: projectData.id,
+                title: m.title,
+                description: m.description,
+                due_date: m.due_date,
+                status: m.status,
+              })),
+            )
+            .select();
+          if (milestoneError) throw new Error(milestoneError.message);
+          formData.milestones.forEach((m, i) => {
+            milestoneMap.set(m.id, milestoneData[i].id);
+          });
+        }
+
+        if (formData.deliverables.length > 0) {
+          await supabase.from("deliverables").insert(
+            formData.deliverables.map((d) => ({
+              project_id: projectData.id,
+              milestone_id: d.milestone_id
+                ? milestoneMap.get(d.milestone_id)
+                : null,
+              title: d.title,
+              description: d.description,
+              due_date: d.due_date,
+              status: d.status,
+            })),
+          );
+        }
+
+        onProjectCreated(projectData);
+        toast.success("Project created successfully!");
+        onClose();
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       setServerError(msg);
@@ -274,5 +395,7 @@ export function useCreateProjectForm(onClose: () => void, onProjectCreated: (p: 
     runCreateProject,
     onSkillsChange,
     onDocumentsChange,
+    isEditMode,
+    projectStatus: (initialProject?.status ?? "").toLowerCase(),
   };
 }

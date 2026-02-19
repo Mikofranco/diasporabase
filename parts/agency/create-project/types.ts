@@ -31,9 +31,31 @@ export interface Project {
   documents: Array<{ title: string; url: string }>;
 }
 
+/** Project shape when opening the form in edit/appeal mode (e.g. from view project). */
+export interface ProjectForEdit {
+  id: string;
+  title: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  category: string;
+  required_skills: string[];
+  documents?: Array<{ title: string; url: string }>;
+  status?: string;
+  country?: string | null;
+  state?: string | null;
+  lga?: string | null;
+  location?:
+    | { country?: string; state?: string; lga?: string }
+    | string
+    | null;
+}
+
 export interface CreateProjectFormProps {
   onClose: () => void;
   onProjectCreated: (project: Project) => void;
+  /** When set, form opens in edit mode with fields pre-filled. Submit updates project or submits appeal if rejected. */
+  initialProject?: ProjectForEdit | null;
 }
 
 export type MilestoneItem = {
