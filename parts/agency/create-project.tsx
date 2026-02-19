@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import {
   Dialog,
@@ -26,6 +26,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { LocationSelects } from "@/components/location-selects";
+import MultipleImageUploader, {
+  MultipleImageUploaderRef,
+} from "@/components/multi-image-uploader";
 
 const supabase = createClient();
 
@@ -95,7 +98,7 @@ const baseProjectSchema = z.object({
     .refine((val) => !isNaN(Date.parse(val)), "Invalid start date")
     .refine(
       (val) => new Date(val) >= new Date(),
-      "Start date must be today or later"
+      "Start date must be today or later",
     ),
   end_date: z
     .string()
@@ -112,7 +115,7 @@ const projectSchema = baseProjectSchema.refine(
   {
     message: "End date must be after start date",
     path: ["end_date"],
-  }
+  },
 );
 
 // === INTERFACES ===
@@ -131,6 +134,10 @@ interface Project {
   status: string;
   category: string;
   created_at: string;
+  documents: Array<{
+    title: string;
+    url: string;
+  }>;
 }
 
 interface CreateProjectFormProps {
@@ -167,6 +174,10 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
       status: "Done" | "Pending" | "In Progress" | "Cancelled";
       milestone_id?: string;
     }>,
+    documents: [] as Array<{
+      title: string;
+      url: string;
+    }>,
   });
 
   const [errors, setErrors] = useState<
@@ -179,6 +190,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
   const [organizationName, setOrganizationName] = useState<string>("");
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
+  const multipleRef = useRef<MultipleImageUploaderRef>(null);
+  const [documentsSelectedCount, setDocumentsSelectedCount] = useState(0);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -210,7 +224,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     index?: number,
-    field?: string
+    field?: string,
   ) => {
     const { name, value } = e.target;
     if (
@@ -235,7 +249,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     name: string,
     value: string,
     index?: number,
-    field?: string
+    field?: string,
   ) => {
     if (
       index !== undefined &&
@@ -277,7 +291,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
       ...prev,
       milestones: prev.milestones.filter((_, i) => i !== index),
       deliverables: prev.deliverables.map((d) =>
-        d.milestone_id === milestoneId ? { ...d, milestone_id: undefined } : d
+        d.milestone_id === milestoneId ? { ...d, milestone_id: undefined } : d,
       ),
     }));
   };
@@ -373,6 +387,16 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
 
     setLoading(true);
     try {
+      const multipleUrls = await multipleRef.current?.upload();
+      if (multipleUrls && multipleUrls.length > 0) {
+        console.log("Multiple documents uploaded:", multipleUrls);
+      } else {
+        setDocumentsError(
+          "No documents uploaded. Please upload at least one document.",
+        );
+        setLoading(false);
+        return;
+      }
       const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .insert({
@@ -393,6 +417,10 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
           volunteers_registered: 0,
           status: "pending",
           category: formData.category,
+          documents: multipleUrls.map((url, index) => ({
+            title: `Document ${index + 1}`,
+            url,
+          })),
         })
         .select()
         .single();
@@ -412,7 +440,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
               description: m.description,
               due_date: m.due_date,
               status: m.status,
-            }))
+            })),
           )
           .select();
 
@@ -433,7 +461,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
             description: d.description,
             due_date: d.due_date,
             status: d.status,
-          }))
+          })),
         );
       }
 
@@ -452,30 +480,27 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     () => (
       <div className="mb-6">
         <div className="flex justify-between mb-2">
-          {[
-            "Basic Info",
-            "Location & Dates",
-            "Category",
-            "Milestones & Deliverables",
-          ].map((label, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentStep >= i + 1
-                    ? "bg-[#0284C7] text-white"
-                    : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {i + 1}
+          {["Basic Info", "Location & Dates", "Category", "Documents"].map(
+            (label, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep >= i + 1
+                      ? "bg-[#0284C7] text-white"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {i + 1}
+                </div>
+                <span className="text-xs mt-1">{label}</span>
               </div>
-              <span className="text-xs mt-1">{label}</span>
-            </div>
-          ))}
+            ),
+          )}
         </div>
         <Progress value={(currentStep / totalSteps) * 100} className="h-2" />
       </div>
     ),
-    [currentStep]
+    [currentStep],
   );
 
   const renderStepContent = useCallback(() => {
@@ -585,7 +610,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 disabled={loading}
               >
                 <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder="Select category"  />
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map((c) => (
@@ -608,7 +633,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         return (
           <div className="space-y-8">
             {/* Milestones */}
-            <div>
+            {/* <div>
               <h3 className="text-lg font-medium mb-3">Milestones *</h3>
               {formData.milestones.map((m, i) => (
                 <div
@@ -695,10 +720,10 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
               >
                 <Plus className="mr-2 h-4 w-4" /> Add Milestone
               </Button>
-            </div>
+            </div> */}
 
             {/* Deliverables */}
-            <div>
+            {/* <div>
               <h3 className="text-lg font-medium mb-3">Deliverables *</h3>
               {formData.deliverables.map((d, i) => (
                 <div
@@ -805,7 +830,31 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
               >
                 <Plus className="mr-2 h-4 w-4" /> Add Deliverable
               </Button>
-            </div>
+            </div> */}
+
+            <h3>Upload Documents</h3>
+            <h3 className="text-gray-800 font-semibold">
+              Supporting Documents
+              <span className="text-red-500 text-sm ml-1 font-normal">
+                (at least one recommended)
+              </span>
+            </h3>
+            <p className="text-sm text-gray-600">
+              Upload CAC certificate, registration documents, or other relevant
+              files (PDF, JPG, PNG). Selections are kept when you go back to
+              previous steps.
+            </p>
+            <MultipleImageUploader
+              ref={multipleRef}
+              title=""
+              onFilesChange={(files) => {
+                setDocumentsSelectedCount(files?.length ?? 0);
+                if ((files?.length ?? 0) > 0) setDocumentsError(null);
+              }}
+            />
+            {documentsError && (
+              <p className="text-red-500 text-sm">{documentsError}</p>
+            )}
           </div>
         );
 
@@ -869,7 +918,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
               ) : (
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (documentsSelectedCount === 0 && !formData.documents.length)}
                   className="bg-[#0284C7] hover:bg-blue-700"
                 >
                   {loading ? "Creating..." : "Create Project"}

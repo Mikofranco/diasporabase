@@ -59,6 +59,7 @@ import { AssignedVolunteersTable } from "./assigned-volunteer";
 import { ClosingRemarksModal } from "@/components/closing-remarks";
 import { ProjectStatus } from "@/lib/types";
 import { routes } from "@/lib/routes";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const supabase = createClient();
 
@@ -126,17 +127,17 @@ const ProjectDetails: React.FC = () => {
 
   // Editing States
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(
-    null
+    null,
   );
   const [editingDeliverable, setEditingDeliverable] =
     useState<Deliverable | null>(null);
 
   // Delete Confirmation States
   const [deleteMilestoneId, setDeleteMilestoneId] = useState<string | null>(
-    null
+    null,
   );
   const [deleteDeliverableId, setDeleteDeliverableId] = useState<string | null>(
-    null
+    null,
   );
 
   // Form States
@@ -181,7 +182,7 @@ const ProjectDetails: React.FC = () => {
           .order("due_date");
         setMilestones(
           //@ts-ignore
-          (miles || []).map((m) => ({ ...m, status: m.status || "Pending" }))
+          (miles || []).map((m) => ({ ...m, status: m.status || "Pending" })),
         );
 
         const { data: dels } = await supabase
@@ -191,13 +192,13 @@ const ProjectDetails: React.FC = () => {
           .order("due_date");
         setDeliverables(
           //@ts-ignore
-          (dels || []).map((d) => ({ ...d, status: d.status || "Pending" }))
+          (dels || []).map((d) => ({ ...d, status: d.status || "Pending" })),
         );
 
         const { data: vols } = await supabase
           .from("project_volunteers")
           .select(
-            "volunteer_id, profiles!inner(full_name, email, skills, availability, residence_country, volunteer_states)"
+            "volunteer_id, profiles!inner(full_name, email, skills, availability, residence_country, volunteer_states)",
           )
           .eq("project_id", projectId);
 
@@ -213,7 +214,7 @@ const ProjectDetails: React.FC = () => {
             residence_country: v.profiles.residence_country || "N/A",
             volunteer_states: v.profiles.volunteer_states || [],
             average_rating: 0,
-          }))
+          })),
         );
       } catch (err: any) {
         setError(err.message);
@@ -430,7 +431,13 @@ const ProjectDetails: React.FC = () => {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-6 space-y-8 max-w-7xl">
+      {project.status === "cancelled" && (<Alert className="text-red-600 bg-red-50">
+        <AlertTitle>Warning</AlertTitle>
+        <AlertDescription>
+          Project is cancelled contact admin.
+        </AlertDescription>
+      </Alert>)}
+      <div className="container mx-auto p-6 space-y-8 ">
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-4xl font-bold">{project.title}</h1>
@@ -497,23 +504,23 @@ const ProjectDetails: React.FC = () => {
                 <span>{project.volunteers_registered} volunteers</span>
               </div>
             </div>
-            <MilestonesSection projectId={project.id} canEdit={true} />
+            {/* <MilestonesSection projectId={project.id} canEdit={true} /> */}
 
-            <section>
+            {/* <section>
               <h2 className="text-2xl font-bold mb-6">
                 Assigned Volunteers ({assignedVolunteers.length})
               </h2>
-              {/*@ts-ignore*/}
+              @ts-ignore
               <AssignedVolunteersTable volunteers={assignedVolunteers} />
-            </section>
+            </section> */}
 
-            <ProjectRecommendation
+            {/* <ProjectRecommendation
               projectId={projectId as string}
               volunteersNeeded={project.volunteers_needed}
               volunteersRegistered={project.volunteers_registered}
-            />
+            /> */}
 
-            <section className="flex justify-center items-center gap-4 flex-col p-8 border shadow-md bg-diaspora-blue/5 rounded-md">
+            {/* <section className="flex justify-center items-center gap-4 flex-col p-8 border shadow-md bg-diaspora-blue/5 rounded-md">
               <h3  className="text-diaspora-blue">Add closing remark and mark project has completed </h3>
               <ClosingRemarksModal
                 projectId={project.id}
@@ -521,7 +528,7 @@ const ProjectDetails: React.FC = () => {
                 isAuthorized={true}
                 onProjectClosed={() => router.refresh()}
               />
-            </section>
+            </section> */}
           </CardContent>
         </Card>
 
