@@ -198,7 +198,10 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
 
     useEffect(() => {
       onSelectionChange?.(getSelectedData());
-    }, [selected, onSelectionChange]);
+      // Intentionally only depend on `selected` so we don't
+      // create a render loop when the parent recreates the
+      // onSelectionChange callback on every render.
+    }, [selected]);
 
     const toggleExpand = (key: string) => {
       setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -335,17 +338,20 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
           return (
             <div key={catId} className="mb-3">
               {/* Category level - larger */}
-              <div className="flex items-center py-2.5 px-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+              <div className="flex items-center py-2.5 px-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <Checkbox
                   id={`cat-${catId}`}
-                  className="h-5 w-5 mr-3 data-[state=indeterminate]:bg-blue-500"
-                  checked={selected[catId]?.checked || false}
-                  indeterminate={selected[catId]?.indeterminate || false}
+                  className="h-5 w-5 mr-3 data-[state=indeterminate]:bg-diaspora-blue"
+                  checked={
+                    selected[catId]?.indeterminate
+                      ? "indeterminate"
+                      : selected[catId]?.checked || false
+                  }
                   onCheckedChange={() => handleCheckboxChange("category", catId)}
                 />
                 <button
                   type="button"
-                  className="flex items-center flex-1 text-base font-semibold text-gray-900 hover:text-blue-700"
+                  className="flex items-center flex-1 text-base font-semibold text-gray-900 hover:text-diaspora-blue"
                   onClick={() => toggleExpand(catId)}
                 >
                   {isCatExpanded ? (
@@ -369,12 +375,12 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
                         <div className="flex items-center py-2 px-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                           <Checkbox
                             id={`sub-${catId}-${subId}`}
-                            className="h-4.5 w-4.5 mr-3 data-[state=indeterminate]:bg-blue-500"
+                            className="h-4.5 w-4.5 mr-3 data-[state=indeterminate]:bg-diaspora-blue"
                             checked={
-                              selected[catId]?.subCategories?.[subId]?.checked || false
-                            }
-                            indeterminate={
-                              selected[catId]?.subCategories?.[subId]?.indeterminate || false
+                              selected[catId]?.subCategories?.[subId]?.indeterminate
+                                ? "indeterminate"
+                                : selected[catId]?.subCategories?.[subId]?.checked ||
+                                  false
                             }
                             onCheckedChange={() =>
                               handleCheckboxChange("subcategory", catId, subId)
@@ -382,7 +388,7 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
                           />
                           <button
                             type="button"
-                            className="flex items-center flex-1 text-sm font-medium text-gray-800 hover:text-blue-600"
+                            className="flex items-center flex-1 text-sm font-medium text-gray-800 hover:text-diaspora-blue"
                             onClick={() => toggleExpand(`${catId}-${subId}`)}
                           >
                             {isSubExpanded ? (
@@ -405,7 +411,7 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
                               >
                                 <Checkbox
                                   id={`skill-${catId}-${subId}-${skill.id}`}
-                                  className="h-3.5 w-3.5 mr-2.5 border-gray-400 data-[state=checked]:bg-blue-600"
+                                  className="h-3.5 w-3.5 mr-2.5 border-gray-400 data-[state=checked]:bg-diaspora-blue"
                                   checked={
                                     selected[catId]?.subCategories?.[subId]?.skills?.[
                                       skill.id

@@ -21,7 +21,7 @@ export interface Project {
   category: string;
   volunteers_registered: number;
   volunteers_needed: number;
-  status: "active" | "pending" | "completed" | "cancelled";
+  status: "active" | "pending" | "completed" | "cancelled" | "rejected";
 }
 
 interface ProjectCardProps {
@@ -42,6 +42,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
       pending: { bg: "bg-yellow-100", text: "text-yellow-800" },
       completed: { bg: "bg-gray-100", text: "text-gray-800" },
       cancelled: { bg: "bg-red-100", text: "text-red-800" },
+      rejected: { bg: "bg-red-100", text: "text-red-800" },
     };
 
   // Capitalize status for display
