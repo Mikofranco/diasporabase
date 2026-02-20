@@ -5,23 +5,17 @@ import { supabase } from "@/lib/supabase/client";
 import { Project } from "@/lib/types";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, PlusCircle } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import EditProjectDialogue from "@/components/dialogues/edit-project";
-import ViewProjectDialogue from "@/components/dialogues/view-project";
-import { ro } from "date-fns/locale";
+import CreateProjectForm from "@/parts/agency/create-project";
 import { useRouter } from "next/navigation";
 import { routes } from "@/lib/routes";
-
 
 const RecentProjects = ({ userId }: { userId: string }) => {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined);
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const router = useRouter();
 
   const fetchProjects = useCallback(async () => {
@@ -62,21 +56,20 @@ const RecentProjects = ({ userId }: { userId: string }) => {
   }, [fetchProjects]);
 
   const handleEditProject = (project: Project) => {
-    setSelectedProject(project);
-    setIsEditModalOpen(true);
+    setProjectToEdit(project);
   };
 
   const handleViewProject = (project: Project) => {
-    setSelectedProject(project);
-    setIsViewModalOpen(true);
+    router.push(routes.agencyViewProject(project.id));
   };
-  const redirectToCreateProject =()=>{
+
+  const redirectToCreateProject = () => {
      toast.info("Redirecting to create a new project...");
     router.replace(routes.agencyProjects)
   }
 
   return (
-    <section className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+    <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
       <div aria-live="polite">
         {isLoading && (
           <div className="space-y-4">
@@ -89,37 +82,18 @@ const RecentProjects = ({ userId }: { userId: string }) => {
           </div>
         )}
         {error && (
-          // <Alert variant="destructive" className="mb-4">
-          //   <AlertCircle className="h-5 w-5" />
-          //   <AlertTitle>Error</AlertTitle>
-          //   <AlertDescription>
-          //     {error}
-          //     <Button
-          //       variant="link"
-          //       onClick={fetchProjects}
-          //       className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-          //       aria-label="Retry loading projects"
-          //     >
-          //       Try Again
-          //     </Button>
-          //   </AlertDescription>
-          // </Alert>
-
-           <div className="text-center py-8">
-              <PlusCircle className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                No projects found.
-              </p>
-             <Button
-                variant="link"
-                onClick={fetchProjects}
-                className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                aria-label="Retry loading projects"
-              >
-                Try Again
-              </Button>
-            </div>
-          
+          <div className="text-center py-8 rounded-lg bg-red-50 border border-red-100">
+            <p className="text-red-700 mb-3">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchProjects}
+              className="border-red-200 text-red-700 hover:bg-red-100"
+              aria-label="Retry loading projects"
+            >
+              Try Again
+            </Button>
+          </div>
         )}
         {!isLoading && projects && projects.length > 0 ? (
           <div className="overflow-x-auto">
@@ -151,18 +125,14 @@ const RecentProjects = ({ userId }: { userId: string }) => {
           )
         )}
       </div>
-      {isEditModalOpen && (
-        <EditProjectDialogue
-          project={selectedProject}
-          isOpen={isEditModalOpen}
-          setIsOpen={setIsEditModalOpen}
-        />
-      )}
-      {isViewModalOpen && (
-        <ViewProjectDialogue
-          project={selectedProject}
-          isOpen={isViewModalOpen}
-          setIsOpen={setIsViewModalOpen}
+      {projectToEdit && (
+        <CreateProjectForm
+          initialProject={projectToEdit}
+          onClose={() => setProjectToEdit(null)}
+          onProjectCreated={() => {
+            fetchProjects();
+            setProjectToEdit(null);
+          }}
         />
       )}
     </section>

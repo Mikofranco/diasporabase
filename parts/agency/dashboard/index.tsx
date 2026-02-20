@@ -1,12 +1,18 @@
 "use client";
 
-import Notifications from "@/components/NotificationPanel";
 import { supabase } from "@/lib/supabase/client";
 import { Project } from "@/lib/types";
 import { getUserId } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+  LayoutGrid,
+  PlayCircle,
+  Clock,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import SmallCard from "./small-card";
 import RecentProjects from "./recent-projects";
 import AgencyRequestFromVolunteer from "./requests";
@@ -17,11 +23,11 @@ const AgencyDashboard = () => {
   const [ongoingProjects, setOngoingProjects] = useState<Project[]>([]);
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
   const [pendingProjects, setPendingProjects] = useState<Project[]>([]);
+  const [rejectedProjects, setRejectedProjects] = useState<Project[]>([]);
   const [projectError, setProjectError] = useState<string | null>(null);
-  const [projectIsLoading, setProjectIsLoading] = useState<boolean>(true); // Start as true
+  const [projectIsLoading, setProjectIsLoading] = useState<boolean>(true);
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
-  const [totalVolunteers, setTotalVolunteers] = useState<number>(0);
 
   // Fetch projects by status
   const fetchProjects = async (
@@ -40,47 +46,7 @@ const AgencyDashboard = () => {
     return (data as Project[]) ?? [];
   };
 
-  async function getTotalVolunteersForOrganization(
-    organizationId: string,
-  ): Promise<number> {
-    if (!organizationId) return 0;
-
-    try {
-      // First get all project IDs for this organization
-      const { data: projects, error: projError } = await supabase
-        .from("projects")
-        .select("id")
-        .eq("organization_id", organizationId)
-        // Optional: only active/completed projects
-        .in("status", ["active", "completed"]);
-
-      if (projError || !projects || projects.length === 0) {
-        return 0;
-      }
-      //@ts-ignore
-      const projectIds = projects.map((p) => p.id);
-      console.log("Project IDs for organization:", projectIds);
-
-      // Now call the Supabase function
-      const { data, error } = await supabase.rpc(
-        "get_total_volunteers_for_projects",
-        {
-          project_ids: projectIds,
-        },
-      );
-
-      if (error) {
-        console.error("Error calling RPC:", error);
-        return 0;
-      }
-
-      return data ?? 0;
-    } catch (err) {
-      console.error("Unexpected error:", err);
-      return 0;
-    }
-  }
-  // Fetch all projects – now takes userId as parameter
+  // Fetch all projects by status
   const fetchAllProjects = async (orgId: string) => {
     if (!orgId) return;
 
@@ -88,15 +54,17 @@ const AgencyDashboard = () => {
     setProjectError(null);
 
     try {
-      const [ongoing, completed, pending] = await Promise.all([
+      const [ongoing, completed, pending, rejected] = await Promise.all([
         fetchProjects(orgId, "active"),
         fetchProjects(orgId, "completed"),
         fetchProjects(orgId, "pending"),
+        fetchProjects(orgId, "rejected"),
       ]);
 
       setOngoingProjects(ongoing);
       setCompletedProjects(completed);
       setPendingProjects(pending);
+      setRejectedProjects(rejected);
     } catch (error) {
       const msg =
         error instanceof Error ? error.message : "Failed to load projects";
@@ -177,58 +145,77 @@ const AgencyDashboard = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 rounded-lg">
-      <h1 className="text-3xl font-bold mb-4">Dashboard Overview</h1>
-      <p className="text-muted-foreground mb-8">
-        Welcome back! Here's what's happening with your projects.
-      </p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50/80 to-white w-full">
+      <div className="w-full">
+        <header className="mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
+            Dashboard Overview
+          </h1>
+          <p className="text-slate-600 mt-1.5">
+            Welcome back! Here&apos;s what&apos;s happening with your projects.
+          </p>
+        </header>
 
-      {projectIsLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-muted/50 rounded-xl p-6 animate-pulse">
-              <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
-              <div className="h-10 bg-muted rounded w-1/2"></div>
+        {projectIsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-10">
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className="min-h-[100px] bg-white border border-slate-200 rounded-xl p-5 sm:p-6 animate-pulse shadow-sm"
+              >
+                <div className="h-4 bg-slate-200 rounded w-3/4 mb-4" />
+                <div className="h-8 bg-slate-200 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-10">
+              <SmallCard
+                count={
+                  ongoingProjects.length +
+                  completedProjects.length +
+                  pendingProjects.length +
+                  rejectedProjects.length
+                }
+                title="Total Projects"
+                icon={<LayoutGrid className="w-6 h-6" />}
+              />
+              <SmallCard
+                count={ongoingProjects.length}
+                title="Ongoing Projects"
+                icon={<PlayCircle className="w-6 h-6 text-emerald-600" />}
+              />
+              <SmallCard
+                count={pendingProjects.length}
+                title="Pending Projects"
+                icon={<Clock className="w-6 h-6 text-amber-600" />}
+              />
+              <SmallCard
+                count={completedProjects.length}
+                title="Completed Projects"
+                icon={<CheckCircle2 className="w-6 h-6 text-slate-600" />}
+              />
+              <SmallCard
+                count={rejectedProjects.length}
+                title="Rejected Projects"
+                icon={<XCircle className="w-6 h-6 text-red-600" />}
+              />
             </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <SmallCard
-              count={ongoingProjects.length}
-              title="Ongoing Projects"
-              image="/svg/active-project.svg"
-            />
-            <SmallCard
-              count={totalVolunteers}
-              title="Total Volunteers"
-              image="/svg/total-volunteers.svg"
-            />
-            <SmallCard
-              count={pendingProjects.length}
-              title="Pending Projects"
-              image="/svg/pending-projects.svg"
-            />
-            <SmallCard
-              count={completedProjects.length}
-              title="Completed Projects"
-              image="/svg/dashboard-completed-project.svg"
-            />
-          </div>
 
-          <div className="space-y-10">
-            <RecentProjects userId={userId || ""} />
-            <AgencyRequestFromVolunteer userId={userId || ""} />
-          </div>
-        </>
-      )}
+            <div className="space-y-8 md:space-y-10">
+              <RecentProjects userId={userId || ""} />
+              <AgencyRequestFromVolunteer userId={userId || ""} />
+            </div>
+          </>
+        )}
 
-      {projectError && (
-        <div className="mt-8 p-6 bg-destructive/10 border border-destructive/50 rounded-lg text-destructive">
-          {projectError}
-        </div>
-      )}
+        {projectError && (
+          <div className="mt-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm">
+            {projectError}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
