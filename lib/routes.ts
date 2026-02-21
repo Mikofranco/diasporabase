@@ -51,6 +51,7 @@ export const routes = {
     agencyAnalytics: "/agency/analytics",
     agencyProjects: "/agency/projects",
     agencyViewProject: (projectId: string) => `/agency/projects/${projectId}`,
+    agencyProjectRecommendations: (projectId: string) => `/agency/projects/${projectId}/recommendations`,
     agencyEditProject: (projectId: string) => `/agency/projects/${projectId}/edit`,
     agencyNotifications: "/agency/notifications",
     agencyProfile: "/agency/profile",

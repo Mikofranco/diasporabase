@@ -100,6 +100,15 @@ export interface Profile {
   volunteer_countries?: string[] | undefined | null;
   volunteer_states?: string[] | undefined | null;
   volunteer_lgas?: string[] | undefined | null;
+  contact_person_first_name?: string | null;
+  contact_person_last_name?: string | null;
+  contact_person_email?: string | null;
+  contact_person_phone?: string | null;
+  organization_name?: string | null;
+  organization_type?: string | null;
+  profile_picture?: string | null;
+  cac_number?: string | null;
+  documents?: string[] | [];
 }
 
 export interface ProjectLeaveReason {
@@ -155,6 +164,7 @@ export interface Project {
   state?: string | null;
   end_date?: string;
   closing_remarks?:string;
+  documents?: { title: string; url: string }[] | [];
 }
 
 export interface SkillSet {
