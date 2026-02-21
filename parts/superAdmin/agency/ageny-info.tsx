@@ -1,8 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertCircle, Upload, AlertTriangle, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,7 +49,6 @@ import ProjectsList from "./project-list";
 import { formatLocation } from "@/lib/utils";
 import DocumentViewer from "@/components/document-viewer";
 import OverviewSection from "./overview";
-import { de } from "date-fns/locale";
 import type { AgencyProfile } from "@/lib/types";
 import { routes } from "@/lib/routes";
 
@@ -68,14 +76,25 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 const AgencyProfile = () => {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const pathname = usePathname() ?? "";
+  const isSuperAdmin = pathname.includes("super-admin");
+  const agenciesListHref = isSuperAdmin ? routes.superAdminAgencies : routes.adminAgencies;
+  const getProjectViewUrl = (projectId: string) => {
+    const base = isSuperAdmin ? routes.superAdminViewProject(projectId) : routes.adminViewProject(projectId);
+    return `${base}?from_agency=${id}`;
+  };
+
   const [profile, setProfile] = useState<AgencyProfile | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
   const [pendingDeactivation, setPendingDeactivation] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showAdminDeactivateConfirm, setShowAdminDeactivateConfirm] = useState(false);
 
   const {
     control,
@@ -96,6 +115,18 @@ const AgencyProfile = () => {
   const fetchProfile = useCallback(async () => {
     if (!id) return;
     setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      setCurrentUserRole(currentProfile?.role ?? null);
+    }
+
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -112,12 +143,14 @@ const AgencyProfile = () => {
 
     const profileData: AgencyProfile = {
       ...data,
-      focus_areas: data.focus_areas || [],
-      environment_cities: data.environment_cities || [],
-      environment_states: data.environment_states || [],
+      focus_areas: Array.isArray(data.focus_areas) ? data.focus_areas : [],
+      environment_cities: Array.isArray(data.environment_cities) ? data.environment_cities : [],
+      environment_states: Array.isArray(data.environment_states) ? data.environment_states : [],
+      documents: Array.isArray(data.documents) ? data.documents : [],
     };
 
     setProfile(profileData);
+    const focusAreas = Array.isArray(profileData.focus_areas) ? profileData.focus_areas : [];
     reset({
       organization_name: profileData.organization_name || "",
       contact_person_email: profileData.contact_person_email || "",
@@ -126,9 +159,7 @@ const AgencyProfile = () => {
       address: profileData.address || "",
       organization_type: profileData.organization_type || "",
       description: profileData.description || "",
-      focus_areas: profileData.focus_areas?.join(", ") || "",
-      // environment_cities: profileData.environment_cities?.join(", ") || "",
-      // environment_states: profileData.environment_states?.join(", ") || "",
+      focus_areas: focusAreas.join(", "),
       is_active: profileData.is_active ?? true,
     });
     setPreviewUrl(profileData.profile_picture || null);
@@ -378,103 +409,215 @@ const AgencyProfile = () => {
     setIsModalOpen(open);
   };
 
+  const handleActivateDeactivate = async (activate: boolean) => {
+    if (!id || !profile) return;
+    if (!activate) {
+      setShowAdminDeactivateConfirm(true);
+      return;
+    }
+    await updateAgencyStatus(activate);
+  };
+
+  const updateAgencyStatus = async (isActive: boolean) => {
+    if (!id) return;
+    setShowAdminDeactivateConfirm(false);
+    setTogglingStatus(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_active: isActive, updated_at: new Date().toISOString() })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setProfile((prev) => (prev ? { ...prev, is_active: isActive } : null));
+      toast.success(isActive ? "Agency activated" : "Agency deactivated");
+
+      if (profile?.contact_person_email && !isActive) {
+        await useSendMail({
+          to: profile.contact_person_email,
+          subject: "Your Agency Has Been Deactivated",
+          html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>Agency Status</title></head>
+<body style="font-family:system-ui;max-width:600px;margin:0 auto;padding:24px;">
+  <p>Hello,</p>
+  <p>Your agency <strong>${profile.organization_name || "account"}</strong> has been deactivated. You will not be able to create or manage projects until the account is reactivated.</p>
+  <p>Contact support if you have questions.</p>
+  <p>&copy; ${new Date().getFullYear()} DiasporaBase.</p>
+</body>
+</html>`,
+          onSuccess: () => {},
+          onError: () => {},
+        });
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update status");
+    } finally {
+      setTogglingStatus(false);
+    }
+  };
+
   if (loading) return <ProfileSkeleton />;
   if (!profile) return <ErrorState message="Agency not found" />;
 
+  const focusAreasList = Array.isArray(profile.focus_areas) ? profile.focus_areas : [];
+  const envCities = Array.isArray(profile.environment_cities) ? profile.environment_cities : [];
+  const envStates = Array.isArray(profile.environment_states) ? profile.environment_states : [];
+  const documentsList = (profile.documents ?? []).map((doc: string, index: number) => ({
+    url: doc,
+    name: `Document ${index + 1}`,
+  }));
+
   return (
     <>
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="container mx-auto px-4 ">
-          {profile.contact_person_email === null ? (
-            <Alert className="mb-6 bg-red-50 border-red-200 text-red-600">
+      <div className="min-h-screen bg-gray-50 py-6">
+        <div className="container mx-auto px-4 max-w-5xl">
+          {/* Breadcrumb */}
+          <Breadcrumb className="mb-6">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href={agenciesListHref}>Agencies</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="font-medium text-foreground truncate max-w-[200px] sm:max-w-none">
+                  {profile.organization_name || "Agency"}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+
+          {profile.contact_person_email == null || profile.contact_person_email === "" ? (
+            <Alert className="mb-6 bg-amber-50 border-amber-200 text-amber-800">
               <AlertCircle className="h-5 w-5" />
               <AlertTitle>Incomplete Profile</AlertTitle>
               <AlertDescription>
-                This agency has not completed the onboarding process. Please
-                contact the agency to provide the necessary information.
+                This agency has not completed onboarding. Ask them to provide contact email and required information.
               </AlertDescription>
             </Alert>
           ) : null}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={profile.profile_picture || ""} />
-                  <AvatarFallback className="text-2xl">
-                    {profile.organization_name?.[0] || "A"}
+
+          {/* Hero / Header block */}
+          <Card className="mb-6 overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-4 min-w-0">
+                <Avatar className="h-20 w-20 border-2 border-gray-100 shrink-0">
+                  <AvatarImage src={profile.profile_picture || ""} alt="" />
+                  <AvatarFallback className="text-2xl bg-diaspora-blue/10 text-diaspora-blue">
+                    {(profile.organization_name || "A").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <CardTitle className="text-2xl">
-                    {profile.organization_name}
+                <div className="min-w-0">
+                  <CardTitle className="text-2xl text-gray-900 truncate">
+                    {profile.organization_name || "—"}
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Agency Profile
-                  </p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-sm text-muted-foreground">Agency profile</span>
+                    <Badge
+                      variant="outline"
+                      className={`font-medium shrink-0 ${
+                        profile.is_active
+                          ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                          : "bg-red-100 text-red-800 border-red-300"
+                      }`}
+                    >
+                      {profile.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Badge
-                  variant="outline"
-                  className={`font-medium ${
-                    profile.is_active
-                      ? "bg-green-100 text-green-800 border-green-300"
-                      : "bg-red-100 text-red-800 border-red-300"
-                  }`}
-                >
-                  {profile.is_active ? "Active" : "Inactive"}
-                </Badge>
-                <Button
-                  onClick={() => setIsModalOpen(true)}
-                  className="action-btn"
-                >
-                  Edit Profile
-                </Button>
+              <div className="flex items-center gap-3 shrink-0">
+                {profile.is_active ? (
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleActivateDeactivate(false)}
+                    disabled={togglingStatus}
+                  >
+                    {togglingStatus ? "Updating…" : "Deactivate"}
+                  </Button>
+                ) : (
+                  <Button
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => updateAgencyStatus(true)}
+                    disabled={togglingStatus}
+                  >
+                    {togglingStatus ? "Updating…" : "Activate"}
+                  </Button>
+                )}
               </div>
             </CardHeader>
-
-            <CardContent className="grid md:grid-cols-1 gap-8">
-              <OverviewSection
-                profile={profile}
-              />
-
-              <InfoSection
-                title="Contact information"
-                data={{
-                  Email: profile.contact_person_email,
-                  Phone: profile.contact_person_phone,
-                  Website: profile.website,
-                  Type: profile.organization_type,
-                  Address: profile.address,
-                }}
-              />
-              <DocumentViewer
-                documents={profile.documents.map(
-                  (doc: string, index: number) => ({
-                    url: doc,
-                    name: `Document ${index + 1}`,
-                  }),
-                )}
-              />
-              {/* <InfoSection
-                title="Operations"
-                data={{
-                  "Focus Areas": profile.focus_areas?.join(", "),
-                  Cities: profile.environment_cities?.join(", "),
-                  States: profile.environment_states?.join(", "),
-                  Description: profile.description,
-                }}
-              /> */}
-            </CardContent>
-
-            <div className="px-6 pb-6">
-              <Button variant="outline" onClick={() => router.back()}>
-                Back to List
-              </Button>
-            </div>
           </Card>
 
-          <ProjectsList agencyId={id} />
+          {/* Section: Overview */}
+          <SectionBlock title="Overview">
+            <OverviewSection profile={profile} />
+          </SectionBlock>
+
+          {/* Section: Contact information */}
+          <SectionBlock title="Contact information">
+            <InfoSection
+              title=""
+              data={{
+                "Contact email": profile.contact_person_email ?? undefined,
+                Phone: profile.contact_person_phone ?? undefined,
+                Website: profile.website ?? undefined,
+                "Organization type": profile.organization_type ?? undefined,
+                Address: profile.address ?? undefined,
+              }}
+            />
+          </SectionBlock>
+
+          {/* Section: Focus & operations */}
+          {(focusAreasList.length > 0 || envCities.length > 0 || envStates.length > 0 || profile.description) && (
+            <SectionBlock title="Focus & operations">
+              <Card className="border shadow-sm">
+                <CardContent className="pt-6">
+                  <dl className="space-y-4 text-sm">
+                    {profile.description && (
+                      <div>
+                        <dt className="font-medium text-gray-600 mb-1">Description</dt>
+                        <dd className="text-gray-900">{profile.description}</dd>
+                      </div>
+                    )}
+                    {focusAreasList.length > 0 && (
+                      <div>
+                        <dt className="font-medium text-gray-600 mb-1">Focus areas</dt>
+                        <dd className="text-gray-900">{focusAreasList.join(", ")}</dd>
+                      </div>
+                    )}
+                    {envCities.length > 0 && (
+                      <div>
+                        <dt className="font-medium text-gray-600 mb-1">Cities</dt>
+                        <dd className="text-gray-900">{envCities.join(", ")}</dd>
+                      </div>
+                    )}
+                    {envStates.length > 0 && (
+                      <div>
+                        <dt className="font-medium text-gray-600 mb-1">States</dt>
+                        <dd className="text-gray-900">{envStates.join(", ")}</dd>
+                      </div>
+                    )}
+                  </dl>
+                </CardContent>
+              </Card>
+            </SectionBlock>
+          )}
+
+          {/* Section: Documents */}
+          {documentsList.length > 0 && (
+            <SectionBlock title="Documents">
+              <DocumentViewer documents={documentsList} />
+            </SectionBlock>
+          )}
+
+          {/* Section: Projects */}
+          <SectionBlock title="Projects">
+            <ProjectsList agencyId={id!} getProjectViewUrl={getProjectViewUrl} />
+          </SectionBlock>
         </div>
       </div>
 
@@ -495,7 +638,7 @@ const AgencyProfile = () => {
         handleStatusChange={handleStatusChange}
       />
 
-      {/* Deactivate Confirmation */}
+      {/* Deactivate Confirmation (Edit modal flow) */}
       <AlertDialog
         open={showDeactivateDialog}
         onOpenChange={setShowDeactivateDialog}
@@ -533,36 +676,131 @@ const AgencyProfile = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Admin: Deactivate confirmation */}
+      <AlertDialog
+        open={showAdminDeactivateConfirm}
+        onOpenChange={setShowAdminDeactivateConfirm}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Deactivate agency?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This agency will no longer be able to create or manage projects until you activate them again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => updateAgencyStatus(false)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
 
-// ——— Helper Components (unchanged) ———
+// ——— Helper Components ———
 const ProfileSkeleton = () => (
-  <div className="container mx-auto p-6 max-w-6xl">
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-20 w-20 rounded-full" />
-          <div>
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-32 mt-2" />
+  <div className="min-h-screen bg-gray-50 py-6">
+    <div className="container mx-auto px-4 max-w-5xl space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-4 w-16 rounded" />
+        <Skeleton className="h-3 w-3 rounded-full shrink-0" />
+        <Skeleton className="h-4 w-32 rounded" />
+      </div>
+
+      {/* Hero card */}
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4 min-w-0">
+            <Skeleton className="h-20 w-20 rounded-full shrink-0" />
+            <div className="space-y-2 min-w-0">
+              <Skeleton className="h-8 w-56" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid md:grid-cols-1 gap-8">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="space-y-4">
-              <Skeleton className="h-6 w-32" />
-              {[...Array(4)].map((_, j) => (
-                <Skeleton key={j} className="h-4 w-full" />
+          <Skeleton className="h-10 w-28 rounded-md shrink-0" />
+        </CardHeader>
+      </Card>
+
+      {/* Section: Overview */}
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-20" />
+        <Card className="border shadow-sm">
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-5 w-5 rounded shrink-0" />
+                  <Skeleton className="h-4 flex-1 min-w-0" />
+                </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section: Contact */}
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-36" />
+        <Card className="border shadow-sm">
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex gap-2">
+                  <Skeleton className="h-4 w-24 shrink-0" />
+                  <Skeleton className="h-4 flex-1" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section: Focus / content block */}
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-40" />
+        <Card className="border shadow-sm">
+          <CardContent className="pt-6 space-y-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-4 w-3/4" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section: Projects */}
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-20" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <CardHeader className="pb-3">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-5 w-16 rounded-full mt-2" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-2 w-full rounded-full" />
+              </CardContent>
+            </Card>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   </div>
 );
 
@@ -576,6 +814,21 @@ const ErrorState = ({ message }: { message: string }) => (
   </div>
 );
 
+function SectionBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mb-8">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
 const InfoSection = ({
   title,
   data,
@@ -583,35 +836,42 @@ const InfoSection = ({
   title: string;
   data: Record<string, string | null | undefined>;
 }) => (
-  <Card className="space-y-3 p-6">
-    <h3 className="text-lg font-semibold text-diaspora-darkBlue">{title}</h3>
-    <dl className="space-y-2 text-sm">
-      {Object.entries(data).map(([key, value]) => (
-        <div key={key} className="flex">
-          <dt className="font-medium text-gray-600 flex-1">{key}:</dt>
-          <dd className="text-gray-900 ml-4 flex-1">
-            {value ? (
-              key === "Website" ? (
-                <a
-                  href={value}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  {value}
-                </a>
-              ) : (
-                value
-              )
-            ) : (
-              "—"
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
+  <Card className="border shadow-sm">
+    <CardContent className="pt-6">
+      {title ? (
+        <h3 className="text-base font-semibold text-diaspora-darkBlue mb-4">{title}</h3>
+      ) : null}
+      <dl className="space-y-3 text-sm">
+        {Object.entries(data)
+          .filter(([, value]) => value != null && value !== "")
+          .map(([key, value]) => (
+            <div key={key} className="flex flex-wrap gap-x-2">
+              <dt className="font-medium text-gray-600 shrink-0">{key}:</dt>
+              <dd className="text-gray-900">
+                {value ? (
+                  key === "Website" ? (
+                    <a
+                      href={value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-diaspora-blue hover:underline"
+                    >
+                      {value}
+                    </a>
+                  ) : (
+                    value
+                  )
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
+          ))}
+      </dl>
+    </CardContent>
   </Card>
 );
+
 
 interface EditModalProps {
   open: boolean;

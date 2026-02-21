@@ -2,35 +2,79 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { FolderOpen, AlertCircle, RefreshCw } from "lucide-react";
 
 export function LoadingSkeleton() {
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="rounded-xl border border-gray-200 bg-white overflow-hidden animate-pulse"
-        >
-          <div className="h-6 bg-gray-100 mx-5 mt-5 rounded w-16" />
-          <div className="px-5 pt-4 space-y-2">
-            <div className="h-5 bg-gray-100 rounded w-3/4" />
-            <div className="h-4 bg-gray-100 rounded w-1/2" />
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-72" />
+      </div>
+
+      {/* Status count cards (6 cards) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div
+            key={i}
+            className="rounded-xl border border-slate-200 bg-white p-4 space-y-2"
+          >
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5 rounded" />
+              <Skeleton className="h-4 flex-1 max-w-[80px]" />
+            </div>
+            <Skeleton className="h-8 w-12" />
           </div>
-          <div className="px-5 py-4 space-y-3">
-            <div className="h-3 bg-gray-100 rounded w-full" />
-            <div className="h-3 bg-gray-100 rounded w-full" />
-            <div className="h-3 bg-gray-100 rounded w-2/3" />
-          </div>
-          <div className="px-5 pb-4 space-y-2">
-            <div className="h-4 bg-gray-100 rounded w-full" />
-            <div className="h-4 bg-gray-100 rounded w-2/3" />
-          </div>
-          <div className="px-5 pb-5">
-            <div className="h-10 bg-gray-100 rounded-xl w-full" />
+        ))}
+      </div>
+
+      {/* Filters section */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <Skeleton className="h-10 flex-1 min-w-[200px] max-w-xs rounded-lg" />
+          <Skeleton className="h-10 w-32 rounded-lg" />
+          <Skeleton className="h-10 w-28 rounded-lg" />
+          <Skeleton className="h-10 w-24 rounded-lg" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-20 rounded-lg" />
+            <Skeleton className="h-10 w-20 rounded-lg" />
           </div>
         </div>
-      ))}
+        <Skeleton className="h-4 w-40" />
+      </div>
+
+      {/* Project cards grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div
+            key={i}
+            className="rounded-xl border border-slate-200 bg-white overflow-hidden"
+          >
+            <div className="p-5 space-y-4">
+              <div className="flex items-start justify-between gap-2">
+                <Skeleton className="h-5 w-20 rounded" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+              <div className="flex gap-4 pt-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { routes } from "@/lib/routes";
@@ -40,8 +40,11 @@ import {
 const ViewProject = () => {
   const { projectId } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromAgencyId = searchParams.get("from_agency");
 
   const [project, setProject] = useState<Project | null>(null);
+  const [fromAgency, setFromAgency] = useState<{ name: string; listHref: string; viewHref: string } | null>(null);
   const [volunteers, setVolunteers] = useState<VolunteerRow[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,6 +81,29 @@ const ViewProject = () => {
           .single();
         setUserId(user.id);
         setUserRole(profile?.role || null);
+
+        if (fromAgencyId && (profile?.role === "admin" || profile?.role === "super_admin")) {
+          try {
+            const { data: agencyProfile } = await supabase
+              .from("profiles")
+              .select("organization_name")
+              .eq("id", fromAgencyId)
+              .eq("role", "agency")
+              .single();
+            const name = agencyProfile?.organization_name?.trim() || "Agency";
+            const listHref =
+              profile?.role === "super_admin" ? routes.superAdminAgencies : routes.adminAgencies;
+            const viewHref =
+              profile?.role === "super_admin"
+                ? routes.superAdminViewAgency(fromAgencyId)
+                : routes.adminViewAgency(fromAgencyId);
+            setFromAgency({ name, listHref, viewHref });
+          } catch {
+            setFromAgency(null);
+          }
+        } else {
+          setFromAgency(null);
+        }
 
         const { data: projectData, error: projectErr } = await supabase
           .from("projects")
@@ -221,7 +247,7 @@ const ViewProject = () => {
     };
 
     fetchData();
-  }, [projectId, router]);
+  }, [projectId, router, fromAgencyId]);
 
   const isAdmin = ["admin", "super_admin"].includes(userRole || "");
 
@@ -450,7 +476,11 @@ const ViewProject = () => {
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20">
       <div className="container mx-auto px-3 sm:px-4 lg:px-5 py-6 max-w-6xl space-y-6">
-        <ViewProjectHeader project={project} projectsHref={projectsHref} />
+        <ViewProjectHeader
+          project={project}
+          projectsHref={projectsHref}
+          fromAgency={fromAgency}
+        />
 
         <div className="space-y-5">
           <ProjectOverviewSection project={project} />

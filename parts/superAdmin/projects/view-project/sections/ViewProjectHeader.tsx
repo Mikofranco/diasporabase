@@ -13,27 +13,64 @@ import {
 import { Building2, Tag } from "lucide-react";
 import { Project } from "../types";
 
+interface FromAgencyBreadcrumb {
+  name: string;
+  listHref: string;
+  viewHref: string;
+}
+
 interface ViewProjectHeaderProps {
   project: Project;
   projectsHref: string;
+  fromAgency?: FromAgencyBreadcrumb | null;
 }
 
-export function ViewProjectHeader({ project, projectsHref }: ViewProjectHeaderProps) {
+export function ViewProjectHeader({
+  project,
+  projectsHref,
+  fromAgency,
+}: ViewProjectHeaderProps) {
   return (
     <>
       <Breadcrumb>
         <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href={projectsHref}>Projects</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage className="font-medium text-foreground truncate max-w-[200px] sm:max-w-md">
-              {project.title}
-            </BreadcrumbPage>
-          </BreadcrumbItem>
+          {fromAgency ? (
+            <>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href={fromAgency.listHref}>Agencies</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href={fromAgency.viewHref} className="truncate max-w-[180px] sm:max-w-xs">
+                    {fromAgency.name}
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="font-medium text-foreground truncate max-w-[200px] sm:max-w-md">
+                  {project.title}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          ) : (
+            <>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href={projectsHref}>Projects</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="font-medium text-foreground truncate max-w-[200px] sm:max-w-md">
+                  {project.title}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          )}
         </BreadcrumbList>
       </Breadcrumb>
 
