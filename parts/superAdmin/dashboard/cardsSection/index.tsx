@@ -1,60 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import SmallCard from './small-card';
 import { supabase } from '@/lib/supabase/client';
-import { Project } from '@/lib/types';
-
-const fetchProjectsByStatus = async (status: string): Promise<Project[]> => {
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('status', status);
-
-  if (error) {
-    console.error(`Error fetching projects with status ${status}:`, error);
-    return [];
-  }
-
-  return data || [];
-};
-
-const fetchTotalAgencies = async (): Promise<number> => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('role', 'agency');
-
-  if (error) {
-    console.error('Error fetching agencies:', error);
-    return 0;
-  }
-
-  return data?.length || 0;
-};
+import { Users, Building2, Briefcase } from 'lucide-react';
 
 const CardsSection = () => {
-  const [pendingProjects, setPendingProjects] = useState<Project[]>([]);
-  const [approvedProjects, setApprovedProjects] = useState<Project[]>([]);
-  const [rejectedProjects, setRejectedProjects] = useState<Project[]>([]);
+  const [totalVolunteers, setTotalVolunteers] = useState<number>(0);
   const [totalAgencies, setTotalAgencies] = useState<number>(0);
+  const [totalProjects, setTotalProjects] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const [pending, approved, rejected, agencies] = await Promise.all([
-          fetchProjectsByStatus('pending'),
-          fetchProjectsByStatus('active'),
-          fetchProjectsByStatus('cancelled'),
-          fetchTotalAgencies(),
+        const [
+          { count: volunteersCount },
+          { count: agenciesCount },
+          { count: projectsCount },
+        ] = await Promise.all([
+          supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'volunteer'),
+          supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'agency'),
+          supabase.from('projects').select('*', { count: 'exact', head: true }),
         ]);
 
-        setPendingProjects(pending);
-        setApprovedProjects(approved);
-        setRejectedProjects(rejected);
-        setTotalAgencies(agencies);
+        setTotalVolunteers(volunteersCount ?? 0);
+        setTotalAgencies(agenciesCount ?? 0);
+        setTotalProjects(projectsCount ?? 0);
       } catch (error) {
-        console.error('Error loading dashboard data:', error);
+        console.error('Error loading dashboard stats:', error);
       } finally {
         setIsLoading(false);
       }
@@ -64,34 +37,31 @@ const CardsSection = () => {
   }, []);
 
   if (isLoading) {
-    return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">  
-      {Array.from({ length: 4 }).map((_, index) => (
-        <SmallCard key={index} count={0} image="/svg/placeholder.svg" title="Loading..." />
-      ))}
-    </div>;
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+        {[1, 2, 3].map((i) => (
+          <SmallCard key={i} count={0} title="Loading..." />
+        ))}
+      </div>
+    );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <SmallCard 
-        count={pendingProjects.length} 
-        image="/svg/admin-pending-project.svg" 
-        title="Pending Requests" 
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 min-w-0">
+      <SmallCard
+        count={totalVolunteers}
+        icon={<Users />}
+        title="Total Volunteers"
       />
-      <SmallCard 
-        count={approvedProjects.length} 
-        image="/svg/admin-approved.svg" 
-        title="Approved Projects" 
+      <SmallCard
+        count={totalAgencies}
+        icon={<Building2 />}
+        title="Total Agencies"
       />
-      <SmallCard 
-        count={totalAgencies} 
-        image="/svg/admin-total.svg" 
-        title="Total Agencies" 
-      />
-      <SmallCard 
-        count={rejectedProjects.length} 
-        image="/svg/admin-rejcted.svg" 
-        title="Rejected Projects" 
+      <SmallCard
+        count={totalProjects}
+        icon={<Briefcase />}
+        title="Total Projects"
       />
     </div>
   );
