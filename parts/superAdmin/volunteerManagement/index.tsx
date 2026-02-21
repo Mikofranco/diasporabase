@@ -1,15 +1,29 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { routes } from '@/lib/routes';
+
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Users, UserCheck, UserX } from "lucide-react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
+import { VolunteerFilters } from "./VolunteerFilters";
+import { VolunteerPaginationBar } from "./PaginationBar";
+import {
+  DEFAULT_VOLUNTEER_FILTERS,
+  DEFAULT_VOLUNTEER_PAGE_SIZE,
+  type VolunteerFilters as VolunteerFiltersType,
+} from "./filters";
 
 interface Volunteer {
   id: string;
@@ -23,182 +37,278 @@ interface Volunteer {
 const VolunteersManagement: React.FC = () => {
   const router = useRouter();
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
-  const [filteredVolunteers, setFilteredVolunteers] = useState<Volunteer[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [totalCount, setTotalCount] = useState(0);
+  const [filters, setFilters] = useState<VolunteerFiltersType>(DEFAULT_VOLUNTEER_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<VolunteerFiltersType>(DEFAULT_VOLUNTEER_FILTERS);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_VOLUNTEER_PAGE_SIZE);
 
-  useEffect(() => {
-    const fetchUserAndVolunteers = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          router.push(routes.login);
-          return;
-        }
-
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) throw profileError;
-
-        if (!['admin', 'super_admin'].includes(profile.role)) {
-          toast.error('You do not have permission to manage volunteers.');
-          setLoading(false);
-          return;
-        }
-
-        setUserRole(profile.role);
-
-        // Fetch volunteers
-        const { data: volunteersData, error: volunteersError } = await supabase
-          .from('profiles')
-          .select('id, full_name, email, is_active, skills')
-          .eq('role', 'volunteer');
-
-        if (volunteersError) throw volunteersError;
-
-        // Fetch confirmed projects from project_volunteers
-        const volunteersWithProjects = await Promise.all(//@ts-ignore
-          volunteersData.map(async (volunteer) => {
-            const { data: projectsData, error: projectsError } = await supabase
-              .from('project_volunteers')
-              .select('project:projects(id, title)')
-              .eq('volunteer_id', volunteer.id);
-
-            if (projectsError) throw projectsError;
-
-            return {
-              ...volunteer,
-              projects: projectsData.map((req: any) => req.project),
-            };
-          })
-        );
-
-        setVolunteers(volunteersWithProjects);
-        setFilteredVolunteers(volunteersWithProjects);
-      } catch (err) {
-        toast.error('Error fetching data: ' + (err as Error).message);
-      } finally {
-        setLoading(false);
+  const fetchVolunteers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push(routes.login);
+        return;
       }
-    };
 
-    fetchUserAndVolunteers();
-  }, [router]);
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
 
-  // Update filtered volunteers when statusFilter changes
-  useEffect(() => {
-    if (statusFilter === 'all') {
-      setFilteredVolunteers(volunteers);
-    } else {
-      const isActive = statusFilter === 'active';
-      setFilteredVolunteers(volunteers.filter((volunteer) => volunteer.is_active === isActive));
+      if (profileError) throw profileError;
+
+      if (!["admin", "super_admin"].includes(profile.role)) {
+        toast.error("You do not have permission to manage volunteers.");
+        setLoading(false);
+        return;
+      }
+
+      setUserRole(profile.role);
+
+      const f = appliedFilters;
+      let query = supabase
+        .from("profiles")
+        .select("id, full_name, email, is_active, skills", { count: "exact" })
+        .eq("role", "volunteer")
+        .order("full_name", { ascending: true });
+
+      if (f.status === "active") query = query.eq("is_active", true);
+      if (f.status === "inactive") query = query.eq("is_active", false);
+      if (f.skill?.trim()) query = query.overlaps("skills", [f.skill.trim()]);
+      if (f.search?.trim()) {
+        const term = `%${f.search.trim()}%`;
+        query = query.or(`full_name.ilike.${term},email.ilike.${term}`);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data: volunteersData, error: volunteersError, count } = await query.range(from, to);
+
+      if (volunteersError) throw volunteersError;
+
+      const list = volunteersData ?? [];
+
+      const volunteersWithProjects = await Promise.all(
+        list.map(async (volunteer: { id: string; full_name: string | null; email: string; is_active: boolean; skills: string[] | null }) => {
+          const { data: projectsData, error: projectsError } = await supabase
+            .from("project_volunteers")
+            .select("project:projects(id, title)")
+            .eq("volunteer_id", volunteer.id);
+
+          if (projectsError) throw projectsError;
+
+          const projects = (projectsData ?? []).map((req: { project: { id: string; title: string } }) => req.project);
+
+          return {
+            ...volunteer,
+            projects,
+          };
+        })
+      );
+
+      setVolunteers(volunteersWithProjects);
+      setTotalCount(count ?? 0);
+    } catch (err) {
+      toast.error("Error fetching data: " + (err as Error).message);
+    } finally {
+      setLoading(false);
     }
-  }, [statusFilter, volunteers]);
+  }, [appliedFilters, page, pageSize, router]);
 
-  const handleRowClick = (volunteerId: string) => {
-    router.push(`/${userRole === "super_admin" ? "super-admin" : userRole}/volunteers/${volunteerId}`);
+  useEffect(() => {
+    fetchVolunteers();
+  }, [fetchVolunteers]);
+
+  const handleApplyFilters = () => {
+    setAppliedFilters(filters);
+    setPage(1);
   };
 
-  if (loading) {
+  const handleClearFilters = () => {
+    setFilters(DEFAULT_VOLUNTEER_FILTERS);
+    setAppliedFilters(DEFAULT_VOLUNTEER_FILTERS);
+    setPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+  };
+
+  const handleRowClick = (volunteerId: string) => {
+    const base = userRole === "super_admin" ? "super-admin" : userRole;
+    router.push(`/${base}/volunteers/${volunteerId}`);
+  };
+
+  const showPagination = !loading && totalCount > 0;
+
+  if (loading && volunteers.length === 0) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-50">
+      <div className="flex justify-center items-center min-h-[400px] bg-gray-50/80 rounded-xl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Manage Volunteers</h1>
-      <Card className="shadow-lg border-none">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-xl font-semibold text-gray-800">Volunteers List</CardTitle>
-          <div className="w-40">
-            <Select
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-              aria-label="Filter volunteers by status"
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+    <div className="container mx-auto p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Manage Volunteers</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          View and manage all volunteers, filter by status or skill, and open profiles
+        </p>
+      </div>
+
+      <VolunteerFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        onApply={handleApplyFilters}
+        onClear={handleClearFilters}
+        resultCount={volunteers.length}
+        totalCount={totalCount}
+      />
+
+      <Card className="shadow-sm border border-gray-200 overflow-hidden">
+        <CardHeader className="border-b bg-gray-50/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Users className="h-5 w-5 text-diaspora-blue" />
+              Volunteers List
+            </CardTitle>
+            {totalCount > 0 && (
+              <span className="text-sm text-gray-500">
+                {totalCount} volunteer{totalCount !== 1 ? "s" : ""} total
+              </span>
+            )}
           </div>
         </CardHeader>
-        <CardContent>
-          {filteredVolunteers.length === 0 ? (
-            <p className="text-muted-foreground text-center">
-              {statusFilter === 'all'
-                ? 'No volunteers found.'
-                : `No ${statusFilter} volunteers found.`}
-            </p>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex justify-center items-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : volunteers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+              <Users className="h-12 w-12 text-gray-300 mb-3" />
+              <p className="text-muted-foreground font-medium">
+                No volunteers found
+              </p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                {appliedFilters.search || appliedFilters.status !== "all" || appliedFilters.skill
+                  ? "Try adjusting your filters or clear them to see all volunteers."
+                  : "There are no volunteers on the platform yet."}
+              </p>
+            </div>
           ) : (
-            <Table>
-              <TableHeader className='bg-gray-100 text-black'>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Skills</TableHead>
-                  <TableHead>Projects</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredVolunteers.map((volunteer) => (
-                  <TableRow
-                    key={volunteer.id}
-                    className="cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                    onClick={() => handleRowClick(volunteer.id)}
-                  >
-                    <TableCell className="font-medium">{volunteer.full_name}</TableCell>
-                    <TableCell>{volunteer.email}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={cn(
-                          volunteer.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        )}
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-100/80 hover:bg-gray-100/80 border-b">
+                      <TableHead className="font-semibold text-gray-700">Name</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Email</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Status</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Skills</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Projects</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {volunteers.map((volunteer) => (
+                      <TableRow
+                        key={volunteer.id}
+                        className="cursor-pointer hover:bg-gray-50/80 transition-colors border-b last:border-0"
+                        onClick={() => handleRowClick(volunteer.id)}
                       >
-                        {volunteer.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {volunteer.skills?.length ? (
-                          volunteer.skills.map((skill) => (
-                            <Badge key={skill} variant="outline">
-                              {skill}
-                            </Badge>
-                          ))
-                        ) : (
-                          'None'
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {volunteer.projects.length ? (
-                        volunteer.projects.map((project) => (
-                          <Badge key={project.id} variant="secondary" className="mr-1">
-                            {project.title}
+                        <TableCell className="font-medium text-gray-900">
+                          {volunteer.full_name || "—"}
+                        </TableCell>
+                        <TableCell className="text-gray-600">{volunteer.email}</TableCell>
+                        <TableCell>
+                          <Badge
+                            className={cn(
+                              "gap-1",
+                              volunteer.is_active
+                                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                                : "bg-red-100 text-red-800 border-red-200"
+                            )}
+                          >
+                            {volunteer.is_active ? (
+                              <UserCheck className="h-3.5 w-3.5" />
+                            ) : (
+                              <UserX className="h-3.5 w-3.5" />
+                            )}
+                            {volunteer.is_active ? "Active" : "Inactive"}
                           </Badge>
-                        ))
-                      ) : (
-                        'None'
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {volunteer.skills?.length ? (
+                              volunteer.skills.slice(0, 3).map((skill) => (
+                                <Badge key={skill} variant="outline" className="text-xs font-normal">
+                                  {skill}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground text-sm">None</span>
+                            )}
+                            {volunteer.skills?.length > 3 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{volunteer.skills.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1 max-w-[220px]">
+                            {volunteer.projects?.length ? (
+                              volunteer.projects.slice(0, 2).map((project) => (
+                                <Badge
+                                  key={project.id}
+                                  variant="secondary"
+                                  className="text-xs font-normal truncate max-w-[100px]"
+                                  title={project.title}
+                                >
+                                  {project.title}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground text-sm">None</span>
+                            )}
+                            {volunteer.projects?.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{volunteer.projects.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {showPagination && (
+                <div className="border-t px-4 sm:px-6">
+                  <VolunteerPaginationBar
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
+                  />
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

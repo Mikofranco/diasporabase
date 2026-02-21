@@ -55,12 +55,14 @@ interface AssignProjectManagerProps {
   projectId: string;
   currentManagerId?: string | null;
   onManagerAssigned?: () => void;
+  disabled?: boolean;
 }
 
 export default function AssignProjectManager({
   projectId,
   currentManagerId,
   onManagerAssigned,
+  disabled = false,
 }: AssignProjectManagerProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -158,6 +160,7 @@ export default function AssignProjectManager({
               ? "border-orange-500 text-orange-700 hover:bg-orange-50"
               : "bg-emerald-600 hover:bg-emerald-700"
             }
+            disabled={disabled}
           >
             <UserCheck className="mr-2 h-4 w-4" />
             {currentManagerId ? "Change Manager" : "Assign Manager"}

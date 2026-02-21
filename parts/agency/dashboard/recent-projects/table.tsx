@@ -13,10 +13,9 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Eye, Pencil, Plus } from "lucide-react";
+import { ArrowUpDown, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -25,7 +24,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Project } from "@/lib/types";
+import { getProjectStatusStyle } from "../../projects/filters";
 import CreateProjectForm from "../../create-project";
 
 interface TableProps {
@@ -44,7 +45,15 @@ export const columns: ColumnDef<Project>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => <div className="capitalize">{row.getValue("status")}</div>,
+    cell: ({ row }) => {
+      const status = (row.getValue("status") as string) || "";
+      const { label, className } = getProjectStatusStyle(status);
+      return (
+        <Badge variant="outline" className={className}>
+          {label}
+        </Badge>
+      );
+    },
   },
   {
     accessorKey: "category",
@@ -81,19 +90,21 @@ export const columns: ColumnDef<Project>[] = [
     cell: ({ row, table }) => {
       const project = row.original;
       return (
-        <div className="flex items-center gap-1 justify-end">
+        <div className="flex items-center gap-2 justify-end">
           <Button
             variant="ghost"
-            className="text-[#0284C7] font-medium"//@ts-ignore
-            onClick={() => table.options.meta?.onView(project)}
+            size="sm"
+            className="text-sky-600 hover:text-sky-700 hover:bg-sky-50 font-medium"
+            onClick={() => (table.options.meta as any)?.onView(project)}
             aria-label={`View project ${project.title}`}
           >
-           View
+            View
           </Button>
           <Button
             variant="ghost"
-            className="text-gray-500 font-medium"//@ts-ignore
-            onClick={() => table.options.meta?.onEdit(project)}
+            size="sm"
+            className="text-slate-600 hover:text-slate-800 hover:bg-slate-100 font-medium"
+            onClick={() => (table.options.meta as any)?.onEdit(project)}
             aria-label={`Edit project ${project.title}`}
           >
             Edit
@@ -149,24 +160,32 @@ export function RecentProjectsTable({ data, onEdit, onView, onRefresh }: TablePr
   };
 
   return (
-    <div className="w-full bg-white p-4 rounded-lg shadow-sm border">
-      <div className="flex items-center py-4 justify-between">
-        <h2 className="font-semibold text-xl">Recent Projects</h2>
-        <Button className="action-btn font-semibold" onClick={handleCreateProjectClick}>
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-slate-900">Recent Projects</h2>
+        <Button
+          className="bg-diaspora-blue hover:bg-diaspora-blue/90 font-medium"
+          onClick={handleCreateProjectClick}
+        >
           <Plus className="h-4 w-4 mr-2" /> Add New Project
         </Button>
       </div>
       {showCreateForm && (
-        // @ts-ignore
-        <CreateProjectForm onClose={handleFormClose} onProjectCreated={handleProjectCreated} />
+        <CreateProjectForm
+          onClose={handleFormClose}
+          onProjectCreated={handleProjectCreated}
+        />
       )}
-      <div className="overflow-hidden rounded-md border">
+      <div className="overflow-hidden rounded-lg border border-slate-200">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="bg-blue-50">
+              <TableRow key={headerGroup.id} className="bg-slate-50 border-b border-slate-200">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead
+                    key={header.id}
+                    className="text-slate-700 font-medium text-xs uppercase tracking-wider"
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -178,9 +197,13 @@ export function RecentProjectsTable({ data, onEdit, onView, onRefresh }: TablePr
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                <TableRow
+                  key={row.id}
+                  className="border-b border-slate-100 hover:bg-slate-50/70 transition-colors"
+                  data-state={row.getIsSelected() && "selected"}
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="py-3">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -188,7 +211,7 @@ export function RecentProjectsTable({ data, onEdit, onView, onRefresh }: TablePr
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell colSpan={columns.length} className="h-24 text-center text-slate-500">
                   No results.
                 </TableCell>
               </TableRow>
@@ -196,25 +219,23 @@ export function RecentProjectsTable({ data, onEdit, onView, onRefresh }: TablePr
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-2 py-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          Next
+        </Button>
       </div>
     </div>
   );
