@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { User, Lock, Layers } from "lucide-react";
+import { User, Lock, Layers, UserPlus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { routes } from "@/lib/routes";
@@ -12,8 +12,10 @@ import type { Profile } from "./ProfileSettingsSection";
 import { ChangePasswordSection } from "./ChangePasswordSection";
 import { ProfileSettingsSection } from "./ProfileSettingsSection";
 import { SkillsetsSection } from "./SkillsetsSection";
+import { CreateAdminSection } from "./CreateAdminSection";
+import { ManageAdminSection } from "./ManageAdminSection";
 
-type SettingsSection = "password" | "profile" | "skillsets";
+type SettingsSection = "password" | "profile" | "skillsets" | "createAdmin" | "manageAdmin";
 
 const NAV_ITEMS: {
   id: SettingsSection;
@@ -29,6 +31,8 @@ const NAV_ITEMS: {
     description: "Add or edit skills & categories",
     icon: Layers,
   },
+  { id: "createAdmin", label: "Create Admin", description: "Create admin or super admin user", icon: UserPlus },
+  { id: "manageAdmin", label: "Manage Admin", description: "View and remove admin users", icon: Users },
 ];
 
 function SettingsSkeleton() {
@@ -38,7 +42,7 @@ function SettingsSkeleton() {
       <div className="flex flex-col md:flex-row gap-6">
         <nav className="w-full md:w-64 shrink-0" aria-hidden>
           <ul className="space-y-1 rounded-xl border border-gray-200/80 bg-white p-2 shadow-sm ring-1 ring-black/5">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <li key={i}>
                 <div className="flex items-center gap-4 rounded-lg px-4 py-3">
                   <Skeleton className="h-9 w-9 shrink-0 rounded-lg" />
@@ -131,6 +135,23 @@ const AdminSettings: React.FC = () => {
     setProfile((prev) => (prev ? { ...prev, ...updates } : null));
   };
 
+  // Restrict Create Admin and Manage Admin to super_admin only
+  const isSuperAdmin = profile?.role === "super_admin";
+  const visibleNavItems = isSuperAdmin
+    ? NAV_ITEMS
+    : NAV_ITEMS.filter(
+        (item) => item.id !== "createAdmin" && item.id !== "manageAdmin"
+      );
+
+  // If non–super_admin has a super_admin-only section selected, switch to password
+  useEffect(() => {
+    if (!profile || isSuperAdmin) return;
+    if (activeSection === "createAdmin" || activeSection === "manageAdmin") {
+      setActiveSection("password");
+      toast.error("Only Super Admins can access this section.");
+    }
+  }, [profile, isSuperAdmin, activeSection]);
+
   if (loading) {
     return <SettingsSkeleton />;
   }
@@ -149,7 +170,7 @@ const AdminSettings: React.FC = () => {
       <div className="flex flex-col md:flex-row gap-6">
         <nav className="w-full md:w-64 shrink-0" aria-label="Settings sections">
           <ul className="space-y-1 rounded-xl border border-gray-200/80 bg-white p-2 shadow-sm ring-1 ring-black/5">
-            {NAV_ITEMS.map(({ id, label, description, icon: Icon }) => {
+            {visibleNavItems.map(({ id, label, description, icon: Icon }) => {
               const isActive = activeSection === id;
               return (
                 <li key={id}>
@@ -204,6 +225,10 @@ const AdminSettings: React.FC = () => {
             />
           )}
           {activeSection === "skillsets" && <SkillsetsSection />}
+          {activeSection === "createAdmin" && <CreateAdminSection />}
+          {activeSection === "manageAdmin" && (
+            <ManageAdminSection currentUserId={profile.id} />
+          )}
         </div>
       </div>
     </div>
