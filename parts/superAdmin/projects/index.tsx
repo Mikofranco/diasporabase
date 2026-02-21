@@ -17,15 +17,30 @@ import {
   DEFAULT_PAGE_SIZE,
   type ProjectFilters,
 } from "./filters";
-import { Loader2 } from "lucide-react";
+import { PROJECT_STATUS_STYLES } from "./filters";
+import { Loader2, FolderOpen, Clock, CheckCircle2, CheckCircle, XCircle, Ban } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const supabase = createClient();
+
+const STATUS_KEYS = ["pending", "active", "approved", "completed", "rejected", "cancelled"] as const;
+const STATUS_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  pending: Clock,
+  active: CheckCircle2,
+  approved: CheckCircle,
+  completed: FolderOpen,
+  rejected: XCircle,
+  cancelled: Ban,
+};
+
+type StatusCounts = Record<string, number>;
 
 const AdminProjectsScreen: React.FC = () => {
   const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<StatusCounts>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ProjectFilters>(DEFAULT_FILTERS);
@@ -79,6 +94,19 @@ const AdminProjectsScreen: React.FC = () => {
 
       setProjects(projectsData ?? []);
       setTotalCount(count ?? 0);
+
+      // Fetch status counts in parallel (unfiltered totals)
+      const countPromises = STATUS_KEYS.map(async (status) => {
+        const { count: c } = await supabase
+          .from("projects")
+          .select("id", { count: "exact", head: true })
+          .eq("status", status);
+        return { status, count: c ?? 0 };
+      });
+      const countResults = await Promise.all(countPromises);
+      const counts: StatusCounts = {};
+      countResults.forEach(({ status, count }) => { counts[status] = count; });
+      setStatusCounts(counts);
     } catch (err) {
       setError("Error fetching data: " + (err as Error).message);
     } finally {
@@ -121,10 +149,6 @@ const AdminProjectsScreen: React.FC = () => {
   if (loading && !projects.length) {
     return (
       <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin text-sky-600" />
-          <span className="text-sm text-gray-600">Checking access...</span>
-        </div>
         <LoadingSkeleton />
       </div>
     );
@@ -140,16 +164,39 @@ const AdminProjectsScreen: React.FC = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Manage Projects
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            View and manage all projects across the platform
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Manage Projects
+        </h1>
+        <p className="text-sm text-gray-500 mt-1">
+          View and manage all projects across the platform
+        </p>
       </div>
+
+      {showFilters && Object.keys(statusCounts).length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {STATUS_KEYS.map((status) => {
+            const style = PROJECT_STATUS_STYLES[status] ?? PROJECT_STATUS_STYLES.pending;
+            const Icon = STATUS_ICONS[status] ?? Clock;
+            const count = statusCounts[status] ?? 0;
+            return (
+              <div
+                key={status}
+                className={cn(
+                  "rounded-xl border p-4 transition-shadow hover:shadow-md",
+                  style.className
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className="h-5 w-5 shrink-0 opacity-80" />
+                  <span className="font-semibold text-sm">{style.label}</span>
+                </div>
+                <p className="text-2xl font-bold mt-2">{count}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {showFilters && (
         <ProjectsFilters

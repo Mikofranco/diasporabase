@@ -1,81 +1,41 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import {
-  Users,
-  Calendar,
-  Tag,
-  MapPin,
-  FileText,
-  Building2,
-  Mail,
-  User,
-  Pencil,
-  X,
-} from "lucide-react";
-// import ProjectRecommendation from "@/parts/agency/projects/project-recommendation";
 import { routes } from "@/lib/routes";
-import { cn } from "@/lib/utils";
-import DocumentViewer from "@/components/document-viewer";
 import { RejectProjectDialog } from "@/components/dialogues/reject-project";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { useSendMail } from "@/services/mail";
-import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
-import { expertiseData } from "@/data/expertise";
-import { Profile } from "@/lib/types";
+import { toast } from "sonner";
 import { projectRejectedHtml } from "@/lib/email-templates/rejectProject";
 import { projectApprovedHtml } from "@/lib/email-templates/approveProject";
 import { getProjectStatusStyle } from "../filters";
-
-// You can expand this type based on your full projects table schema
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  organization_id: string;
-  organization_name: string;
-  location: { country: string; state: string; lga: string } | null;
-  start_date: string;
-  end_date: string;
-  volunteers_registered: number;
-  volunteers_needed: number;
-  status: string;
-  category: string;
-  required_skills: string[];
-  country: string;
-  state: string;
-  lga: string;
-  created_at: string;
-  updated_at: string;
-  documents?: Array<{ title: string; url: string }>;
-  organization?: Profile | null;
-}
-
-interface VolunteerRow {
-  id: string;
-  full_name: string;
-  email: string;
-  joined_at: string;
-}
+import {
+  type Project,
+  type RejectionReasonRow,
+  type VolunteerRow,
+  type MilestoneRow,
+  type MilestoneDeliverableRow,
+  type MilestoneWithDeliverables,
+} from "./types";
+import { MAX_REJECTIONS, THIRD_REJECTION_CANCEL_REASON } from "./constants";
+import { ViewProjectSkeleton } from "./ViewProjectSkeleton";
+import { EditSkillsModal } from "./EditSkillsModal";
+import { CancelProjectDialog } from "./CancelProjectDialog";
+import {
+  ViewProjectHeader,
+  ProjectOverviewSection,
+  BasicInfoSection,
+  TimelineLocationSection,
+  VolunteersSection,
+  RequiredSkillsSection,
+  MilestonesSection,
+  RejectionReasonsSection,
+  CancellationSection,
+  SupportingDocumentsSection,
+  ProjectActionBar,
+} from "./sections";
 
 const ViewProject = () => {
   const { projectId } = useParams();
@@ -87,11 +47,18 @@ const ViewProject = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [isApprovingProject, setIsApprovingProject] = useState(false);
+  const [isCancellingProject, setIsCancellingProject] = useState(false);
   const [showEditSkillsModal, setShowEditSkillsModal] = useState(false);
   const [editingSkills, setEditingSkills] = useState<string[]>([]);
   const [savingSkills, setSavingSkills] = useState(false);
+  const [rejectionReasons, setRejectionReasons] = useState<RejectionReasonRow[]>([]);
+  const [milestones, setMilestones] = useState<MilestoneWithDeliverables[]>([]);
+  const [cancelledByName, setCancelledByName] = useState<string | null>(null);
+  const [approvedByName, setApprovedByName] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,7 +71,6 @@ const ViewProject = () => {
           return;
         }
 
-        // Get user role
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")
@@ -113,20 +79,19 @@ const ViewProject = () => {
         setUserId(user.id);
         setUserRole(profile?.role || null);
 
-        // Get project
         const { data: projectData, error: projectErr } = await supabase
           .from("projects")
           .select(
             `
-    *,
-    organization:organization_id (
-      email,
-      contact_person_phone,
-      contact_person_email,
-      contact_person_first_name,
-      contact_person_last_name
-    )
-  `,
+            *,
+            organization:organization_id (
+              email,
+              contact_person_phone,
+              contact_person_email,
+              contact_person_first_name,
+              contact_person_last_name
+            )
+          `
           )
           .eq("id", projectId as string)
           .single();
@@ -136,8 +101,70 @@ const ViewProject = () => {
 
         setProject(projectData);
 
-        // Volunteers: fetch via API so profiles are read server-side with service role
-        // (project_volunteers -> volunteer_id, then profiles by id)
+        const cancelledBy = (projectData as Project).cancelled_by;
+        if (cancelledBy) {
+          const { data: cancelProfile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", cancelledBy)
+            .single();
+          setCancelledByName(cancelProfile?.full_name?.trim() || "Unknown");
+        } else {
+          setCancelledByName(null);
+        }
+
+        const approvedBy = (projectData as Project).approved_by;
+        if (approvedBy) {
+          const { data: approveProfile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", approvedBy)
+            .single();
+          setApprovedByName(approveProfile?.full_name?.trim() || "Unknown");
+        } else {
+          setApprovedByName(null);
+        }
+
+        const { data: reasonsData } = await supabase
+          .from("rejection_reasons")
+          .select("id, reason_text, internal_note, created_at, rejected_by")
+          .eq("project_id", projectId as string)
+          .order("created_at", { ascending: false });
+
+        const reasons = (reasonsData ?? []) as (RejectionReasonRow & {
+          rejected_by?: string | null;
+        })[];
+        const rejectedByIds = [
+          ...new Set(reasons.map((r) => r.rejected_by).filter(Boolean)),
+        ] as string[];
+        let rejectedByNameMap: Record<string, string> = {};
+        if (rejectedByIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("id, full_name")
+            .in("id", rejectedByIds);
+          if (profilesData?.length) {
+            rejectedByNameMap = profilesData.reduce(
+              (
+                acc: Record<string, string>,
+                p: { id: string; full_name?: string | null }
+              ) => {
+                acc[p.id] = p.full_name?.trim() || "Unknown";
+                return acc;
+              },
+              {}
+            );
+          }
+        }
+        setRejectionReasons(
+          reasons.map((r) => ({
+            ...r,
+            rejected_by_name: r.rejected_by
+              ? rejectedByNameMap[r.rejected_by] ?? "Unknown"
+              : null,
+          }))
+        );
+
         try {
           const res = await fetch(`/api/admin/projects/${projectId}/volunteers`);
           if (res.ok) {
@@ -148,6 +175,43 @@ const ViewProject = () => {
           }
         } catch {
           setVolunteers([]);
+        }
+
+        const { data: milesData } = await supabase
+          .from("milestones")
+          .select("id, title, description, due_date, status, project_id")
+          .eq("project_id", projectId as string)
+          .order("due_date");
+
+        if (milesData?.length) {
+          const milestoneIds = (milesData as MilestoneRow[]).map((m) => m.id);
+          const { data: delsData } = await supabase
+            .from("deliverables")
+            .select("id, title, description, due_date, status, milestone_id")
+            .in("milestone_id", milestoneIds)
+            .order("due_date");
+
+          const delsByMilestone = (delsData || []).reduce(
+            (
+              acc: Record<string, MilestoneDeliverableRow[]>,
+              d: MilestoneDeliverableRow
+            ) => {
+              const mid = d.milestone_id;
+              if (!acc[mid]) acc[mid] = [];
+              acc[mid].push(d);
+              return acc;
+            },
+            {}
+          );
+
+          setMilestones(
+            (milesData as MilestoneRow[]).map((m) => ({
+              ...m,
+              deliverables: delsByMilestone[m.id] || [],
+            })) as MilestoneWithDeliverables[]
+          );
+        } else {
+          setMilestones([]);
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Failed to load project");
@@ -162,129 +226,7 @@ const ViewProject = () => {
   const isAdmin = ["admin", "super_admin"].includes(userRole || "");
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50/50 pb-20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-6xl space-y-6">
-          {/* Breadcrumb skeleton */}
-          <nav className="flex items-center gap-2 text-sm">
-            <div className="h-4 w-24 rounded bg-gray-200 animate-pulse" />
-            <span className="text-gray-300">/</span>
-            <div className="h-4 w-48 rounded bg-gray-200 animate-pulse" />
-          </nav>
-
-          {/* Header skeleton */}
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="space-y-2 min-w-0">
-              <div className="h-8 w-3/4 max-w-md rounded bg-gray-200 animate-pulse" />
-              <div className="flex gap-4">
-                <div className="h-4 w-40 rounded bg-gray-100 animate-pulse" />
-                <div className="h-4 w-28 rounded bg-gray-100 animate-pulse" />
-              </div>
-            </div>
-            <div className="h-10 w-28 rounded-xl bg-gray-200 animate-pulse shrink-0" />
-          </div>
-
-          <div className="space-y-5">
-            {/* Overview card skeleton */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-                <div className="h-5 w-5 rounded bg-gray-200 animate-pulse" />
-                <div className="h-5 w-40 rounded bg-gray-200 animate-pulse" />
-              </div>
-              <div className="p-5 space-y-2">
-                <div className="h-3 w-full rounded bg-gray-100 animate-pulse" />
-                <div className="h-3 w-full rounded bg-gray-100 animate-pulse" />
-                <div className="h-3 w-5/6 rounded bg-gray-100 animate-pulse" />
-                <div className="h-3 w-2/3 rounded bg-gray-100 animate-pulse" />
-              </div>
-            </div>
-
-            {/* Basic Info + Timeline skeletons - side by side on lg */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100">
-                  <div className="h-4 w-36 rounded bg-gray-200 animate-pulse" />
-                </div>
-                <div className="p-5 space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex justify-between">
-                      <div className="h-4 w-16 rounded bg-gray-100 animate-pulse" />
-                      <div className="h-4 w-20 rounded bg-gray-100 animate-pulse" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100">
-                  <div className="h-4 w-40 rounded bg-gray-200 animate-pulse" />
-                </div>
-                <div className="p-5 space-y-4">
-                  <div className="flex gap-3">
-                    <div className="h-5 w-5 rounded bg-gray-100 animate-pulse shrink-0" />
-                    <div className="space-y-1 flex-1">
-                      <div className="h-4 w-48 rounded bg-gray-100 animate-pulse" />
-                      <div className="h-3 w-12 rounded bg-gray-100 animate-pulse" />
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="h-5 w-5 rounded bg-gray-100 animate-pulse shrink-0" />
-                    <div className="h-4 w-36 rounded bg-gray-100 animate-pulse" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Volunteers card skeleton */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <div className="h-4 w-24 rounded bg-gray-200 animate-pulse" />
-                <div className="h-4 w-12 rounded bg-gray-100 animate-pulse" />
-              </div>
-              <div className="p-5 space-y-4">
-                <div className="h-2 w-full rounded-full bg-gray-100 animate-pulse" />
-                <div className="space-y-2">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 py-2 px-3 rounded-lg bg-gray-50 border border-gray-100"
-                    >
-                      <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse shrink-0" />
-                      <div className="flex-1 space-y-1">
-                        <div className="h-3 w-32 rounded bg-gray-200 animate-pulse" />
-                        <div className="h-3 w-40 rounded bg-gray-100 animate-pulse" />
-                      </div>
-                      <div className="h-3 w-16 rounded bg-gray-100 animate-pulse shrink-0" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Required Skills skeleton */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <div className="h-4 w-32 rounded bg-gray-200 animate-pulse" />
-              </div>
-              <div className="p-5 flex flex-wrap gap-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div
-                    key={i}
-                    className="h-6 rounded-full bg-gray-100 animate-pulse"
-                    style={{ width: `${60 + (i % 3) * 24}px` }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom actions skeleton */}
-          <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="h-10 w-32 rounded-lg bg-gray-200 animate-pulse" />
-            <div className="h-10 w-28 rounded-lg bg-gray-100 animate-pulse" />
-          </div>
-        </div>
-      </div>
-    );
+    return <ViewProjectSkeleton />;
   }
 
   if (error || !project) {
@@ -299,29 +241,73 @@ const ViewProject = () => {
   }
 
   const confirmReject = async (reason: string, internalNote?: string) => {
-    console.log(
-      "Rejecting project:",
-      project,
-      "Reason:",
-      reason,
-      "Internal Note:",
-      internalNote,
-    );
     try {
-      const { error } = await supabase.from("rejection_reasons").insert({
-        project_id: project.id,
-        rejected_by: userId,
-        reason_text: reason,
-        internal_note: internalNote,
-        organization_id: project.organization_id,
-      });
+      const { count: existingCount } = await supabase
+        .from("rejection_reasons")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", project.id);
 
-      if (error) throw error;
+      const currentRejections = existingCount ?? 0;
+      if (currentRejections >= MAX_REJECTIONS) {
+        throw new Error(
+          "This project has already been rejected the maximum of 3 times and cannot be rejected again."
+        );
+      }
 
-      await supabase
-        .from("projects")
-        .update({ status: "rejected" })
-        .eq("id", project.id);
+      const { error: insertErr } = await supabase
+        .from("rejection_reasons")
+        .insert({
+          project_id: project.id,
+          rejected_by: userId,
+          reason_text: reason,
+          internal_note: internalNote,
+          organization_id: project.organization_id,
+        });
+
+      if (insertErr) throw insertErr;
+
+      const isThirdRejection = currentRejections + 1 === MAX_REJECTIONS;
+      const now = new Date().toISOString();
+
+      if (isThirdRejection) {
+        const { error: updateErr } = await supabase
+          .from("projects")
+          .update({
+            status: "cancelled",
+            cancelled_reason: THIRD_REJECTION_CANCEL_REASON,
+            cancelled_at: now,
+            cancelled_by: userId,
+            updated_at: now,
+          })
+          .eq("id", project.id);
+
+        if (updateErr) throw updateErr;
+        setProject((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: "cancelled",
+                cancelled_reason: THIRD_REJECTION_CANCEL_REASON,
+                cancelled_at: now,
+                cancelled_by: userId,
+              }
+            : null
+        );
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", userId)
+          .single();
+        setCancelledByName(profile?.full_name?.trim() || "Unknown");
+      } else {
+        await supabase
+          .from("projects")
+          .update({ status: "rejected", updated_at: now })
+          .eq("id", project.id);
+        setProject((prev) =>
+          prev ? { ...prev, status: "rejected" } : null
+        );
+      }
 
       await useSendMail({
         to:
@@ -332,50 +318,111 @@ const ViewProject = () => {
         html: projectRejectedHtml(
           project.organization?.contact_person_first_name || "there",
           project.title,
-          reason,
+          reason
         ),
       });
 
       router.refresh();
-    } catch (err: any) {
-      console.error(err.message || "Failed to reject project");
+      return { isThirdRejection };
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error("Failed to reject project");
     }
   };
 
   const approveProject = async () => {
-    setIsApprovingProject(true)
+    setIsApprovingProject(true);
     try {
-      await supabase
+      const now = new Date().toISOString();
+      const { error: updateErr } = await supabase
         .from("projects")
-        .update({ status: "active" })
+        .update({ status: "active", updated_at: now, approved_by: userId })
         .eq("id", project.id);
+
+      if (updateErr) throw updateErr;
+      setProject((prev) =>
+        prev
+          ? { ...prev, status: "active", updated_at: now, approved_by: userId }
+          : null
+      );
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", userId)
+        .single();
+      setApprovedByName(profile?.full_name?.trim() || "Unknown");
 
       await useSendMail({
         to:
           project.organization?.contact_person_email ||
           project.organization?.email ||
           "",
-
         subject: `Your Project Has Been Approved!`,
         html: projectApprovedHtml(
           project.organization?.contact_person_first_name || "there",
           project.title,
-          `${window.location.origin}/agency/projects/${projectId}`,
+          `${window.location.origin}/agency/projects/${projectId}`
         ),
       });
 
       router.refresh();
-      setIsApprovingProject(false)
-    } catch (err: any) {
-      console.log(err);
-      setIsApprovingProject(false)
+    } catch (err: unknown) {
+      console.error(err);
+    } finally {
+      setIsApprovingProject(false);
+    }
+  };
+
+  const cancelProject = async (reason: string) => {
+    const trimmed = reason?.trim() || "";
+    if (!trimmed) return;
+    setIsCancellingProject(true);
+    try {
+      const now = new Date().toISOString();
+      const { error: updateErr } = await supabase
+        .from("projects")
+        .update({
+          status: "cancelled",
+          cancelled_reason: trimmed,
+          cancelled_at: now,
+          cancelled_by: userId,
+          updated_at: now,
+        })
+        .eq("id", project.id);
+
+      if (updateErr) throw updateErr;
+      setProject((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "cancelled",
+              cancelled_reason: trimmed,
+              cancelled_at: now,
+              cancelled_by: userId,
+            }
+          : null
+      );
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", userId)
+        .single();
+      setCancelledByName(profile?.full_name?.trim() || "Unknown");
+      setShowCancelDialog(false);
+      setCancelReason("");
+      toast.success("Project cancelled successfully");
+      router.refresh();
+    } catch (err: unknown) {
+      console.error("Failed to cancel project:", err);
+    } finally {
+      setIsCancellingProject(false);
     }
   };
 
   const handleSaveSkills = async () => {
     setSavingSkills(true);
     try {
-      const { error } = await supabase
+      const { error: updateErr } = await supabase
         .from("projects")
         .update({
           required_skills: editingSkills,
@@ -383,8 +430,10 @@ const ViewProject = () => {
         })
         .eq("id", project.id);
 
-      if (error) throw error;
-      setProject((prev) => prev ? { ...prev, required_skills: editingSkills } : null);
+      if (updateErr) throw updateErr;
+      setProject((prev) =>
+        prev ? { ...prev, required_skills: editingSkills } : null
+      );
       setShowEditSkillsModal(false);
       router.refresh();
     } catch (err) {
@@ -400,308 +449,61 @@ const ViewProject = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-6xl space-y-6">
-        {/* Breadcrumb */}
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href={projectsHref}>Projects</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="font-medium text-foreground truncate max-w-[200px] sm:max-w-md">
-                {project.title}
-              </BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
-        {/* Header - admin cannot edit agency-provided content */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-              {project.title}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
-              <div className="flex items-center gap-1.5">
-                <Building2 className="h-4 w-4 shrink-0 text-gray-500" />
-                <span>{project.organization_name}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Tag className="h-4 w-4 shrink-0 text-gray-500" />
-                <span className="capitalize">{project.category}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="container mx-auto px-3 sm:px-4 lg:px-5 py-6 max-w-6xl space-y-6">
+        <ViewProjectHeader project={project} projectsHref={projectsHref} />
 
         <div className="space-y-5">
-          {/* 1. Overview Card - full width */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-diaspora-blue" />
-              <h2 className="text-lg font-semibold text-gray-900">
-                Project Overview
-              </h2>
-            </div>
-            <div className="p-5">
-              <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm">
-                {project.description || "No description provided."}
-              </p>
-            </div>
-          </div>
+          <ProjectOverviewSection project={project} />
 
-          {/* 2 & 3. Basic Info + Timeline & Location - side by side on lg */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <h3 className="font-semibold text-gray-900">Basic Information</h3>
-              </div>
-              <div className="p-5 space-y-4 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Status</span>
-                  <span
-                    className={cn(
-                      "font-medium px-2.5 py-1 rounded-lg text-xs border",
-                      statusStyle.className,
-                    )}
-                  >
-                    {statusStyle.label}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Category</span>
-                  <span className="font-medium">{project.category}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Created</span>
-                  <span className="font-medium">
-                    {new Date(project.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <h3 className="font-semibold text-gray-900">
-                  Timeline & Location
-                </h3>
-              </div>
-              <div className="p-5 space-y-4 text-sm">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <p className="font-medium">
-                      {new Date(project.start_date).toLocaleDateString()} —{" "}
-                      {new Date(project.end_date).toLocaleDateString()}
-                    </p>
-                    <p className="text-gray-500 text-xs">
-                      {new Date(project.end_date) < new Date()
-                        ? "Ended"
-                        : "Ongoing"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
-                  <div>
-                    <p className="font-medium">
-                      {project.country}
-                      {project.state && `, ${project.state}`}
-                      {project.lga && `, ${project.lga}`}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <BasicInfoSection
+              project={project}
+              statusStyle={statusStyle}
+              approvedByName={approvedByName}
+            />
+            <TimelineLocationSection project={project} />
           </div>
 
-          {/* 4. Volunteers - full width, stands alone */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Volunteers</h3>
-              <span className="text-sm font-medium text-gray-600">
-                {project.volunteers_registered} / {project.volunteers_needed}
-              </span>
-            </div>
-            <div className="p-5">
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-4">
-                <div
-                  className="h-full bg-diaspora-blue transition-all duration-300 rounded-full"
-                  style={{
-                    width: `${Math.min(
-                      project.volunteers_needed
-                        ? (project.volunteers_registered / project.volunteers_needed) * 100
-                        : 0,
-                      100,
-                    )}%`,
-                  }}
-                />
-              </div>
-              {volunteers.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">
-                  No volunteers joined yet
-                </p>
-              ) : (
-                <ul className="space-y-2 max-h-48 overflow-y-auto">
-                  {volunteers.map((vol) => (
-                    <li
-                      key={vol.id}
-                      className="flex items-center gap-3 py-2 px-3 rounded-lg bg-gray-50/80 border border-gray-100"
-                    >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-diaspora-blue/10 text-diaspora-blue">
-                        <User className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {vol.full_name}
-                        </p>
-                        {vol.email && (
-                          <p className="flex items-center gap-1 text-xs text-gray-500 truncate">
-                            <Mail className="h-3 w-3 shrink-0" />
-                            {vol.email}
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-xs text-gray-400 shrink-0">
-                        {new Date(vol.joined_at).toLocaleDateString()}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+          <VolunteersSection project={project} volunteers={volunteers} />
 
-          {/* 5. Required Skills - full width; admin can edit only this via modal */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Required Skills</h3>
-              {isAdmin && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-lg text-gray-500 hover:text-diaspora-blue hover:bg-diaspora-blue/5"
-                  onClick={() => {
-                    setEditingSkills([...(project.required_skills || [])]);
-                    setShowEditSkillsModal(true);
-                  }}
-                  aria-label="Edit required skills"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            <div className="p-5">
-              {project.required_skills?.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {project.required_skills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full border border-gray-200"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 italic">
-                  No specific skills required
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* 6. Supporting Documents - same block style as other sections */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-diaspora-blue" />
-              <h3 className="font-semibold text-gray-900">Supporting Documents</h3>
-            </div>
-            <div className="p-5">
-              <DocumentViewer
-                documents={(project.documents || []).map((d) => ({
-                  url: d.url,
-                  name: d.title,
-                }))}
-                title=""
-                emptyMessage="No documents uploaded yet."
-                className="shadow-none border-0 p-0 bg-transparent min-h-0"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Recommendation section - commented out */}
-        {/* <div className="mt-10">
-          <ProjectRecommendation
-            projectId={projectId as string}
-            volunteersNeeded={project.volunteers_needed}
-            volunteersRegistered={project.volunteers_registered}
+          <RequiredSkillsSection
+            project={project}
+            isAdmin={isAdmin}
+            onEditClick={() => {
+              setEditingSkills([...(project.required_skills || [])]);
+              setShowEditSkillsModal(true);
+            }}
           />
-        </div> */}
-      </div>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-        <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <Button
-            disabled={isApprovingProject}
-            onClick={approveProject}
-            className="rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-          >
-            {isApprovingProject ? "Approving…" : "Approve Project"}
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => setShowRejectDialog(true)}
-            className="rounded-lg"
-          >
-            Reject Project
-          </Button>
+
+          <MilestonesSection milestones={milestones} />
+          <RejectionReasonsSection rejectionReasons={rejectionReasons} />
+          <CancellationSection
+            project={project}
+            cancelledByName={cancelledByName}
+          />
+          <SupportingDocumentsSection project={project} />
         </div>
       </div>
-      <Dialog open={showEditSkillsModal} onOpenChange={setShowEditSkillsModal}>
-        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[90vh] rounded-xl flex flex-col p-0 gap-0 overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
-            <DialogTitle>Edit required skills</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-gray-600 px-6 pb-3 shrink-0">
-            Select skills from the category list below. Only admins can edit this section.
-          </p>
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4">
-            {showEditSkillsModal && (
-              <CheckboxReactHookFormMultiple
-                key="edit-skills-modal"
-                items={expertiseData}
-                initialValues={editingSkills}
-                onChange={(selected: string[]) => setEditingSkills(selected)}
-              />
-            )}
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0 px-6 py-4 border-t border-gray-100 shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowEditSkillsModal(false)}
-              className="rounded-lg"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveSkills}
-              disabled={savingSkills}
-              className="rounded-lg bg-diaspora-blue hover:bg-diaspora-blue/90"
-            >
-              {savingSkills ? "Saving…" : "Save skills"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+      <div className="container mx-auto px-3 sm:px-4 lg:px-5 max-w-6xl">
+        <ProjectActionBar
+          status={project.status}
+          isApprovingProject={isApprovingProject}
+          isCancellingProject={isCancellingProject}
+          onApprove={approveProject}
+          onReject={() => setShowRejectDialog(true)}
+          onCancel={() => setShowCancelDialog(true)}
+        />
+      </div>
+
+      <EditSkillsModal
+        open={showEditSkillsModal}
+        onOpenChange={setShowEditSkillsModal}
+        editingSkills={editingSkills}
+        onEditingSkillsChange={setEditingSkills}
+        onSave={handleSaveSkills}
+        saving={savingSkills}
+      />
 
       <RejectProjectDialog
         open={showRejectDialog}
@@ -709,6 +511,15 @@ const ViewProject = () => {
         projectTitle={project.title}
         projectId={project.id}
         onConfirmReject={confirmReject}
+      />
+
+      <CancelProjectDialog
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        cancelReason={cancelReason}
+        onCancelReasonChange={setCancelReason}
+        onConfirm={() => cancelProject(cancelReason)}
+        isCancelling={isCancellingProject}
       />
     </div>
   );

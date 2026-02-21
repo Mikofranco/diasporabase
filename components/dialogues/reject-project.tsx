@@ -28,7 +28,10 @@ interface RejectProjectDialogProps {
   onOpenChange: (open: boolean) => void;
   projectTitle: string;
   projectId: string;
-  onConfirmReject: (reason: string, details?: string) => Promise<void> | void;
+  onConfirmReject: (
+    reason: string,
+    details?: string
+  ) => Promise<{ isThirdRejection?: boolean } | void> | void;
 }
 
 const REJECTION_REASONS = [
@@ -72,9 +75,16 @@ export function RejectProjectDialog({
           ? otherDetails.trim()
           : REJECTION_REASONS.find(r => r.value === selectedReason)?.label || selectedReason;
 
-      await onConfirmReject(mainReason, internalNote.trim() || undefined);
+      const result = await onConfirmReject(
+        mainReason,
+        internalNote.trim() || undefined
+      );
 
-      toast.success("Project rejected successfully");
+      toast.success(
+        result?.isThirdRejection
+          ? "Project rejected and cancelled (maximum rejections reached)."
+          : "Project rejected successfully"
+      );
       onOpenChange(false);
 
       // Reset form
@@ -96,22 +106,25 @@ export function RejectProjectDialog({
             <AlertTriangle className="h-5 w-5" />
             Reject Project
           </DialogTitle>
-          <DialogDescription className="pt-2">
-            You are about to <strong>permanently reject</strong> the project:
-            <div className="mt-2 p-3 bg-gray-50 rounded-lg border text-gray-900 font-medium">
-              {projectTitle}
-            </div>
+          <DialogDescription asChild>
+            <p className="text-gray-600 pt-1">
+              Select a reason for rejecting this project. The agency will see the reason you choose.
+            </p>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-5 py-4">
+          <div className="rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm font-medium text-gray-700">
+            {projectTitle}
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="reason" className="font-medium">
+            <Label htmlFor="reason" className="font-medium text-gray-900">
               Reason for rejection <span className="text-red-500">*</span>
             </Label>
             <Select value={selectedReason} onValueChange={setSelectedReason}>
-              <SelectTrigger id="reason">
-                <SelectValue placeholder="Select primary reason" />
+              <SelectTrigger id="reason" className="rounded-lg">
+                <SelectValue placeholder="Select a reason" />
               </SelectTrigger>
               <SelectContent>
                 {REJECTION_REASONS.map((reason) => (
@@ -125,8 +138,8 @@ export function RejectProjectDialog({
 
           {selectedReason === "other" && (
             <div className="space-y-2">
-              <Label htmlFor="details" className="font-medium">
-                Please specify the reason <span className="text-red-500">*</span>
+              <Label htmlFor="details" className="font-medium text-gray-900">
+                Please specify <span className="text-red-500">*</span>
               </Label>
               <Textarea
                 id="details"
@@ -134,34 +147,23 @@ export function RejectProjectDialog({
                 value={otherDetails}
                 onChange={(e) => setOtherDetails(e.target.value)}
                 rows={3}
-                className="resize-none"
+                className="resize-none rounded-lg"
               />
             </div>
           )}
 
-          {/* Optional internal note – only visible to admins */}
           <div className="space-y-2">
-            <Label htmlFor="internal-note" className="font-medium">
-              Internal note <span className="text-gray-500 text-xs">(not visible to agency)</span>
+            <Label htmlFor="internal-note" className="font-medium text-gray-900">
+              Additional notes <span className="text-gray-500 font-normal text-xs">(optional, for admin use only — not sent to agency)</span>
             </Label>
             <Textarea
               id="internal-note"
-              placeholder="Private notes for team (optional)"
+              placeholder="Add any extra context for your records..."
               value={internalNote}
               onChange={(e) => setInternalNote(e.target.value)}
               rows={2}
-              className="resize-none"
+              className="resize-none rounded-lg"
             />
-          </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
-            <p className="font-medium flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              This action cannot be undone.
-            </p>
-            <p className="mt-1">
-              The agency will be notified and will no longer be able to edit or resubmit this project.
-            </p>
           </div>
         </div>
 
