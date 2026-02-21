@@ -12,13 +12,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, UserCheck, UserX } from "lucide-react";
+import { Users, UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { VolunteerFilters } from "./VolunteerFilters";
 import { VolunteerPaginationBar } from "./PaginationBar";
+import { VolunteerLoadingSkeleton, VolunteerTableSkeleton } from "./VolunteerLoadingSkeleton";
 import {
   DEFAULT_VOLUNTEER_FILTERS,
   DEFAULT_VOLUNTEER_PAGE_SIZE,
@@ -154,11 +155,7 @@ const VolunteersManagement: React.FC = () => {
   const showPagination = !loading && totalCount > 0;
 
   if (loading && volunteers.length === 0) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px] bg-gray-50/80 rounded-xl">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <VolunteerLoadingSkeleton />;
   }
 
   return (
@@ -195,9 +192,7 @@ const VolunteersManagement: React.FC = () => {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center items-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <VolunteerTableSkeleton />
           ) : volunteers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
               <Users className="h-12 w-12 text-gray-300 mb-3" />
