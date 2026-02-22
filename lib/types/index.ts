@@ -31,6 +31,8 @@ export interface Deliverable {
   createdAt?: string;
   due_date?: string;
   milestone_id?: string;
+  /** User id (volunteer) assigned to this deliverable. Nullable. */
+  assigned_to?: string | null;
 }
 
 export interface Milestone {

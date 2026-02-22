@@ -440,8 +440,108 @@ const ProjectDetails: React.FC = () => {
 
   if (loading)
     return (
-      <div className="container mx-auto p-6">
-        <Skeleton className="h-96 w-full" />
+      <div className="container mx-auto p-4 sm:p-6 space-y-6 max-w-7xl">
+        {/* Breadcrumb skeleton */}
+        <div className="flex items-center gap-2 text-sm">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-3 w-3 rounded-full" />
+          <Skeleton className="h-4 w-40 max-w-[200px] sm:w-48" />
+        </div>
+
+        {/* Page header skeleton */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
+          <div className="min-w-0 space-y-2">
+            <Skeleton className="h-8 w-full max-w-md" />
+            <Skeleton className="h-4 w-36" />
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+        </div>
+
+        {/* Overview card skeleton */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Location & dates card skeleton */}
+        <Card>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-5 w-40" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Category & skills card skeleton */}
+        <Card>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-5 w-36" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-5 w-24" />
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Skeleton className="h-6 w-16 rounded-md" />
+              <Skeleton className="h-6 w-20 rounded-md" />
+              <Skeleton className="h-6 w-14 rounded-md" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Milestones section skeleton */}
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <Skeleton className="h-7 w-64" />
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-28" />
+                <Skeleton className="h-9 w-20" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <Skeleton className="h-28 w-full rounded-lg" />
+              <Skeleton className="h-28 w-full rounded-lg" />
+              <Skeleton className="h-28 w-full rounded-lg" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Assigned volunteers card skeleton */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-9 w-28" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full rounded-md" />
+              <Skeleton className="h-12 w-full rounded-md" />
+              <Skeleton className="h-12 w-full rounded-md" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   if (error || !project)
@@ -722,6 +822,7 @@ const ProjectDetails: React.FC = () => {
               canEdit={true}
               volunteers={assignedVolunteers}
               canAddMilestone={["pending", "approved", "active"].includes(project.status)}
+              milestonesPageHref={routes.agencyProjectMilestones(project.id)}
             />
           </CardContent>
         </Card>
