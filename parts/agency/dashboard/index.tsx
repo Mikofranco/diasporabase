@@ -203,9 +203,17 @@ const AgencyDashboard = () => {
               />
             </div>
 
-            <div className="space-y-8 md:space-y-10">
-              <RecentProjects userId={userId || ""} />
-              <AgencyRequestFromVolunteer userId={userId || ""} />
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 xl:gap-8">
+              <RecentProjects
+                userId={userId || ""}
+                limitRows={5}
+                viewAllHref={routes.agencyProjects}
+              />
+              <AgencyRequestFromVolunteer
+                userId={userId || ""}
+                limitRows={5}
+                viewAllHref={routes.agencyRequests}
+              />
             </div>
           </>
         )}
