@@ -45,6 +45,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CommentsModal } from "@/components/modals/comment";
 import { Volunteer } from "@/lib/types";
 import { CreateMilestoneModal } from "@/components/modals/create-milestone";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const supabase = createClient();
 
@@ -70,7 +75,7 @@ interface MilestonesSectionProps {
   projectId: string;
   canEdit?: boolean;
   volunteers: Volunteer[];
-  /** When false, Add Milestone button is disabled (e.g. when project status is not approved/active). */
+  /** When false, Add Milestone button is disabled (e.g. when project status is not pending/approved/active). */
   canAddMilestone?: boolean;
 }
 
@@ -264,35 +269,138 @@ export function MilestonesSection({
 
   if (milestones.length === 0) {
     return (
-      <Card className="border-dashed">
-        <CardContent className="text-center py-16">
-          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2 text-diaspora-darkBlue">
-            No Milestones Defined
-          </h3>
-          <p className="text-gray-600">
-            Start by adding your first milestone and its deliverables.
-          </p>
-          {canEdit && (
-            <Button
-              onClick={() =>
-                setEditMilestone({
-                  title: "",
-                  description: "",
-                  due_date: "",
-                  status: "Pending",
-                  deliverables: [],
-                })
-              }
-              disabled={!canAddMilestone}
-              className="text-diaspora-darkBlue border-diaspora-darkBlue mt-5"
-              variant={"outline"}
-            >
-              <Plus className="mr-2 h-4 w-4" /> Add Milestone
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+      <>
+        <Card className="border-dashed">
+          <CardContent className="text-center py-16">
+            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2 text-diaspora-darkBlue">
+              No Milestones Defined
+            </h3>
+            <p className="text-gray-600">
+              Start by adding your first milestone and its deliverables.
+            </p>
+            {canEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-block">
+                    <Button
+                      onClick={() =>
+                        setEditMilestone({
+                          title: "",
+                          description: "",
+                          due_date: "",
+                          status: "Pending",
+                          deliverables: [],
+                        })
+                      }
+                      disabled={!canAddMilestone}
+                      className="text-diaspora-darkBlue border-diaspora-darkBlue mt-5"
+                      variant={"outline"}
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Add Milestone
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {!canAddMilestone
+                    ? "Milestones can be added when the project is Pending, Approved, or Active."
+                    : "Add a new milestone"}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Edit Milestone Dialog – must be in DOM when empty so "Add Milestone" can open it */}
+        <Dialog
+          open={!!editMilestone}
+          onOpenChange={() => setEditMilestone(null)}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {editMilestone?.id ? "Edit" : "Add"} Milestone
+              </DialogTitle>
+            </DialogHeader>
+            {editMilestone && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={editMilestone.title}
+                    onChange={(e) =>
+                      setEditMilestone({
+                        ...editMilestone,
+                        title: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description (optional)</Label>
+                  <Textarea
+                    value={editMilestone.description || ""}
+                    onChange={(e) =>
+                      setEditMilestone({
+                        ...editMilestone,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Due Date</Label>
+                  <Input
+                    type="date"
+                    value={editMilestone.due_date}
+                    onChange={(e) =>
+                      setEditMilestone({
+                        ...editMilestone,
+                        due_date: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={editMilestone.status}
+                    onValueChange={(v) =>
+                      setEditMilestone({ ...editMilestone, status: v as any })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="In Progress">In Progress</SelectItem>
+                      <SelectItem value="Done">Done</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditMilestone(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={saveMilestone}
+                disabled={saving}
+                className="action-btn"
+              >
+                {saving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Save Milestone
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
@@ -303,22 +411,33 @@ export function MilestonesSection({
           Project Milestones & Deliverables
         </h2>
         {canEdit && (
-          <Button
-            onClick={() =>
-              setEditMilestone({
-                title: "",
-                description: "",
-                due_date: "",
-                status: "Pending",
-                deliverables: [],
-              })
-            }
-            disabled={!canAddMilestone}
-            className="text-diaspora-darkBlue border-diaspora-darkBlue"
-            variant={"outline"}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add Milestone
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-block">
+                <Button
+                  onClick={() =>
+                    setEditMilestone({
+                      title: "",
+                      description: "",
+                      due_date: "",
+                      status: "Pending",
+                      deliverables: [],
+                    })
+                  }
+                  disabled={!canAddMilestone}
+                  className="text-diaspora-darkBlue border-diaspora-darkBlue"
+                  variant={"outline"}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add Milestone
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {!canAddMilestone
+                ? "Milestones can be added when the project is Pending, Approved, or Active."
+                : "Add a new milestone"}
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
 

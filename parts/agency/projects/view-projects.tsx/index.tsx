@@ -721,7 +721,7 @@ const ProjectDetails: React.FC = () => {
               projectId={project.id}
               canEdit={true}
               volunteers={assignedVolunteers}
-              canAddMilestone={project.status === "approved" || project.status === "active"}
+              canAddMilestone={["pending", "approved", "active"].includes(project.status)}
             />
           </CardContent>
         </Card>
