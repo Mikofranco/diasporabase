@@ -6,7 +6,7 @@ import MultipleImageUploader, {
 
 interface Step4DocumentsProps {
   documentsError: string | null;
-  uploaderRef: React.RefObject<MultipleImageUploaderRef | null>;
+  uploaderRef: React.RefObject<MultipleImageUploaderRef>;
   onFilesChange: (files: File[] | undefined) => void;
 }
 
@@ -25,7 +25,7 @@ export function Step4Documents({
           </span>
         </h3>
         <p className="text-sm text-gray-600">
-          Upload any supporting documents such as CAC certificate, registration
+          Upload any supporting documents such as registration
           documents, proposals, or other relevant files (PDF, JPG, PNG). These
           are helpful but not required and you can always add them later after
           creating your project.

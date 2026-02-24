@@ -13,7 +13,7 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Plus } from "lucide-react";
+import { ArrowUpDown, Plus, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,12 +28,16 @@ import { Badge } from "@/components/ui/badge";
 import { Project } from "@/lib/types";
 import { getProjectStatusStyle } from "../../projects/filters";
 import CreateProjectForm from "../../create-project";
+import type { Project as CreateProjectFormProject } from "../../create-project/types";
 
 interface TableProps {
   data: Project[];
   onEdit: (project: Project) => void;
   onView: (project: Project) => void;
-  onRefresh: () => void; 
+  onRefresh: () => void;
+  /** When set, show only this many rows and show "View all" link; no pagination or Add button. */
+  limitRows?: number;
+  viewAllHref?: string;
 }
 
 export const columns: ColumnDef<Project>[] = [
@@ -90,7 +94,7 @@ export const columns: ColumnDef<Project>[] = [
     cell: ({ row, table }) => {
       const project = row.original;
       return (
-        <div className="flex items-center gap-2 justify-end">
+        <div className="flex items-center justify-end">
           <Button
             variant="ghost"
             size="sm"
@@ -100,35 +104,38 @@ export const columns: ColumnDef<Project>[] = [
           >
             View
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-slate-600 hover:text-slate-800 hover:bg-slate-100 font-medium"
-            onClick={() => (table.options.meta as any)?.onEdit(project)}
-            aria-label={`Edit project ${project.title}`}
-          >
-            Edit
-          </Button>
         </div>
       );
     },
   },
 ];
 
-export function RecentProjectsTable({ data, onEdit, onView, onRefresh }: TableProps) {
+const DASHBOARD_LIMIT = 5;
+
+export function RecentProjectsTable({
+  data,
+  onEdit,
+  onView,
+  onRefresh,
+  limitRows,
+  viewAllHref,
+}: TableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [showCreateForm, setShowCreateForm] = React.useState<boolean>(false);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
+  const isDashboardMode = limitRows != null && limitRows > 0;
+  const displayData = isDashboardMode ? data.slice(0, limitRows) : data;
+
   const table = useReactTable({
-    data,
+    data: displayData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    ...(isDashboardMode ? {} : { getPaginationRowModel: getPaginationRowModel() }),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
@@ -136,7 +143,7 @@ export function RecentProjectsTable({ data, onEdit, onView, onRefresh }: TablePr
     meta: {
       onEdit,
       onView,
-      onRefresh, // Pass refresh callback
+      onRefresh,
     },
     state: {
       sorting,
@@ -154,21 +161,42 @@ export function RecentProjectsTable({ data, onEdit, onView, onRefresh }: TablePr
     setShowCreateForm(false);
   };
 
-  const handleProjectCreated = (newProject: Project) => {
-    setShowCreateForm(false);//@ts-ignore
-    table.options.meta?.onRefresh(); // Refresh parent data
+  const handleProjectCreated = (_project: CreateProjectFormProject) => {
+    setShowCreateForm(false);
+    (table.options.meta as any)?.onRefresh();
+  };
+
+  // Full page navigation to avoid client-side transition freezes (dashboard → projects
+  // can hang with router.push due to layout/RSC or heavy unmount).
+  const handleViewAll = () => {
+    if (!viewAllHref) return;
+    window.location.href = viewAllHref;
   };
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
         <h2 className="text-lg font-semibold text-slate-900">Recent Projects</h2>
-        <Button
-          className="bg-diaspora-blue hover:bg-diaspora-blue/90 font-medium"
-          onClick={handleCreateProjectClick}
-        >
-          <Plus className="h-4 w-4 mr-2" /> Add New Project
-        </Button>
+        <div className="flex items-center gap-2">
+          {viewAllHref && (
+            <button
+              type="button"
+              onClick={handleViewAll}
+              className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-3 text-diaspora-blue hover:text-diaspora-blue/90 hover:bg-diaspora-blue/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              View all
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </button>
+          )}
+          {!isDashboardMode && (
+            <Button
+              className="bg-diaspora-blue hover:bg-diaspora-blue/90 font-medium"
+              onClick={handleCreateProjectClick}
+            >
+              <Plus className="h-4 w-4 mr-2" /> Add New Project
+            </Button>
+          )}
+        </div>
       </div>
       {showCreateForm && (
         <CreateProjectForm
@@ -219,24 +247,26 @@ export function RecentProjectsTable({ data, onEdit, onView, onRefresh }: TablePr
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end gap-2 py-3">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
-      </div>
+      {!isDashboardMode && (
+        <div className="flex items-center justify-end gap-2 py-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

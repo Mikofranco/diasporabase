@@ -8,10 +8,38 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CreateProjectForm from "@/parts/agency/create-project";
+import type { ProjectForEdit } from "@/parts/agency/create-project/types";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { routes } from "@/lib/routes";
 
-const RecentProjects = ({ userId }: { userId: string }) => {
+/** Map lib Project (optional fields) to CreateProjectForm's ProjectForEdit (required fields). */
+function toProjectForEdit(p: Project): ProjectForEdit {
+  return {
+    id: p.id,
+    title: p.title ?? "",
+    description: p.description ?? "",
+    start_date: p.start_date ?? p.startDate ?? "",
+    end_date: p.end_date ?? p.endDate ?? "",
+    category: p.category ?? "",
+    required_skills: p.required_skills ?? p.requiredSkills ?? [],
+    documents: p.documents ?? undefined,
+    status: p.status,
+    country: p.country ?? null,
+    state: p.state ?? null,
+    lga: p.lga ?? null,
+    location: p.location ?? null,
+  };
+}
+
+interface RecentProjectsProps {
+  userId: string;
+  /** When set, show only this many rows with "View all" link; no pagination or Add button. */
+  limitRows?: number;
+  viewAllHref?: string;
+}
+
+const RecentProjects = ({ userId, limitRows, viewAllHref }: RecentProjectsProps) => {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +88,7 @@ const RecentProjects = ({ userId }: { userId: string }) => {
   };
 
   const handleViewProject = (project: Project) => {
-    router.push(routes.agencyViewProject(project.id));
+    window.location.href = routes.agencyViewProject(project.id);
   };
 
   const redirectToCreateProject = () => {
@@ -101,7 +129,9 @@ const RecentProjects = ({ userId }: { userId: string }) => {
               data={projects}
               onEdit={handleEditProject}
               onView={handleViewProject}
-              onRefresh={fetchProjects} // Pass refresh callback
+              onRefresh={fetchProjects}
+              limitRows={limitRows}
+              viewAllHref={viewAllHref}
               aria-label="Recent projects table"
             />
           </div>
@@ -113,21 +143,31 @@ const RecentProjects = ({ userId }: { userId: string }) => {
               <p className="mt-2 text-gray-600 dark:text-gray-400">
                 No projects found.
               </p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={redirectToCreateProject}
-                aria-label="Create a new project"
-              >
-                Create New Project
-              </Button>
+              {!limitRows && (
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={redirectToCreateProject}
+                  aria-label="Create a new project"
+                >
+                  Create New Project
+                </Button>
+              )}
+              {limitRows && viewAllHref && (
+                <Link
+                  href={viewAllHref}
+                  className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground mt-4"
+                >
+                  View all projects
+                </Link>
+              )}
             </div>
           )
         )}
       </div>
       {projectToEdit && (
         <CreateProjectForm
-          initialProject={projectToEdit}
+          initialProject={toProjectForEdit(projectToEdit)}
           onClose={() => setProjectToEdit(null)}
           onProjectCreated={() => {
             fetchProjects();

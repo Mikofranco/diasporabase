@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase/client";
 import { Project } from "@/lib/types";
 import { getUserId } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   LayoutGrid,
@@ -46,9 +46,13 @@ const AgencyDashboard = () => {
     return (data as Project[]) ?? [];
   };
 
-  // Fetch all projects by status
+  // Ref so async callbacks (fetchAllProjects) can read current mount state
+  const isMountedRef = useRef(true);
+
+  // Fetch all projects by status (guards setState with isMountedRef to avoid updates after unmount)
   const fetchAllProjects = async (orgId: string) => {
     if (!orgId) return;
+    if (!isMountedRef.current) return;
 
     setProjectIsLoading(true);
     setProjectError(null);
@@ -60,17 +64,19 @@ const AgencyDashboard = () => {
         fetchProjects(orgId, "pending"),
         fetchProjects(orgId, "rejected"),
       ]);
-
+      if (!isMountedRef.current) return;
       setOngoingProjects(ongoing);
       setCompletedProjects(completed);
       setPendingProjects(pending);
       setRejectedProjects(rejected);
     } catch (error) {
+      if (!isMountedRef.current) return;
       const msg =
         error instanceof Error ? error.message : "Failed to load projects";
       setProjectError(msg);
       toast.error(msg);
     } finally {
+      if (!isMountedRef.current) return;
       setProjectIsLoading(false);
     }
   };
@@ -78,6 +84,7 @@ const AgencyDashboard = () => {
   // Main initialization effect – fetch user, profile and all dependent data once
   useEffect(() => {
     let isMounted = true;
+    isMountedRef.current = true;
 
     const initialize = async () => {
       try {
@@ -112,7 +119,6 @@ const AgencyDashboard = () => {
           return;
         }
 
-        // Now we have the real userId → fetch projects with it
         await fetchAllProjects(currentUserId);
       } catch (error) {
         if (!isMounted) return;
@@ -129,6 +135,7 @@ const AgencyDashboard = () => {
 
     return () => {
       isMounted = false;
+      isMountedRef.current = false;
     };
   }, []);
 
@@ -203,9 +210,17 @@ const AgencyDashboard = () => {
               />
             </div>
 
-            <div className="space-y-8 md:space-y-10">
-              <RecentProjects userId={userId || ""} />
-              <AgencyRequestFromVolunteer userId={userId || ""} />
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 xl:gap-8">
+              <RecentProjects
+                userId={userId || ""}
+                limitRows={5}
+                viewAllHref={routes.agencyProjects}
+              />
+              <AgencyRequestFromVolunteer
+                userId={userId || ""}
+                limitRows={5}
+                viewAllHref={routes.agencyRequests}
+              />
             </div>
           </>
         )}
