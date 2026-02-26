@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +63,20 @@ const ratingSchema = z.object({
 const VolunteerProjectDetails: React.FC = () => {
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from") || "opportunities";
+  const backHref =
+    from === "requests"
+      ? routes.volunteerRequests
+      : from === "my-projects"
+      ? routes.volunteerProjects
+      : routes.volunteerFindOpportunity;
+  const backLabel =
+    from === "requests"
+      ? "Back to My Requests"
+      : from === "my-projects"
+      ? "Back to My Projects"
+      : "Back to Opportunities";
   const [project, setProject] = useState<Project | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ratings, setRatings] = useState<Rating[]>([]);
@@ -263,10 +277,10 @@ const VolunteerProjectDetails: React.FC = () => {
             <Button
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => router.push(routes.volunteerFindOpportunity)}
+              onClick={() => router.push(backHref)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Opportunities
+              {backLabel}
             </Button>
           </CardFooter>
         </Card>
@@ -286,10 +300,10 @@ const VolunteerProjectDetails: React.FC = () => {
             <Button
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => router.push(routes.volunteerFindOpportunity)}
+              onClick={() => router.push(backHref)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Opportunities
+              {backLabel}
             </Button>
           </CardFooter>
         </Card>
@@ -304,10 +318,10 @@ const VolunteerProjectDetails: React.FC = () => {
         <Button
           variant="outline"
           className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          onClick={() => router.push(routes.volunteerFindOpportunity)}
+          onClick={() => router.push(backHref)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Opportunities
+          {backLabel}
         </Button>
       </div>
 

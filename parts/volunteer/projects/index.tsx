@@ -215,7 +215,9 @@ export default function VolunteerProjectsManagement() {
     date ? format(new Date(date), "MMM d, yyyy") : "TBD";
 
   const goToProjectDetails = (projectId: string) => {
-    router.push(`/volunteer/projects/${projectId}`);
+    router.push(
+      `/volunteer/projects/${projectId}?from=my-projects`
+    );
   };
 
   const categories = useMemo(
