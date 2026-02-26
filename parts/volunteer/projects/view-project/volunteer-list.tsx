@@ -12,16 +12,16 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, CalendarDays, Mail } from "lucide-react";
 import { Volunteer } from "@/lib/types";
-import VolunteerInfoModal from "@/components/modals/voulunteer-modal";
+import VolunteerInfoModal, { VolunteerViewerRole } from "@/components/modals/voulunteer-modal";
 import { useState } from "react";
-
-
 
 interface VolunteersListProps {
   volunteers: Volunteer[];
+  /** Same-project volunteers see name/email/skills (no DOB); public respects anonymous. */
+  viewerRole?: VolunteerViewerRole;
 }
 
-export default function VolunteersList({ volunteers }: VolunteersListProps) {
+export default function VolunteersList({ volunteers, viewerRole = "volunteer_same_project" }: VolunteersListProps) {
   const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
   if (volunteers.length === 0) {
     return (
@@ -49,11 +49,13 @@ export default function VolunteersList({ volunteers }: VolunteersListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {volunteers.map((v) => (
-              <TableRow key={v.id} data-modal-trigger="volunteer-info-modal" onClick={()=> setSelectedVolunteer(v)}>
+            {volunteers.map((v) => {
+              const anonym = viewerRole === "public" && v.anonymous === true;
+              return (
+              <TableRow key={v.id ?? v.volunteer_id} data-modal-trigger="volunteer-info-modal" onClick={()=> setSelectedVolunteer(v)}>
                 <TableCell>
                   <div className="bg-muted rounded-full w-10 h-10 flex items-center justify-center shrink-0">
-                    {v.avatar_url ? (
+                    {!anonym && v.avatar_url ? (
                       <img
                         src={v.avatar_url}
                         alt={v.full_name}
@@ -64,12 +66,14 @@ export default function VolunteersList({ volunteers }: VolunteersListProps) {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">{v.full_name}</TableCell>
+                <TableCell className="font-medium">{anonym ? "Volunteer" : v.full_name}</TableCell>
                 <TableCell>
+                  {!anonym && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Mail className="h-4 w-4" />
                     <span className="truncate max-w-xs">{v.email}</span>
                   </div>
+                  )}
                 </TableCell>
                 <TableCell className="text-right text-sm text-muted-foreground">
                   <div className="flex items-center justify-end gap-1">
@@ -78,7 +82,7 @@ export default function VolunteersList({ volunteers }: VolunteersListProps) {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            );})}
           </TableBody>
         </Table>
       </CardContent>
@@ -86,7 +90,8 @@ export default function VolunteersList({ volunteers }: VolunteersListProps) {
       {/* Volunteer Info Modal */}
       {selectedVolunteer && (
         <VolunteerInfoModal
-          showAll={true}
+          showAll={viewerRole === "admin"}
+          viewerRole={viewerRole}
           volunteer={selectedVolunteer}
         />
       ) }

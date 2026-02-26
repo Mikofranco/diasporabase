@@ -72,6 +72,7 @@ export const routes = {
     superAdminViewProject: (projectId: string) => `/super-admin/projects/${projectId}`,
     superAdminEditProject: (projectId: string) => `/super-admin/projects/${projectId}/edit`,
     superAdminInviteAdmin: "/super-admin/invite-admin",
+    superAdminLogs: "/super-admin/logs",
     superAdminNotifications: "/super-admin/notifications",
     superAdminSettings: "/super-admin/settings",
     superAdminUsers: "/super-admin/users",

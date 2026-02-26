@@ -136,7 +136,7 @@ export function useFindVolunteers(projectId: string) {
       let query = supabase
         .from("profiles")
         .select(
-          "id, full_name, email, skills, residence_country, residence_state, volunteer_countries, volunteer_states, volunteer_lgas, average_rating"
+          "id, full_name, email, skills, experience, residence_country, residence_state, volunteer_countries, volunteer_states, volunteer_lgas, average_rating, anonymous"
         )
         .eq("role", "volunteer");
 
@@ -188,6 +188,8 @@ export function useFindVolunteers(projectId: string) {
         full_name: (p.full_name as string) ?? "",
         email: (p.email as string) ?? "",
         skills: (p.skills ?? []) as string[],
+        experience: (p.experience as string) ?? undefined,
+        anonymous: !!(p.anonymous as boolean),
         residence_country: p.residence_country as string | undefined,
         residence_state: p.residence_state as string | undefined,
         volunteer_countries: (p.volunteer_countries ?? []) as string[],

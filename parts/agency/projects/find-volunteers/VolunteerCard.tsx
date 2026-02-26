@@ -16,7 +16,6 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Volunteer } from "@/lib/types";
@@ -78,12 +77,13 @@ export function VolunteerCard({
   const remainingCount = Math.max(0, skills.length - 4);
   const isLimitReached = volunteersRegistered >= volunteersNeeded;
   const hasRequested = volunteer.hasRequested?.hasRequested;
+  const rating = volunteer.average_rating ?? 0;
+  const hasRating = rating > 0;
+  const isAnonymous = volunteer.anonymous === true;
   const avatarUrl =
     volunteer.avatar_url ??
     volunteer.profile?.profile_picture ??
     volunteer.profile?.profilePicture;
-  const rating = volunteer.average_rating ?? 0;
-  const hasRating = rating > 0;
 
   return (
     <Card
@@ -103,32 +103,32 @@ export function VolunteerCard({
       />
 
       <CardContent className="flex-1 p-5">
-        {/* Header: avatar + name + email */}
-        <div className="flex items-start gap-3 mb-4">
+        {/* Not-yet-added: respect anonymous – hide personal info when anonymous */}
+        <div className="flex items-center gap-3 mb-4">
           <Avatar className="h-12 w-12 shrink-0 border-2 border-background shadow-sm ring-1 ring-border">
-            {avatarUrl && (
-              <AvatarImage
-                src={avatarUrl}
-                alt=""
-                className="object-cover"
-              />
+            {!isAnonymous && avatarUrl && (
+              <AvatarImage src={avatarUrl} alt="" className="object-cover" />
             )}
             <AvatarFallback className="bg-gradient-to-r from-diaspora-blue to-diaspora-darkBlue text-white text-sm font-semibold">
-              {getInitials(volunteer.full_name)}
+              {isAnonymous ? "?" : getInitials(volunteer.full_name)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-card-foreground line-clamp-1" title={volunteer.full_name}>
-              {volunteer.full_name}
+            <p className="font-semibold text-card-foreground line-clamp-1" title={isAnonymous ? undefined : volunteer.full_name}>
+              {isAnonymous ? "Volunteer" : volunteer.full_name}
             </p>
-            <a
-              href={`mailto:${volunteer.email}`}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-card-foreground truncate max-w-full"
-              title={volunteer.email}
-            >
-              <Mail className="h-3 w-3 shrink-0" aria-hidden />
-              <span className="truncate">{volunteer.email}</span>
-            </a>
+            {!isAnonymous && (
+              <a
+                href={`mailto:${volunteer.email}`}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-card-foreground truncate max-w-full"
+                title={volunteer.email}
+              >
+                <span className="truncate">{volunteer.email}</span>
+              </a>
+            )}
+            {isAnonymous && (
+              <p className="text-xs text-muted-foreground">Skills, location & experience only</p>
+            )}
           </div>
         </div>
 
@@ -182,6 +182,16 @@ export function VolunteerCard({
           </span>
         </div>
 
+        {/* Experience – summary only (no personal info) */}
+        {(volunteer.experience ?? volunteer.profile?.experience) && (
+          <div className="mb-3">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Experience</p>
+            <p className="text-sm text-card-foreground line-clamp-3">
+              {(volunteer.experience ?? volunteer.profile?.experience) ?? ""}
+            </p>
+          </div>
+        )}
+
         {/* Rating */}
         <div className="flex items-center gap-1.5">
           <Star
@@ -230,7 +240,7 @@ export function VolunteerCard({
                   )}
                   onClick={() => onOpenRequestDialog(volunteer)}
                   disabled={isLimitReached}
-                  aria-label={`Send project request to ${volunteer.full_name}`}
+                  aria-label="Send project request to this volunteer"
                 >
                   <Send className="h-4 w-4 mr-2 shrink-0" aria-hidden />
                   Send request
@@ -240,7 +250,7 @@ export function VolunteerCard({
             <TooltipContent>
               {isLimitReached
                 ? `All ${volunteersNeeded} volunteer slots are filled.`
-                : `Invite ${volunteer.full_name} to this project.`}
+                : "Invite this volunteer to the project."}
             </TooltipContent>
           </Tooltip>
         )}

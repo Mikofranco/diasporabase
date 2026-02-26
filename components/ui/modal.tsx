@@ -15,6 +15,8 @@ type ModalProps<T extends RouteParams> = {
   onOpen?: (params: T) => void;
   children: React.ReactNode;
   className?: string;
+  /** When true, do not render overlay/backdrop; only manage state and registry (e.g. for use with Dialog) */
+  headless?: boolean;
 };
 
 type ModalHeaderProps = {
@@ -136,6 +138,7 @@ const Modal: ModalComponent<RouteParams> = <T extends RouteParams>({
   onOpen: externalOnOpen,
   children,
   className = "",
+  headless = false,
 }: ModalProps<T>) => {
   const [isOpen, setIsOpen] = useState(externalIsOpen || false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -186,18 +189,21 @@ const Modal: ModalComponent<RouteParams> = <T extends RouteParams>({
   }, [externalIsOpen, handleOpen, handleClose]);
 
   useEffect(() => {
-    console.log(`Modal ${id} is ${isOpen ? "open" : "closed"}`);
     if (isOpen) {
       setIsAnimating(true);
-      document.body.style.overflow = "hidden";
+      if (!headless) document.body.style.overflow = "hidden";
     } else {
       const timeout = setTimeout(() => {
         setIsAnimating(false);
       }, 300);
-      document.body.style.overflow = "unset";
+      if (!headless) document.body.style.overflow = "unset";
       return () => clearTimeout(timeout);
     }
-  }, [isOpen, id]);
+  }, [isOpen, id, headless]);
+
+  if (headless) {
+    return <>{children}</>;
+  }
 
   if (!isOpen && !isAnimating) return null as React.ReactNode;
 

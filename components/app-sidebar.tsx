@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Send,
   UserRoundPlus,
+  ScrollText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -67,8 +68,8 @@ const ROUTES = {
     agencies: routes.superAdminAgencies,
     settings: routes.superAdminSettings,
     profile: routes.superAdminProfile,
-    invite_admin: routes.superAdminInviteAdmin,
     users: routes.superAdminUsers,
+    logs: routes.superAdminLogs,
   },
   volunteer: {
     dashboard: routes.volunteerDashboard,
@@ -106,8 +107,8 @@ const MENU_ITEMS = {
     { path: ROUTES.super_admin.volunteers, label: "Volunteers", icon: Users },
     { path: ROUTES.super_admin.agencies, label: "Agencies", icon: Home },
     { path: ROUTES.super_admin.settings, label: "Settings", icon: Settings },
-    { path: ROUTES.super_admin.invite_admin, label: "Invite Admin", icon: UserRoundPlus },
     { path: ROUTES.super_admin.users, label: "User Management", icon: UserRoundPlus },
+    { path: ROUTES.super_admin.logs, label: "Logs", icon: ScrollText },
   ],
   volunteer: [
     { path: ROUTES.volunteer.dashboard, label: "Dashboard", icon: LayoutDashboard },

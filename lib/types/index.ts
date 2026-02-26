@@ -214,6 +214,7 @@ export interface Volunteer {
   email: string;
   skills: string[];
   availability?: string;
+  experience?: string | null;
   residence_country?: string;
   residence_state?: string;
   volunteer_countries?: string[];
@@ -225,6 +226,8 @@ export interface Volunteer {
   joined_at: string;
   avatar_url?: string;
   profile?: Profile;
+  /** When true, hide name/email/photo in contexts that respect anonymity (e.g. find volunteers, public). */
+  anonymous?: boolean;
 }
 
 export interface AgencyProfile {

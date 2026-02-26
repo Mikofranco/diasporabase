@@ -652,6 +652,11 @@ type ProjectVolunteer = {
     full_name: string | null;
     profile_picture: string | null;
     email: string | null;
+    skills: string[] | null;
+    anonymous: boolean | null;
+    residence_country: string | null;
+    residence_state: string | null;
+    average_rating: number | null;
   } | null;
 };
 
@@ -667,7 +672,12 @@ export async function getProjectVolunteers(projectId: string): Promise<{
       profiles!project_volunteers_volunteer_id_fkey (
         full_name,
         profile_picture,
-        email
+        email,
+        skills,
+        anonymous,
+        residence_country,
+        residence_state,
+        average_rating
       )
     `)
     .eq("project_id", projectId)

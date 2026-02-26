@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { projectRejectedHtml } from "@/lib/email-templates/rejectProject";
 import { projectApprovedHtml } from "@/lib/email-templates/approveProject";
 import { getProjectStatusStyle } from "../filters";
+import { logSystemEvent } from "@/lib/system-log";
 import {
   type Project,
   type RejectionReasonRow,
@@ -348,6 +349,13 @@ const ViewProject = () => {
         ),
       });
 
+      await logSystemEvent(supabase, {
+        action: "project_rejected",
+        entity_type: "project",
+        entity_id: project.id,
+        details: { title: project.title, reason },
+      });
+
       router.refresh();
       return { isThirdRejection };
     } catch (err: unknown) {
@@ -371,6 +379,12 @@ const ViewProject = () => {
           ? { ...prev, status: "active", updated_at: now, approved_by: userId }
           : null
       );
+      await logSystemEvent(supabase, {
+        action: "project_approved",
+        entity_type: "project",
+        entity_id: project.id,
+        details: { title: project.title },
+      });
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
@@ -494,7 +508,7 @@ const ViewProject = () => {
             <TimelineLocationSection project={project} />
           </div>
 
-          <VolunteersSection project={project} volunteers={volunteers} />
+          <VolunteersSection project={project} volunteers={volunteers} userRole={userRole} />
 
           <RequiredSkillsSection
             project={project}
