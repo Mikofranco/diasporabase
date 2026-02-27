@@ -9,6 +9,7 @@ export const routes = {
   LearnMore: "/learn-more",
   privacy: "/privacy",
   generalProjectsView: "/projects",
+  generalProjectDetails: (id: string) => `/projects/${id}`,
   report: "/report",
   safetyAndGuidelines: "/safety",
   successStories: "/success-stories",
