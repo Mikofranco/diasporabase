@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
 import RequestSlate from "./request-slate";
 import { toast } from "sonner";
 import { useSendMail } from "@/services/mail";
 import { volunteerApplicationStatusHtml } from "@/lib/email-templates/volunteerApplicationStatus";
+import { ChevronRight } from "lucide-react";
 
 interface VolunteerRequest {
   id: string;
@@ -22,11 +24,16 @@ interface AgencyRequestFromVolunteerProps {
   className?: string;
   /** Optional organization/user id; when provided we avoid extra getUserId() calls */
   userId?: string;
+  /** When set, show only this many requests and show "View all" link. */
+  limitRows?: number;
+  viewAllHref?: string;
 }
 
 const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
   className = "",
   userId,
+  limitRows,
+  viewAllHref,
 }) => {
   const [requests, setRequests] = useState<VolunteerRequest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -242,13 +249,28 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
     }).format(date);
   };
 
+  const displayRequests = limitRows != null && limitRows > 0
+    ? requests.slice(0, limitRows)
+    : requests;
+
   return (
     <div
-      className={`bg-white p-6 rounded-lg shadow-md space-y-4 mt-8 ${className}`}
+      className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4 ${className}`}
     >
-      <h2 className="font-semibold text-xl text-gray-800">
-        Volunteer Requests{" "}
-      </h2>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-semibold text-lg text-slate-900">
+          Volunteer Requests
+        </h2>
+        {viewAllHref && requests.length > 0 && (
+          <Link
+            href={viewAllHref}
+            className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-3 text-diaspora-blue hover:text-diaspora-blue/90 hover:bg-diaspora-blue/10 transition-colors"
+          >
+            View all
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Link>
+        )}
+      </div>
 
       {isLoading && (
         <div className="flex justify-center items-center py-4">
@@ -287,9 +309,9 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
         </div>
       )}
 
-      {!isLoading && !error && requests.length > 0 && (
+      {!isLoading && !error && displayRequests.length > 0 && (
         <div className="space-y-4">
-          {requests.map((request) => (
+          {displayRequests.map((request) => (
             <RequestSlate
               key={request.id}
               requestId={request.id}

@@ -10,12 +10,12 @@ import {
   Settings,
   Search,
   User,
-  BarChart,
   LogOut,
   ChevronUp,
   LayoutDashboard,
   Send,
   UserRoundPlus,
+  ScrollText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,7 +37,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { createClient } from "@/lib/supabase/client";
-import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
 import { routes } from "@/lib/routes";
@@ -69,8 +68,8 @@ const ROUTES = {
     agencies: routes.superAdminAgencies,
     settings: routes.superAdminSettings,
     profile: routes.superAdminProfile,
-    invite_admin: routes.superAdminInviteAdmin,
     users: routes.superAdminUsers,
+    logs: routes.superAdminLogs,
   },
   volunteer: {
     dashboard: routes.volunteerDashboard,
@@ -84,7 +83,7 @@ const ROUTES = {
     dashboard: routes.agencyDashboard,
     projects: routes.agencyProjects,
     profile: routes.agencyProfile,
-    analytics: routes.agencyAnalytics,
+    requests: routes.agencyRequests,
     settings: routes.agencySettings,
   },
   guest: {
@@ -108,8 +107,8 @@ const MENU_ITEMS = {
     { path: ROUTES.super_admin.volunteers, label: "Volunteers", icon: Users },
     { path: ROUTES.super_admin.agencies, label: "Agencies", icon: Home },
     { path: ROUTES.super_admin.settings, label: "Settings", icon: Settings },
-    { path: ROUTES.super_admin.invite_admin, label: "Invite Admin", icon: UserRoundPlus },
     { path: ROUTES.super_admin.users, label: "User Management", icon: UserRoundPlus },
+    { path: ROUTES.super_admin.logs, label: "Logs", icon: ScrollText },
   ],
   volunteer: [
     { path: ROUTES.volunteer.dashboard, label: "Dashboard", icon: LayoutDashboard },
@@ -123,7 +122,7 @@ const MENU_ITEMS = {
     { path: ROUTES.agency.dashboard, label: "Dashboard", icon: LayoutDashboard },
     { path: ROUTES.agency.projects, label: "Projects", icon: Briefcase },
     { path: ROUTES.agency.profile, label: "Profile", icon: User },
-    { path: ROUTES.agency.analytics, label: "Analytics", icon: BarChart },
+    { path: ROUTES.agency.requests, label: "Requests", icon: Send },
     { path: ROUTES.agency.settings, label: "Settings", icon: Settings },
   ],
   guest: [],
@@ -198,13 +197,9 @@ export function AppSidebar({ onSignOutClick }: AppSidebarProps) {
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            {items.map((item, index) => (
+            {items.map((item) => (
               <SidebarMenuItem key={item.path}>
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                >
+                <div>
                   <SidebarMenuButton
                     asChild
                     className={`text-sm transition-colors ${
@@ -214,12 +209,19 @@ export function AppSidebar({ onSignOutClick }: AppSidebarProps) {
                     }`}
                     aria-current={isActive(item.path, pathname) ? "page" : undefined}
                   >
-                    <Link href={item.path}>
-                      <item.icon className="h-4 w-4 mr-2" />
-                      <span>{item.label}</span>
-                    </Link>
+                    {pathname === routes.agencyDashboard && item.path !== routes.agencyDashboard ? (
+                      <a href={item.path} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4 mr-2" />
+                        <span>{item.label}</span>
+                      </a>
+                    ) : (
+                      <Link href={item.path} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4 mr-2" />
+                        <span>{item.label}</span>
+                      </Link>
+                    )}
                   </SidebarMenuButton>
-                </motion.div>
+                </div>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>

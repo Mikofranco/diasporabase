@@ -124,7 +124,7 @@ export default function RootLayout({
         {/* <AuthListenerProvider>{children}</AuthListenerProvider> */}
         {children}
 
-        {/* <Toaster position="top-right" richColors duration={6000} closeButton /> */}
+        <Toaster position="bottom-right" richColors duration={6000} closeButton />
       </body>
     </html>
   );

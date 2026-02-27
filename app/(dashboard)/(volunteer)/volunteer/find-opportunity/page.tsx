@@ -1,4 +1,4 @@
-import Opportunities from "@/parts/volunteer/opportunities";
+import Opportunities from "@/parts/volunteer/opportunities/index";
 
 // app/volunteer/find-opportunity/page.tsx
 export default function VolunteerFindOpportunityPage() {

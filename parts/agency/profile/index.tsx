@@ -31,7 +31,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { Edit2, MapPin, User, Globe, Phone, Mail, Building } from "lucide-react";
+import { Edit2, MapPin, User, Globe, Phone, Mail, Building, Loader2 } from "lucide-react";
 import {
   Form,
   FormField,
@@ -44,7 +44,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Image from "next/image";
-import { Badge } from "@/components/ui/badge";
 
 const supabase = createClient();
 
@@ -58,19 +57,21 @@ const formSchema = z.object({
   contact_person_last_name: z.string().min(1, "Last name is required.").trim(),
   contact_person_email: z.string().email("Invalid email address.").min(1, "Email is required."),
   contact_person_phone: z.string().min(1, "Phone number is required.").trim(),
-  website: z.string().url("Invalid URL.").nullable(),
+  website: z.string().nullable(),
   organization_type: z.string().min(1, "Organization type is required.").trim(),
   tax_id: z.string().min(1, "Tax ID is required.").trim(),
   focus_areas: z.array(z.string()).min(1, "At least one focus area is required."),
   environment_cities: z.array(z.string()).nullable(),
   environment_states: z.array(z.string()).nullable(),
   profile_picture: z.string().url("Invalid URL.").nullable(),
+  organization_phone: z.string().trim().optional(),
 });
 
 interface Profile {
   id: string;
   full_name: string;
   email: string;
+  phone: string | null;
   role: string;
   description: string | null;
   address: string | null;
@@ -88,9 +89,103 @@ interface Profile {
   profile_picture: string | null;
 }
 
+const CONTENT_WIDTH = "max-w-6xl";
+
+function ProfileSkeleton() {
+  return (
+    <div className={`container mx-auto p-8 space-y-8 ${CONTENT_WIDTH}`}>
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-9 w-48 rounded-lg" />
+        <Skeleton className="h-10 w-28 rounded-lg" />
+      </div>
+      <div className="space-y-6">
+        <Card className="shadow-md border border-gray-200/80 rounded-xl overflow-hidden">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-20 w-20 rounded-full shrink-0" />
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-56 rounded" />
+                <Skeleton className="h-4 w-32 rounded" />
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        <Card className="shadow-md border border-gray-200/80 rounded-xl">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Organization</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-36 rounded" />
+                <Skeleton className="h-5 w-full rounded" />
+              </div>
+            ))}
+            <div className="sm:col-span-2 space-y-2">
+              <Skeleton className="h-4 w-24 rounded" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-md border border-gray-200/80 rounded-xl">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Contact</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-28 rounded" />
+                <Skeleton className="h-5 w-full rounded" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Card className="shadow-md border border-gray-200/80 rounded-xl">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Location & focus</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20 rounded" />
+              <Skeleton className="h-5 w-full rounded" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-28 rounded" />
+              <div className="flex flex-wrap gap-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-6 w-20 rounded-md" />
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32 rounded" />
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-6 w-16 rounded-md" />
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28 rounded" />
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-6 w-24 rounded-md" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 const Profile: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
@@ -115,6 +210,7 @@ const Profile: React.FC = () => {
       environment_cities: [],
       environment_states: [],
       profile_picture: null,
+      organization_phone: "",
     },
   });
 
@@ -134,6 +230,7 @@ const Profile: React.FC = () => {
             id,
             full_name,
             email,
+            phone,
             role,
             description,
             address,
@@ -174,6 +271,7 @@ const Profile: React.FC = () => {
           environment_cities: profileData.environment_cities || [],
           environment_states: profileData.environment_states || [],
           profile_picture: profileData.profile_picture || null,
+          organization_phone: profileData.phone ?? "",
         });
       } catch (err: any) {
         setError(err.message);
@@ -193,7 +291,7 @@ const Profile: React.FC = () => {
   };
 
   const handleSubmit = async (data: z.infer<typeof formSchema>) => {
-    setLoading(true);
+    setSaving(true);
     try {
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
@@ -233,7 +331,7 @@ const Profile: React.FC = () => {
           environment_cities: data.environment_cities,
           environment_states: data.environment_states,
           profile_picture: profilePictureUrl,
-          // Remove updated_at; handled by database trigger
+          phone: data.organization_phone || null,
         })
         .eq("id", userId)
         .eq("role", "agency");
@@ -246,6 +344,7 @@ const Profile: React.FC = () => {
               ...prev,
               id: prev.id,
               email: prev.email,
+              phone: data.organization_phone || null,
               role: prev.role,
               full_name: data.full_name,
               description: data.description,
@@ -272,32 +371,18 @@ const Profile: React.FC = () => {
       setError(err.message);
       toast.error(err.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="container mx-auto p-8 space-y-8 max-w-4xl">
-        <Skeleton className="h-12 w-1/3 rounded-lg" />
-        <Card className="shadow-xl border-0">
-          <CardHeader>
-            <Skeleton className="h-8 w-1/2 rounded-lg" />
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <Skeleton className="h-10 w-full rounded-lg" />
-            <Skeleton className="h-20 w-full rounded-lg" />
-            <Skeleton className="h-10 w-full rounded-lg" />
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (error) {
     return (
-      <div className="container mx-auto p-8 max-w-4xl">
-        <Card className="border-red-200 bg-red-50 shadow-md">
+      <div className={`container mx-auto p-8 ${CONTENT_WIDTH}`}>
+        <Card className="border-red-200 bg-red-50 shadow-md rounded-xl">
           <CardContent className="pt-6 text-red-600">{error}</CardContent>
         </Card>
       </div>
@@ -306,19 +391,21 @@ const Profile: React.FC = () => {
 
   if (!profile) {
     return (
-      <div className="container mx-auto p-8 max-w-4xl">
-        <Card className="shadow-md">
+      <div className={`container mx-auto p-8 ${CONTENT_WIDTH}`}>
+        <Card className="shadow-md rounded-xl">
           <CardContent className="pt-6 text-gray-600">Profile not found.</CardContent>
         </Card>
       </div>
     );
   }
 
+  const sectionCardClass = "shadow-md border border-gray-200/80 rounded-xl overflow-hidden";
+
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-8 space-y-8 max-w-4xl">
+      <div className={`container mx-auto p-8 space-y-8 ${CONTENT_WIDTH}`}>
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Agency Profile</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{isEditing ? "Edit Agency Profile" : "Agency Profile"}</h1>
           {!isEditing && (
             <Button
               variant="outline"
@@ -331,55 +418,79 @@ const Profile: React.FC = () => {
           )}
         </div>
 
-        <Card className="shadow-xl border-0 bg-white">
-          <CardHeader>
-            <CardTitle className="text-2xl text-diaspora-darkBlue font-semibold">
-              {profile.full_name}
-            </CardTitle>
-            <CardDescription className="text-gray-600">Agency Profile</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            {!isEditing ? (
-              <div className="space-y-6">
-                {profile.profile_picture && (
-                  <div className="flex justify-center">
-                    <Image
-                      src={profile.profile_picture}
-                      alt="Profile Picture"
-                      width={120}
-                      height={120}
-                      className="rounded-full border border-gray-200"
-                    />
+        <div className="space-y-6">
+          {/* Profile header block */}
+          <Card className={sectionCardClass}>
+            <CardContent className="pt-6 pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                {profile.profile_picture ? (
+                  <Image
+                    src={profile.profile_picture}
+                    alt="Profile"
+                    width={80}
+                    height={80}
+                    className="rounded-full border border-gray-200 shrink-0"
+                  />
+                ) : (
+                  <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                    <Building className="h-10 w-10 text-gray-400" />
                   </div>
                 )}
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <CardTitle className="text-xl text-diaspora-darkBlue font-semibold">
+                    {profile.full_name}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 mt-0.5">Agency Profile</CardDescription>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {!isEditing ? (
+            <>
+              {/* Organization section */}
+              <Card className={sectionCardClass}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Building className="h-4 w-4 text-gray-500" />
+                    Organization
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <Label className="text-gray-700 font-medium">Organization Name</Label>
                     <p className="text-gray-600">{profile.organization_name || "N/A"}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-700 font-medium">
-                      Contact Person <User className="inline h-4 w-4 text-gray-500 ml-1" />
-                    </Label>
-                    <p className="text-gray-600">
-                      {profile.contact_person_first_name} {profile.contact_person_last_name}
-                    </p>
+                    <Label className="text-gray-700 font-medium">Display Name</Label>
+                    <p className="text-gray-600">{profile.full_name || "N/A"}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-700 font-medium">
-                      Email <Mail className="inline h-4 w-4 text-gray-500 ml-1" />
+                    <Label className="text-gray-700 font-medium flex items-center gap-1">
+                      <Mail className="h-4 w-4 text-gray-500" />
+                      Organization Email
                     </Label>
-                    <p className="text-gray-600">{profile.contact_person_email || profile.email}</p>
+                    <p className="text-gray-600">{profile.email || "N/A"}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-700 font-medium">
-                      Phone <Phone className="inline h-4 w-4 text-gray-500 ml-1" />
+                    <Label className="text-gray-700 font-medium flex items-center gap-1">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      Organization Phone
                     </Label>
-                    <p className="text-gray-600">{profile.contact_person_phone || "N/A"}</p>
+                    <p className="text-gray-600">{profile.phone || "N/A"}</p>
                   </div>
                   <div>
-                    <Label className="text-gray-700 font-medium">
-                      Website <Globe className="inline h-4 w-4 text-gray-500 ml-1" />
+                    <Label className="text-gray-700 font-medium">Organization Type</Label>
+                    <p className="text-gray-600">{profile.organization_type || "N/A"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-700 font-medium">Tax ID</Label>
+                    <p className="text-gray-600">{profile.tax_id || "N/A"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-700 font-medium flex items-center gap-1">
+                      <Globe className="h-4 w-4 text-gray-500" />
+                      Website
                     </Label>
                     <p className="text-gray-600">
                       {profile.website ? (
@@ -396,156 +507,308 @@ const Profile: React.FC = () => {
                       )}
                     </p>
                   </div>
-                  <div>
-                    <Label className="text-gray-700 font-medium">
-                      Organization Type <Building className="inline h-4 w-4 text-gray-500 ml-1" />
-                    </Label>
-                    <p className="text-gray-600">{profile.organization_type || "N/A"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-700 font-medium">Tax ID</Label>
-                    <p className="text-gray-600">{profile.tax_id || "N/A"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-700 font-medium">
-                      Address <MapPin className="inline h-4 w-4 text-gray-500 ml-1" />
-                    </Label>
-                    <p className="text-gray-600">{profile.address || "N/A"}</p>
-                  </div>
                   <div className="sm:col-span-2">
                     <Label className="text-gray-700 font-medium">Description</Label>
                     <p className="text-gray-600">{profile.description || "No description provided."}</p>
                   </div>
-                  <div className="sm:col-span-2">
+                </CardContent>
+              </Card>
+
+              {/* Contact section */}
+              <Card className={sectionCardClass}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    Contact
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label className="text-gray-700 font-medium">Contact Person</Label>
+                    <p className="text-gray-600">
+                      {profile.contact_person_first_name} {profile.contact_person_last_name}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-700 font-medium flex items-center gap-1">
+                      <Mail className="h-4 w-4 text-gray-500" />
+                      Contact Person Email
+                    </Label>
+                    <p className="text-gray-600">{profile.contact_person_email || "N/A"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-700 font-medium flex items-center gap-1">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      Contact Person Phone
+                    </Label>
+                    <p className="text-gray-600">{profile.contact_person_phone || "N/A"}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Location & focus section */}
+              <Card className={sectionCardClass}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-gray-500" />
+                    Location & focus
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label className="text-gray-700 font-medium">Address</Label>
+                    <p className="text-gray-600">{profile.address || "N/A"}</p>
+                  </div>
+                  <div>
                     <Label className="text-gray-700 font-medium">Focus Areas</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.focus_areas && profile.focus_areas.length > 0 ? (
-                        profile.focus_areas.map((area) => (
-                          <Badge
-                            key={area}
-                            variant="default"
-                            className="bg-diaspora-blue text-white rounded-md px-2 py-1 text-sm"
-                          >
-                            {area.charAt(0).toUpperCase() + area.slice(1).replace("_", " ")}
-                          </Badge>
-                        ))
-                      ) : (
-                        <p className="text-gray-600">No focus areas listed.</p>
-                      )}
-                    </div>
+                    {profile.focus_areas && profile.focus_areas.length > 0 ? (
+                      <ul className="mt-1.5 rounded-lg border border-gray-100 bg-gray-50/80 px-4 py-3 text-sm text-gray-600 list-none space-y-1.5">
+                        {profile.focus_areas.map((area) => (
+                          <li key={area} className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-diaspora-blue" aria-hidden />
+                            {area.charAt(0).toUpperCase() + area.slice(1).replace(/_/g, " ")}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-500 text-sm mt-1">No focus areas listed.</p>
+                    )}
                   </div>
-                  <div className="sm:col-span-2">
-                    <Label className="text-gray-700 font-medium">Operating Cities</Label>
-                    <div className="flex flex-wrap gap-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <Label className="text-gray-700 font-medium">Operating Cities</Label>
                       {profile.environment_cities && profile.environment_cities.length > 0 ? (
-                        profile.environment_cities.map((city) => (
-                          <Badge
-                            key={city}
-                            variant="default"
-                            className="bg-diaspora-blue text-white rounded-md px-2 py-1 text-sm"
-                          >
-                            {city}
-                          </Badge>
-                        ))
+                        <ul className="mt-1.5 rounded-lg border border-gray-100 bg-gray-50/80 px-4 py-3 text-sm text-gray-600 list-none space-y-1.5">
+                          {profile.environment_cities.map((city) => (
+                            <li key={city} className="flex items-center gap-2">
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" aria-hidden />
+                              {city}
+                            </li>
+                          ))}
+                        </ul>
                       ) : (
-                        <p className="text-gray-600">No cities listed.</p>
+                        <p className="text-gray-500 text-sm mt-1">No cities listed.</p>
                       )}
                     </div>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label className="text-gray-700 font-medium">Operating States</Label>
-                    <div className="flex flex-wrap gap-2">
+                    <div>
+                      <Label className="text-gray-700 font-medium">Operating States</Label>
                       {profile.environment_states && profile.environment_states.length > 0 ? (
-                        profile.environment_states.map((state) => (
-                          <Badge
-                            key={state}
-                            variant="default"
-                            className="bg-diaspora-blue text-white rounded-md px-2 py-1 text-sm"
-                          >
-                            {state}
-                          </Badge>
-                        ))
+                        <ul className="mt-1.5 rounded-lg border border-gray-100 bg-gray-50/80 px-4 py-3 text-sm text-gray-600 list-none space-y-1.5">
+                          {profile.environment_states.map((state) => (
+                            <li key={state} className="flex items-center gap-2">
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" aria-hidden />
+                              {state}
+                            </li>
+                          ))}
+                        </ul>
                       ) : (
-                        <p className="text-gray-600">No states listed.</p>
+                        <p className="text-gray-500 text-sm mt-1">No states listed.</p>
                       )}
                     </div>
                   </div>
-                </div>
-              </div>
-            ) : (
+                </CardContent>
+              </Card>
+            </>
+          ) : (
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
-                  <div className="grid gap-6 sm:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="profile_picture"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">Profile Picture</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleProfilePictureChange}
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          {profile.profile_picture && (
-                            <div className="mt-2">
-                              <Image
-                                src={profile.profile_picture}
-                                alt="Current Profile Picture"
-                                width={80}
-                                height={80}
-                                className="rounded-full border border-gray-200"
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                  <Card className={sectionCardClass}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-semibold flex items-center gap-2">
+                        <Building className="h-4 w-4 text-gray-500" />
+                        Organization
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-6 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="profile_picture"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 font-medium">Profile Picture</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleProfilePictureChange}
+                                className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                               />
-                            </div>
-                          )}
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="full_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">
-                            Organization Name <Building className="inline h-4 w-4 text-gray-500 ml-1" />
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Enter organization name"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="organization_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">
-                            Display Name
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Enter display name"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="contact_person_first_name"
+                            </FormControl>
+                            {profile.profile_picture && (
+                              <div className="mt-2">
+                                <Image
+                                  src={profile.profile_picture}
+                                  alt="Current Profile Picture"
+                                  width={80}
+                                  height={80}
+                                  className="rounded-full border border-gray-200"
+                                />
+                              </div>
+                            )}
+                            <FormMessage className="text-red-500 text-sm" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="full_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 font-medium">
+                              Organization Name <Building className="inline h-4 w-4 text-gray-500 ml-1" />
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Enter organization name"
+                                className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-sm" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="organization_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 font-medium">Display Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Enter display name"
+                                className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-sm" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="organization_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 font-medium">Organization Type</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Enter organization type"
+                                className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-sm" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="tax_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 font-medium">Tax ID</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Enter tax ID"
+                                className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-sm" />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="space-y-2">
+                        <Label className="text-gray-700 font-medium flex items-center gap-1">
+                          <Mail className="h-4 w-4 text-gray-500" />
+                          Organization Email
+                        </Label>
+                        <Input
+                          value={profile.email || ""}
+                          readOnly
+                          className="border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed rounded-lg"
+                        />
+                        <p className="text-xs text-gray-500">Account email from registration; not editable here.</p>
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name="organization_phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 font-medium flex items-center gap-1">
+                              <Phone className="h-4 w-4 text-gray-500" />
+                              Organization Phone
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value)}
+                                placeholder="Enter organization phone"
+                                className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-sm" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="website"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 font-medium flex items-center gap-1">
+                              <Globe className="h-4 w-4 text-gray-500" />
+                              Website
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value || null)}
+                                placeholder="Enter website URL"
+                                className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-sm" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem className="sm:col-span-2">
+                            <FormLabel className="text-gray-700 font-medium">Description</FormLabel>
+                            <FormControl>
+                              <textarea
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value || null)}
+                                placeholder="Enter organization description"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+                                rows={4}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-sm" />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className={sectionCardClass}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-semibold flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-500" />
+                        Contact
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-6 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="contact_person_first_name"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-gray-700 font-medium">
@@ -555,7 +818,7 @@ const Profile: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter first name"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -574,7 +837,7 @@ const Profile: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter last name"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -593,7 +856,7 @@ const Profile: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter contact email"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -612,70 +875,24 @@ const Profile: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter contact phone"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="website"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">
-                            Website <Globe className="inline h-4 w-4 text-gray-500 ml-1" />
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              value={field.value ?? ""}
-                              onChange={(e) => field.onChange(e.target.value || null)}
-                              placeholder="Enter website URL"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="organization_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">
-                            Organization Type <Building className="inline h-4 w-4 text-gray-500 ml-1" />
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Enter organization type"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="tax_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">Tax ID</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Enter tax ID"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
+                    </CardContent>
+                  </Card>
+
+                  <Card className={sectionCardClass}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-semibold flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-500" />
+                        Location & focus
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-6 sm:grid-cols-2">
                     <FormField
                       control={form.control}
                       name="address"
@@ -688,7 +905,7 @@ const Profile: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter address"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -713,7 +930,7 @@ const Profile: React.FC = () => {
                                 )
                               }
                               placeholder="e.g., education, health, environment"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -724,7 +941,7 @@ const Profile: React.FC = () => {
                       control={form.control}
                       name="environment_cities"
                       render={({ field }) => (
-                        <FormItem className="sm:col-span-2">
+                        <FormItem>
                           <FormLabel className="text-gray-700 font-medium">Operating Cities</FormLabel>
                           <FormControl>
                             <Input
@@ -738,7 +955,7 @@ const Profile: React.FC = () => {
                                 )
                               }
                               placeholder="e.g., Lagos, Abuja"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -749,7 +966,7 @@ const Profile: React.FC = () => {
                       control={form.control}
                       name="environment_states"
                       render={({ field }) => (
-                        <FormItem className="sm:col-span-2">
+                        <FormItem>
                           <FormLabel className="text-gray-700 font-medium">Operating States</FormLabel>
                           <FormControl>
                             <Input
@@ -763,43 +980,32 @@ const Profile: React.FC = () => {
                                 )
                               }
                               placeholder="e.g., Lagos State, Ogun State"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem className="sm:col-span-2">
-                          <FormLabel className="text-gray-700 font-medium">Description</FormLabel>
-                          <FormControl>
-                            <textarea
-                              {...field}
-                              value={field.value ?? ""}
-                              onChange={(e) => field.onChange(e.target.value || null)}
-                              placeholder="Enter organization description"
-                              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y transition-shadow duration-200 hover:shadow-sm"
-                              rows={6}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                    </CardContent>
+                  </Card>
+
                   <div className="flex gap-4">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
                           type="submit"
-                          className="w-full action-btn text-white font-semibold rounded-lg transition-colors duration-200 py-2"
-                          disabled={loading}
+                          className="w-full action-btn text-white font-semibold rounded-lg transition-colors duration-200 py-2 disabled:opacity-70"
+                          disabled={saving}
                         >
-                          Save Changes
+                          {saving ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                              <span className="ml-2">Saving...</span>
+                            </>
+                          ) : (
+                            "Save Changes"
+                          )}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent className="text-sm">Save updated profile details</TooltipContent>
@@ -810,7 +1016,26 @@ const Profile: React.FC = () => {
                       onClick={() => {
                         setIsEditing(false);
                         setProfilePictureFile(null);
-                        form.reset();
+                        if (profile) {
+                          form.reset({
+                            full_name: profile.full_name || "",
+                            description: profile.description || null,
+                            address: profile.address || "",
+                            organization_name: profile.organization_name || "",
+                            contact_person_first_name: profile.contact_person_first_name || "",
+                            contact_person_last_name: profile.contact_person_last_name || "",
+                            contact_person_email: profile.contact_person_email || "",
+                            contact_person_phone: profile.contact_person_phone || "",
+                            website: profile.website || null,
+                            organization_type: profile.organization_type || "",
+                            tax_id: profile.tax_id || "",
+                            focus_areas: profile.focus_areas || [],
+                            environment_cities: profile.environment_cities || [],
+                            environment_states: profile.environment_states || [],
+                            profile_picture: profile.profile_picture || null,
+                            organization_phone: profile.phone ?? "",
+                          });
+                        }
                       }}
                       className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg py-2"
                     >
@@ -820,8 +1045,7 @@ const Profile: React.FC = () => {
                 </form>
               </Form>
             )}
-          </CardContent>
-        </Card>
+        </div>
       </div>
     </TooltipProvider>
   );

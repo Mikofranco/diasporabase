@@ -3,6 +3,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 
 import ProjectView from "./project-view";
@@ -10,17 +11,21 @@ import { OrganizationContact, Project, ProjectRating } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
-import MilestonesView from "./milestones-view";
-import DeliverablesView from "./deliverables-view";
 import VolunteersList from "./volunteer-list";
 import ContactOrganizationModal from "@/components/modals/contact-organizer";
 import { getOrganizationContact } from "@/services/agency/dashboard";
-import { ReviewsList } from "./review-list";
-import ProjectManagementScreen from "../project-management";
 import { checkAgencyRequestsToVolunteer, checkIfUserIsProjectManager, checkUserInProject } from "@/services/projects";
 import Comments from "../comments";
 import { MilestonesSection } from "@/parts/agency/projects/view-projects.tsx/milestone-section";
 import { routes } from "@/lib/routes";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 export default function ViewProjectDetails() {
   const { id } = useParams<{ id: string }>();
@@ -121,7 +126,7 @@ export default function ViewProjectDetails() {
           supabase
             .from("project_volunteers")
             .select(
-              "volunteer_id, created_at, profiles!volunteer_id(full_name, profile_picture, email)"
+              "volunteer_id, created_at, profiles!volunteer_id(full_name, profile_picture, email, skills, anonymous, residence_country, residence_state, average_rating)"
             )
             .eq("project_id", id),
         ]);
@@ -132,10 +137,17 @@ export default function ViewProjectDetails() {
         setVolunteers(
           (volsRes.data || []).map((v: any) => ({
             id: v.volunteer_id,
-            full_name: v.profiles?.full_name || "Anonymous",
-            email: v.profiles?.email || "",
-            profile_picture: v.profiles?.profile_picture || null,
+            volunteer_id: v.volunteer_id,
+            full_name: v.profiles?.full_name ?? "",
+            email: v.profiles?.email ?? "",
+            avatar_url: v.profiles?.profile_picture ?? undefined,
+            profile_picture: v.profiles?.profile_picture ?? null,
             joined_at: v.created_at,
+            skills: v.profiles?.skills ?? [],
+            anonymous: !!v.profiles?.anonymous,
+            residence_country: v.profiles?.residence_country ?? undefined,
+            residence_state: v.profiles?.residence_state ?? undefined,
+            average_rating: typeof v.profiles?.average_rating === "number" ? v.profiles.average_rating : 0,
           }))
         );
 
@@ -222,56 +234,181 @@ export default function ViewProjectDetails() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <Skeleton className="h-96 w-full rounded-xl" />
-        <Skeleton className="h-64 w-full mt-8" />
+      <div className="min-h-screen bg-gradient-to-b from-slate-50/80 to-white">
+        <div className="container mx-auto max-w-7xl space-y-8 p-4 sm:p-6">
+          {/* Breadcrumb skeleton */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Skeleton className="h-4 w-20 rounded-full" />
+            <span className="text-xs text-muted-foreground/60">&gt;</span>
+            <Skeleton className="h-4 w-32 rounded-full" />
+          </div>
+
+          {/* Main project overview card skeleton */}
+          <div className="rounded-xl border bg-white/70 p-4 shadow-sm sm:p-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-3/4 rounded-lg" />
+                <Skeleton className="h-4 w-1/3 rounded-lg" />
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-5 w-28 rounded-full" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Skeleton className="h-4 w-40 rounded-lg" />
+                <Skeleton className="h-4 w-32 rounded-lg" />
+                <Skeleton className="h-4 w-32 rounded-lg" />
+                <Skeleton className="h-4 w-28 rounded-lg" />
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Skeleton className="h-8 w-32 rounded-md" />
+                <Skeleton className="h-8 w-32 rounded-md" />
+              </div>
+            </div>
+          </div>
+
+          {/* Milestones & volunteers skeleton */}
+          <div className="space-y-6">
+            <div className="rounded-xl border bg-white/70 p-4 shadow-sm sm:p-5">
+              <Skeleton className="mb-4 h-5 w-32 rounded-lg" />
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-2 rounded-lg border bg-muted/40 p-3"
+                  >
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-40 rounded-lg" />
+                      <Skeleton className="h-3 w-28 rounded-lg" />
+                    </div>
+                    <Skeleton className="h-4 w-16 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border bg-white/70 p-4 shadow-sm sm:p-5">
+              <div className="mb-4 flex items-baseline justify-between gap-2">
+                <Skeleton className="h-5 w-28 rounded-lg" />
+                <Skeleton className="h-4 w-16 rounded-full" />
+              </div>
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3"
+                  >
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-1">
+                      <Skeleton className="h-4 w-40 rounded-lg" />
+                      <Skeleton className="h-3 w-32 rounded-lg" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !project) {
     return (
-      <div className="container mx-auto p-6 text-center py-20">
-        <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-        <p className="text-lg text-destructive">
-          {error || "Project not found"}
-        </p>
+      <div className="min-h-screen bg-gradient-to-b from-slate-50/80 to-white">
+        <div className="container mx-auto max-w-2xl p-6 py-24 text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+          <p className="mb-2 text-lg font-semibold text-destructive">
+            {error || "Project not found"}
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            The project you&apos;re looking for might have been removed or is unavailable.
+          </p>
+          <button
+            onClick={() => router.push(routes.volunteerProjects)}
+            className="inline-flex h-9 items-center rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            Back to my projects
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-16 pb-20 bg-white rounded-lg shadow-sm">
-      <section>
-        <ProjectView
-          project={project}
-          isUserInProject={isUserInProject}
-          hasRequested={hasRequested}
-          setHasRequested={setHasRequested}
-          userID={currentUserId} //@ts-ignore
-          contactEmail={organizationDetails.contact_person_email}
-          hasRated={hasRated}
-          volunteersRegistered={volunteers.length}
-          agencyHasSentRequest={agencyHasSentRequest}
-          setHasRated={setHasRated}
-          onboardingComplete={onboardingComplete}
-        />
-      </section>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50/80 to-white">
+      <div className="container mx-auto max-w-7xl p-4 pb-16 sm:p-6 space-y-10">
+        {/* Breadcrumb */}
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={routes.volunteerProjects}>My projects</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="max-w-[220px] truncate font-medium sm:max-w-md">
+                {project.title}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
-      <Separator />
-      <div className="space-y-6">
-        <MilestonesSection projectId={project.id} canEdit={false} volunteers={volunteers}/>
-
-        <section className="lg:col-span-2 space-y-8">
-          <h2 className="text-2xl text-diaspora-darkBlue font-bold">
-            Volunteers ({volunteers.length})
-          </h2>
-          <VolunteersList volunteers={volunteers} />
+        {/* Main project overview */}
+        <section>
+          <ProjectView
+            project={project}
+            isUserInProject={isUserInProject}
+            hasRequested={hasRequested}
+            setHasRequested={setHasRequested}
+            userID={currentUserId} //@ts-ignore
+            contactEmail={organizationDetails.contact_person_email}
+            hasRated={hasRated}
+            volunteersRegistered={volunteers.length}
+            agencyHasSentRequest={agencyHasSentRequest}
+            setHasRated={setHasRated}
+            onboardingComplete={onboardingComplete}
+          />
         </section>
-      </div>
 
-      {/* <ReviewsList reviews={}/> */}
-      {isUserInProject && <Comments projectId={project.id} volunteers={volunteers} projectTitle={project.title} />}
+        <Separator />
+
+        {/* Milestones & volunteers */}
+        <div className="space-y-8">
+          <MilestonesSection
+            projectId={project.id}
+            canEdit={false}
+            volunteers={volunteers}
+            milestonesPageHref={routes.volunteerProjectMilestones(project.id)}
+          />
+
+          <section className="space-y-4 lg:col-span-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-xl font-semibold text-diaspora-darkBlue sm:text-2xl">
+                Volunteers
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {volunteers.length} participant
+                {volunteers.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            <VolunteersList
+              volunteers={volunteers}
+              viewerRole={isUserInProject ? "volunteer_same_project" : "public"}
+            />
+          </section>
+        </div>
+
+        {isUserInProject && (
+          <Comments
+            projectId={project.id}
+            volunteers={volunteers}
+            projectTitle={project.title}
+          />
+        )}
+      </div>
 
       <ContactOrganizationModal
         project={{ id: project.id, title: project.title }}

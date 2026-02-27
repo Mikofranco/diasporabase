@@ -19,6 +19,7 @@ const NavBar = () => {
   const mainLinks = [
     { href: routes.home, label: "Home" },
     { href: routes.about, label: "About us" },
+    { href: routes.generalProjectsView, label: "Projects" },
     { href: routes.contact, label: "Contact us" },
   ].filter(
     (link) => pathname !== routes.home || link.href !== routes.home

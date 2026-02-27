@@ -3,10 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { getUserId } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -15,11 +16,15 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { checkAgencyStatus } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { KeyRound, Bell, AlertTriangle, Loader2 } from 'lucide-react';
 
 const supabase = createClient();
+const CONFIRM_DELETE_TEXT = 'DELETE';
 
 // Form schema for password change
 const passwordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
   newPassword: z
     .string()
     .min(8, 'Password must be at least 8 characters')
@@ -42,13 +47,16 @@ interface Settings {
 
 export default function AgencySettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   // Form setup with react-hook-form
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
+      currentPassword: '',
       newPassword: '',
       confirmPassword: '',
     },
@@ -57,21 +65,24 @@ export default function AgencySettings() {
   // Fetch settings on mount
   useEffect(() => {
     const fetchSettings = async () => {
+      setInitialLoading(true);
       try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-          toast.error('Unauthorized: Please log in');
+        const { data: userId, error: userIdError } = await getUserId();
+        if (userIdError || !userId) {
+          toast.error('Please log in to view settings');
+          setInitialLoading(false);
           return;
         }
 
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('id, role, is_active, notification_preferences, receives_updates')
-          .eq('id', user.id)
+          .eq('id', userId)
           .single();
 
         if (profileError || !profile) {
           toast.error('Profile not found');
+          setInitialLoading(false);
           return;
         }
 
@@ -82,16 +93,25 @@ export default function AgencySettings() {
         });
         if (agencyStatus.status === 'error' || !agencyStatus.isAgencyActive) {
           toast.error(agencyStatus.message);
+          setInitialLoading(false);
           return;
         }
 
+        const prefs = profile.notification_preferences && typeof profile.notification_preferences === 'object'
+          ? profile.notification_preferences
+          : { email_notifications: true, sms_notifications: false };
         setSettings({
-          notification_preferences: profile.notification_preferences,
-          receives_updates: profile.receives_updates,
-          is_active: profile.is_active,
+          notification_preferences: {
+            email_notifications: prefs.email_notifications ?? true,
+            sms_notifications: prefs.sms_notifications ?? false,
+          },
+          receives_updates: profile.receives_updates ?? false,
+          is_active: profile.is_active ?? false,
         });
-      } catch (err: any) {
+      } catch {
         toast.error('Failed to load settings');
+      } finally {
+        setInitialLoading(false);
       }
     };
     fetchSettings();
@@ -99,54 +119,65 @@ export default function AgencySettings() {
 
   // Handle password change
   const handlePasswordChange = async (data: PasswordFormData) => {
-    setLoading(true);
-
+    setSaving(true);
     try {
-      const { error: authError } = await supabase.auth.updateUser({
-        password: data.newPassword,
-      });
-
-      if (authError) {
-        toast.error(`Failed to update password: ${authError.message}`);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user?.email) {
+        toast.error('Please log in to change your password.');
+        setSaving(false);
         return;
       }
 
-      // Log notification (FR-301)
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('notifications').insert({
-          user_id: user.id,
-          message: 'Password changed successfully',
-          type: 'request_status_change',
-          related_id: user.id,
-        });
+      // Verify current password by re-authenticating
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: data.currentPassword,
+      });
+      if (signInError) {
+        toast.error('Current password is incorrect.');
+        setSaving(false);
+        return;
       }
 
+      const { error: authError } = await supabase.auth.updateUser({
+        password: data.newPassword,
+      });
+      if (authError) {
+        toast.error(`Failed to update password: ${authError.message}`);
+        setSaving(false);
+        return;
+      }
+
+      // Log notification
+      await supabase.from('notifications').insert({
+        user_id: user.id,
+        message: 'Password changed successfully',
+        type: 'request_status_change',
+        related_id: user.id,
+      });
+
       toast.success('Password updated successfully');
-      passwordForm.reset();
-    } catch (err: any) {
+      passwordForm.reset({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch {
       toast.error('Failed to update password');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   // Handle settings update (notification preferences, receives_updates)
   const handleSettingsSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
-
     if (!settings) {
       toast.error('No settings data to save');
-      setLoading(false);
       return;
     }
-
+    setSaving(true);
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        toast.error('Unauthorized: Please log in');
-        setLoading(false);
+      const { data: userId, error: userIdError } = await getUserId();
+      if (userIdError || !userId) {
+        toast.error('Please log in to save settings');
+        setSaving(false);
         return;
       }
 
@@ -157,62 +188,60 @@ export default function AgencySettings() {
           receives_updates: settings.receives_updates,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', user.id);
+        .eq('id', userId);
 
       if (error) {
         toast.error(`Failed to update settings: ${error.message}`);
       } else {
-        // Log notification (FR-301)
         await supabase.from('notifications').insert({
-          user_id: user.id,
+          user_id: userId,
           message: 'Notification settings updated',
           type: 'request_status_change',
-          related_id: user.id,
+          related_id: userId,
         });
         toast.success('Settings updated successfully');
       }
-    } catch (err: any) {
+    } catch {
       toast.error('Failed to update settings');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   // Handle account deletion
   const handleDeleteAccount = async () => {
-    setLoading(true);
-
+    if (deleteConfirmText !== CONFIRM_DELETE_TEXT) return;
+    setSaving(true);
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        toast.error('Unauthorized: Please log in');
-        setLoading(false);
+      const { data: userId, error: userIdError } = await getUserId();
+      if (userIdError || !userId) {
+        toast.error('Please log in to continue');
+        setSaving(false);
         return;
       }
 
-      // Soft delete by setting deleted_at
       const { error } = await supabase
         .from('profiles')
         .update({ deleted_at: new Date().toISOString() })
-        .eq('id', user.id);
+        .eq('id', userId);
 
       if (error) {
         toast.error(`Failed to delete account: ${error.message}`);
       } else {
-        // Log notification (FR-301)
         await supabase.from('notifications').insert({
-          user_id: user.id,
+          user_id: userId,
           message: 'Account deletion requested',
           type: 'request_status_change',
-          related_id: user.id,
+          related_id: userId,
         });
         toast.success('Account deletion requested. Contact admin for finalization.');
         setDeleteDialogOpen(false);
+        setDeleteConfirmText('');
       }
-    } catch (err: any) {
+    } catch {
       toast.error('Failed to delete account');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -235,20 +264,93 @@ export default function AgencySettings() {
     }
   };
 
-  if (!settings) {
-    return <div className="container mx-auto p-4 text-center text-gray-500">Loading...</div>;
+  const sectionCardClass = 'shadow-md border border-gray-200/80 rounded-xl overflow-hidden';
+
+  if (initialLoading || !settings) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
+        <div>
+          <Skeleton className="h-8 w-48 rounded-lg mb-2" />
+          <Skeleton className="h-4 w-72 rounded" />
+        </div>
+        <Card className={sectionCardClass}>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-5 w-40 rounded" />
+            <Skeleton className="h-4 w-full rounded mt-2" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-9 w-32 rounded-lg" />
+          </CardContent>
+        </Card>
+        <Card className={sectionCardClass}>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-5 w-44 rounded" />
+            <Skeleton className="h-4 w-full rounded mt-2" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-12 w-full rounded" />
+            <Skeleton className="h-12 w-full rounded" />
+            <Skeleton className="h-12 w-full rounded" />
+            <Skeleton className="h-9 w-28 rounded-lg" />
+          </CardContent>
+        </Card>
+        <Card className={sectionCardClass}>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-5 w-28 rounded" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-9 w-32 rounded-lg" />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
-      {/* Password Change Card */}
-      <Card className="shadow-md rounded-lg animate-fade-in">
-        <CardHeader className="py-3">
-          <CardTitle className="text-lg font-semibold text-gray-800">Change Password</CardTitle>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Manage your password, notifications, and account.
+        </p>
+      </div>
+
+      {/* Password */}
+      <Card className={sectionCardClass}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-gray-500" />
+            Change Password
+          </CardTitle>
+          <CardDescription>
+            Set a new password. Use at least 8 characters with uppercase, number, and special character.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <Form {...passwordForm}>
-            <form onSubmit={passwordForm.handleSubmit(handlePasswordChange)} className="space-y-3">
+            <form onSubmit={passwordForm.handleSubmit(handlePasswordChange)} className="space-y-4">
+              <FormField
+                control={passwordForm.control}
+                name="currentPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700">Current Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        id="currentPassword"
+                        type="password"
+                        placeholder="Enter your current password"
+                        className="h-9 text-sm border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                        aria-required="true"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs text-red-500" />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={passwordForm.control}
                 name="newPassword"
@@ -260,7 +362,7 @@ export default function AgencySettings() {
                         id="newPassword"
                         type="password"
                         placeholder="Enter new password"
-                        className="h-9 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                        className="h-9 text-sm border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                         aria-required="true"
                         {...field}
                       />
@@ -280,7 +382,7 @@ export default function AgencySettings() {
                         id="confirmPassword"
                         type="password"
                         placeholder="Confirm new password"
-                        className="h-9 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                        className="h-9 text-sm border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                         aria-required="true"
                         {...field}
                       />
@@ -291,27 +393,40 @@ export default function AgencySettings() {
               />
               <Button
                 type="submit"
-                disabled={loading || !settings.is_active}
-                className="h-9 text-sm action-btn transition-colors disabled:bg-gray-400"
-                aria-disabled={loading || !settings.is_active}
+                disabled={saving || !settings.is_active}
+                className="h-9 text-sm action-btn rounded-lg disabled:opacity-70"
+                aria-disabled={saving || !settings.is_active}
               >
-                {loading ? 'Saving...' : 'Change Password'}
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                    <span className="ml-2">Updating...</span>
+                  </>
+                ) : (
+                  'Change Password'
+                )}
               </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
 
-      {/* Notification Preferences Card */}
-      <Card className="shadow-md rounded-lg animate-fade-in">
-        <CardHeader className="py-3">
-          <CardTitle className="text-lg font-semibold text-gray-800">Notification Preferences</CardTitle>
+      {/* Notifications */}
+      <Card className={sectionCardClass}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Bell className="h-4 w-4 text-gray-500" />
+            Notification Preferences
+          </CardTitle>
+          <CardDescription>
+            Choose how you want to receive updates and notifications.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <form onSubmit={handleSettingsSubmit} className="space-y-3">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="email_notifications" className="text-sm font-medium text-gray-700">
+        <CardContent className="space-y-4">
+          <form onSubmit={handleSettingsSubmit} className="space-y-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 px-4 py-3">
+                <Label htmlFor="email_notifications" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Email Notifications
                 </Label>
                 <Switch
@@ -320,24 +435,24 @@ export default function AgencySettings() {
                   onCheckedChange={(checked) => handleToggleChange('email_notifications', checked)}
                   disabled={!settings.is_active}
                   aria-label="Toggle email notifications"
-                  className="data-[state=checked]:bg-blue-600"
+                  className="data-[state=checked]:bg-[#0ea5e9] data-[state=checked]:hover:bg-[#0284c7]"
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="sms_notifications" className="text-sm font-medium text-gray-700">
+              <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 px-4 py-3">
+                <Label htmlFor="sms_notifications" className="text-sm font-medium text-gray-700 cursor-pointer">
                   SMS Notifications
                 </Label>
                 <Switch
                   id="sms_notifications"
-                  checked={settings.notification_preferences.sms_notifications || false}
+                  checked={settings.notification_preferences.sms_notifications ?? false}
                   onCheckedChange={(checked) => handleToggleChange('sms_notifications', checked)}
                   disabled={!settings.is_active}
                   aria-label="Toggle SMS notifications"
-                  className="data-[state=checked]:bg-blue-600"
+                  className="data-[state=checked]:bg-[#0ea5e9] data-[state=checked]:hover:bg-[#0284c7]"
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="receives_updates" className="text-sm font-medium text-gray-700">
+              <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 px-4 py-3">
+                <Label htmlFor="receives_updates" className="text-sm font-medium text-gray-700 cursor-pointer">
                   General Updates
                 </Label>
                 <Switch
@@ -346,46 +461,57 @@ export default function AgencySettings() {
                   onCheckedChange={(checked) => handleToggleChange('receives_updates', checked)}
                   disabled={!settings.is_active}
                   aria-label="Toggle general updates"
-                  className="data-[state=checked]:bg-blue-600"
+                  className="data-[state=checked]:bg-[#0ea5e9] data-[state=checked]:hover:bg-[#0284c7]"
                 />
               </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-700">
-                Account Status: <strong className={settings.is_active ? 'text-green-600' : 'text-red-600'}>{settings.is_active ? 'Active' : 'Inactive'}</strong>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <p className="text-sm text-gray-600">
+                Account status:{' '}
+                <strong className={settings.is_active ? 'text-green-600' : 'text-amber-600'}>
+                  {settings.is_active ? 'Active' : 'Pending'}
+                </strong>
                 {!settings.is_active && (
-                  <span className="text-gray-500 text-xs ml-1">
-                    (Contact admin for verification)
-                  </span>
+                  <span className="text-muted-foreground text-xs ml-1">(Contact admin if you need access)</span>
                 )}
               </p>
+              <Button
+                type="submit"
+                disabled={saving || !settings.is_active}
+                className="h-9 text-sm action-btn rounded-lg disabled:opacity-70"
+                aria-disabled={saving || !settings.is_active}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                    <span className="ml-2">Saving...</span>
+                  </>
+                ) : (
+                  'Save Settings'
+                )}
+              </Button>
             </div>
-            <Button
-              type="submit"
-              disabled={loading || !settings.is_active}
-              className="h-9 text-sm action-btn transition-colors disabled:bg-gray-400"
-              aria-disabled={loading || !settings.is_active}
-            >
-              {loading ? 'Saving...' : 'Save Settings'}
-            </Button>
           </form>
         </CardContent>
       </Card>
 
-      {/* Danger Zone Card */}
-      <Card className="shadow-md rounded-lg border border-red-200 animate-fade-in">
-        <CardHeader className="py-3">
-          <CardTitle className="text-lg font-semibold text-red-600">Danger Zone</CardTitle>
+      {/* Danger Zone */}
+      <Card className="shadow-md border border-red-200/80 rounded-xl overflow-hidden bg-red-50/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2 text-red-700">
+            <AlertTriangle className="h-4 w-4" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>
+            Deleting your account is irreversible. You will lose access to all projects and data. Contact admin for finalization after requesting deletion.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-600 mb-3">
-            Deleting your account is irreversible. You will lose access to all projects and data.
-          </p>
-          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <Dialog open={deleteDialogOpen} onOpenChange={(open) => { setDeleteDialogOpen(open); if (!open) setDeleteConfirmText(''); }}>
             <DialogTrigger asChild>
               <Button
                 variant="destructive"
-                className="h-9 text-sm hover:bg-red-700 transition-colors"
+                className="h-9 text-sm rounded-lg hover:bg-red-700"
               >
                 Delete Account
               </Button>
@@ -394,24 +520,40 @@ export default function AgencySettings() {
               <DialogHeader>
                 <DialogTitle className="text-red-600">Confirm Account Deletion</DialogTitle>
                 <DialogDescription>
-                  Are you sure you want to delete your account? This action cannot be undone.
+                  This action cannot be undone. Type <strong>{CONFIRM_DELETE_TEXT}</strong> below to confirm.
                 </DialogDescription>
               </DialogHeader>
+              <div className="py-2">
+                <Input
+                  placeholder={`Type ${CONFIRM_DELETE_TEXT} to confirm`}
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="border-red-200 focus-visible:ring-red-500 rounded-lg font-mono"
+                  aria-label="Confirmation text"
+                />
+              </div>
               <DialogFooter className="mt-4">
                 <Button
                   variant="outline"
-                  onClick={() => setDeleteDialogOpen(false)}
-                  className="h-9 text-sm"
+                  onClick={() => { setDeleteDialogOpen(false); setDeleteConfirmText(''); }}
+                  className="h-9 text-sm rounded-lg"
                 >
                   Cancel
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={handleDeleteAccount}
-                  disabled={loading}
-                  className="h-9 text-sm hover:bg-red-700 transition-colors"
+                  disabled={saving || deleteConfirmText !== CONFIRM_DELETE_TEXT}
+                  className="h-9 text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
                 >
-                  {loading ? 'Deleting...' : 'Delete Account'}
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                      <span className="ml-2">Deleting...</span>
+                    </>
+                  ) : (
+                    'Delete Account'
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>

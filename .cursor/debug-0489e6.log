@@ -1,0 +1,43 @@
+{"sessionId":"0489e6","location":"components/app-sidebar.tsx:link-click","message":"Sidebar nav link clicked (full nav)","data":{"href":"/agency/projects","fromPathname":"/agency/dashboard"},"timestamp":1771900586608,"hypothesisId":"H6"}
+{"sessionId":"0489e6","location":"parts/agency/projects/index.tsx:mount","message":"Projects page mounted","data":{},"timestamp":1771900602481,"hypothesisId":"H7"}
+{"sessionId":"0489e6","location":"app/(dashboard)/layout.tsx:pathname","message":"Dashboard layout pathname","data":{"pathname":"/agency/projects"},"timestamp":1771900602486,"hypothesisId":"H4"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:effect-start","message":"Dashboard init effect started","data":{},"timestamp":1771900620219,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/projects/index.tsx:unmount","message":"Projects page unmount","data":{},"timestamp":1771900620212,"hypothesisId":"H7"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:effect-start","message":"Dashboard init effect started","data":{},"timestamp":1771900620230,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"app/(dashboard)/layout.tsx:pathname","message":"Dashboard layout pathname","data":{"pathname":"/agency/dashboard"},"timestamp":1771900620223,"hypothesisId":"H4"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:effect-cleanup","message":"Dashboard unmount (cleanup)","data":{},"timestamp":1771900620226,"hypothesisId":"H3"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:after-profile-unmounted","message":"Skipped setState/replace (unmounted)","data":{},"timestamp":1771900620924,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:before-setState","message":"About to setUserId/setIsActive","data":{"hasTaxId":true,"isActive":true},"timestamp":1771900621338,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:fetchAllProjects-finally","message":"fetchAllProjects finally (setProjectIsLoading false)","data":{},"timestamp":1771900622052,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:fetchAllProjects-done","message":"fetchAllProjects completed","data":{},"timestamp":1771900622054,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"components/app-sidebar.tsx:link-click","message":"Sidebar nav link clicked (full nav)","data":{"href":"/agency/profile","fromPathname":"/agency/dashboard"},"timestamp":1771900626594,"hypothesisId":"H6"}
+{"sessionId":"0489e6","location":"app/(dashboard)/layout.tsx:pathname","message":"Dashboard layout pathname","data":{"pathname":"/agency/profile"},"timestamp":1771900673029,"hypothesisId":"H4"}
+{"sessionId":"0489e6","location":"app/(dashboard)/layout.tsx:pathname","message":"Dashboard layout pathname","data":{"pathname":"/agency/projects"},"timestamp":1771900685035,"hypothesisId":"H4"}
+{"sessionId":"0489e6","location":"parts/agency/projects/index.tsx:unmount","message":"Projects page unmount","data":{},"timestamp":1771900685038,"hypothesisId":"H7"}
+{"sessionId":"0489e6","location":"parts/agency/projects/index.tsx:mount","message":"Projects page mounted","data":{},"timestamp":1771900685042,"hypothesisId":"H7"}
+{"sessionId":"0489e6","location":"parts/agency/projects/index.tsx:mount","message":"Projects page mounted","data":{},"timestamp":1771900685031,"hypothesisId":"H7"}
+{"sessionId":"0489e6","location":"app/(dashboard)/layout.tsx:pathname","message":"Dashboard layout pathname","data":{"pathname":"/agency/dashboard"},"timestamp":1771900693909,"hypothesisId":"H4"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:effect-cleanup","message":"Dashboard unmount (cleanup)","data":{},"timestamp":1771900693912,"hypothesisId":"H3"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:effect-start","message":"Dashboard init effect started","data":{},"timestamp":1771900693915,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/projects/index.tsx:unmount","message":"Projects page unmount","data":{},"timestamp":1771900693897,"hypothesisId":"H7"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:effect-start","message":"Dashboard init effect started","data":{},"timestamp":1771900693904,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:after-profile-unmounted","message":"Skipped setState/replace (unmounted)","data":{},"timestamp":1771900694774,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:before-setState","message":"About to setUserId/setIsActive","data":{"hasTaxId":true,"isActive":true},"timestamp":1771900695212,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:fetchAllProjects-finally","message":"fetchAllProjects finally (setProjectIsLoading false)","data":{},"timestamp":1771900695881,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:fetchAllProjects-done","message":"fetchAllProjects completed","data":{},"timestamp":1771900695884,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"components/app-sidebar.tsx:link-click","message":"Sidebar nav link clicked (full nav)","data":{"href":"/agency/settings","fromPathname":"/agency/dashboard"},"timestamp":1771900702773,"hypothesisId":"H6"}
+{"sessionId":"0489e6","location":"app/(dashboard)/layout.tsx:pathname","message":"Dashboard layout pathname","data":{"pathname":"/agency/settings"},"timestamp":1771900744348,"hypothesisId":"H4"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:effect-start","message":"Dashboard init effect started","data":{},"timestamp":1771900756989,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:effect-cleanup","message":"Dashboard unmount (cleanup)","data":{},"timestamp":1771900756996,"hypothesisId":"H3"}
+{"sessionId":"0489e6","location":"app/(dashboard)/layout.tsx:pathname","message":"Dashboard layout pathname","data":{"pathname":"/agency/dashboard"},"timestamp":1771900756993,"hypothesisId":"H4"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:effect-start","message":"Dashboard init effect started","data":{},"timestamp":1771900757000,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:after-profile-unmounted","message":"Skipped setState/replace (unmounted)","data":{},"timestamp":1771900757545,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:before-setState","message":"About to setUserId/setIsActive","data":{"hasTaxId":true,"isActive":true},"timestamp":1771900758033,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:fetchAllProjects-done","message":"fetchAllProjects completed","data":{},"timestamp":1771900758723,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"parts/agency/dashboard/index.tsx:fetchAllProjects-finally","message":"fetchAllProjects finally (setProjectIsLoading false)","data":{},"timestamp":1771900758721,"hypothesisId":"H1"}
+{"sessionId":"0489e6","location":"components/app-sidebar.tsx:link-click","message":"Sidebar nav link clicked (full nav)","data":{"href":"/agency/projects","fromPathname":"/agency/dashboard"},"timestamp":1771900767039,"hypothesisId":"H6"}
+{"sessionId":"0489e6","location":"app/(dashboard)/layout.tsx:pathname","message":"Dashboard layout pathname","data":{"pathname":"/agency/projects"},"timestamp":1771900778537,"hypothesisId":"H4"}
+{"sessionId":"0489e6","location":"parts/agency/projects/index.tsx:mount","message":"Projects page mounted","data":{},"timestamp":1771900778532,"hypothesisId":"H7"}
+{"sessionId":"0489e6","location":"parts/agency/projects/index.tsx:unmount","message":"Projects page unmount","data":{},"timestamp":1771900909368,"hypothesisId":"H7"}
+{"sessionId":"0489e6","location":"parts/agency/projects/index.tsx:mount","message":"Projects page mounted","data":{},"timestamp":1771900909427,"hypothesisId":"H7"}
+{"sessionId":"0489e6","location":"parts/agency/projects/index.tsx:unmount","message":"Projects page unmount","data":{},"timestamp":1771900915988,"hypothesisId":"H7"}
