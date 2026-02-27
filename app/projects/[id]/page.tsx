@@ -161,7 +161,7 @@ export default function PublicProjectDetailsPage() {
       <div className="flex flex-col min-h-[100dvh]">
         <NavBar />
         <main className="flex-1 pt-24 pb-12">
-          <div className="max-w-4xl mx-auto px-4 lg:px-6">
+          <div className="max-w-7xl mx-auto px-4 lg:px-6">
             <Card className="animate-pulse">
               <CardHeader>
                 <div className="h-6 bg-gray-200 rounded w-2/3" />
@@ -186,7 +186,7 @@ export default function PublicProjectDetailsPage() {
       <div className="flex flex-col min-h-[100dvh]">
         <NavBar />
         <main className="flex-1 pt-24 pb-12">
-          <div className="max-w-4xl mx-auto px-4 lg:px-6">
+          <div className="max-w-7xl mx-auto px-4 lg:px-6">
             <p className="text-muted-foreground">Project not found.</p>
             <Link href={routes.generalProjectsView}>
               <Button variant="outline" className="mt-4">
@@ -204,12 +204,23 @@ export default function PublicProjectDetailsPage() {
       <NavBar />
       <main className="flex-1 pt-24 pb-12">
         <section>
-          <div className="max-w-4xl mx-auto px-4 lg:px-6">
-            <Link href={routes.generalProjectsView}>
-              <Button variant="outline" className="mb-6 bg-transparent">
-                ← Back to Projects
-              </Button>
-            </Link>
+          <div className="max-w-7xl mx-auto px-4 lg:px-6">
+            <nav className="mb-6 text-sm text-muted-foreground">
+              <ol className="flex items-center gap-1">
+                <li>
+                  <Link
+                    href={routes.generalProjectsView}
+                    className="hover:text-[#0EA5E9] transition-colors"
+                  >
+                    Projects
+                  </Link>
+                </li>
+                <li className="px-1 text-xs text-gray-400">/</li>
+                <li className="text-gray-900 font-medium truncate max-w-xs sm:max-w-md">
+                  {project.title}
+                </li>
+              </ol>
+            </nav>
 
             <div className="grid gap-6 lg:grid-cols-3">
               {/* Project Details */}

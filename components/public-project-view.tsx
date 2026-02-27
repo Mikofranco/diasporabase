@@ -251,21 +251,59 @@ export default function PublicProjectView() {
 
   if (loading) {
     return (
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="h-3 bg-gray-200 rounded"></div>
-                <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+      <div>
+        <div className="mb-8 space-y-4">
+          <div className="space-y-2">
+            <div className="h-7 w-40 bg-gray-200 rounded-md animate-pulse" />
+            <div className="h-4 w-64 bg-gray-200 rounded-md animate-pulse" />
+          </div>
+
+          <div className="rounded-xl border bg-white/80 p-4 shadow-sm space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="flex-1">
+                <div className="h-10 w-full bg-gray-100 rounded-md animate-pulse" />
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <div className="flex gap-2">
+                <div className="h-9 w-20 bg-gray-100 rounded-lg animate-pulse" />
+                <div className="h-9 w-20 bg-gray-100 rounded-lg animate-pulse" />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-9 w-full bg-gray-50 rounded-md border border-gray-100 animate-pulse"
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="h-full flex flex-col shadow-sm">
+              <CardHeader className="space-y-2 animate-pulse">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-4/5" />
+                    <div className="h-3 bg-gray-200 rounded w-2/5" />
+                  </div>
+                  <div className="h-5 w-16 bg-gray-200 rounded-full" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 animate-pulse flex-1 flex flex-col">
+                <div className="space-y-2 flex-1">
+                  <div className="h-3 bg-gray-200 rounded w-full" />
+                  <div className="h-3 bg-gray-200 rounded w-5/6" />
+                  <div className="h-3 bg-gray-200 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 rounded w-2/5" />
+                </div>
+                <div className="h-9 w-full bg-gray-200 rounded-md mt-2" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -294,12 +332,17 @@ export default function PublicProjectView() {
               />
             </div>
             <div className="flex gap-2">
-              <Button size="sm" onClick={handleApplyFilters}>
+              <Button
+                size="sm"
+                className="px-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 text-white shadow-sm"
+                onClick={handleApplyFilters}
+              >
                 Search
               </Button>
               <Button
-                variant="outline"
                 size="sm"
+                variant="outline"
+                className="text-sm font-medium text-gray-700 border border-gray-300 hover:border-[#0ea5e9] hover:text-[#0ea5e9] rounded-lg px-4 py-2 transition-colors duration-200"
                 onClick={handleClearFilters}
               >
                 Clear
@@ -496,6 +539,7 @@ export default function PublicProjectView() {
         <div className="flex justify-center mt-8">
           <Button
             variant="outline"
+            className="text-sm font-medium text-gray-700 border border-gray-300 hover:border-[#0ea5e9] hover:text-[#0ea5e9] rounded-lg px-4 py-2 transition-colors duration-200"
             onClick={handleLoadMore}
             disabled={loadingMore}
           >
