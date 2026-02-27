@@ -23,10 +23,16 @@ export function TeamTab({ project, projectId }: TeamTabProps) {
             console.log("Fetched volunteers:", fetchedVolunteers);//@ts-ignore
             setVolunteers(fetchedVolunteers.map((v: any) => ({
                 id: v.volunteer_id,
-                full_name: v.profiles.full_name,
-                email: v.profiles.email,
-                avatar_url: v.profiles.profile_picture,
+                volunteer_id: v.volunteer_id,
+                full_name: v.profiles.full_name ?? "",
+                email: v.profiles.email ?? "",
+                avatar_url: v.profiles.profile_picture ?? undefined,
                 joined_at: v.created_at,
+                skills: v.profiles.skills ?? [],
+                anonymous: !!v.profiles.anonymous,
+                residence_country: v.profiles.residence_country ?? undefined,
+                residence_state: v.profiles.residence_state ?? undefined,
+                average_rating: typeof v.profiles.average_rating === "number" ? v.profiles.average_rating : 0,
             })));
         }
     }

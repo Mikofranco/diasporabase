@@ -92,6 +92,7 @@ export function MilestonesSection({
   }
 
   if (milestones.length === 0) {
+    const noMilestonesViewButtonDisabled = !canEdit; // Volunteers: disable when there's nothing to view
     return (
       <Card className="border-dashed">
         <CardContent className="text-center py-12">
@@ -100,7 +101,9 @@ export function MilestonesSection({
             No Milestones Defined
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Add milestones and deliverables to track progress.
+            {canEdit
+              ? "Add milestones and deliverables to track progress."
+              : "No milestones to view yet. The project organizer will add them to track progress."}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             {canEdit && (
@@ -127,9 +130,30 @@ export function MilestonesSection({
                 </TooltipContent>
               </Tooltip>
             )}
-            <Button asChild variant="default" size="sm" className="bg-diaspora-darkBlue hover:bg-diaspora-darkBlue/90">
-              <Link href={milestonesPageHref}>View milestones</Link>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-block">
+                  <Button
+                    asChild={!noMilestonesViewButtonDisabled}
+                    disabled={noMilestonesViewButtonDisabled}
+                    variant="default"
+                    size="sm"
+                    className="bg-diaspora-darkBlue hover:bg-diaspora-darkBlue/90"
+                  >
+                    {noMilestonesViewButtonDisabled ? (
+                      "View milestones"
+                    ) : (
+                      <Link href={milestonesPageHref}>View milestones</Link>
+                    )}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {noMilestonesViewButtonDisabled
+                  ? "No milestones to view yet."
+                  : "Open the milestones page"}
+              </TooltipContent>
+            </Tooltip>
           </div>
         </CardContent>
       </Card>

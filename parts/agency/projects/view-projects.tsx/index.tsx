@@ -118,13 +118,19 @@ interface Volunteer {
   volunteer_id: string;
   full_name: string;
   email: string;
+  profile_picture?: string | null;
+  phone?: string | null;
+  date_of_birth?: string | null;
   skills: string[];
   availability: string;
+  experience?: string | null;
   residence_country: string;
+  residence_state?: string;
   volunteer_states: string[];
   volunteer_countries: string[];
   volunteer_lgas: string[];
   average_rating: number;
+  anonymous?: boolean;
   joined_at: string;
 }
 
@@ -251,22 +257,28 @@ const ProjectDetails: React.FC = () => {
         const { data: vols } = await supabase
           .from("project_volunteers")
           .select(
-            "volunteer_id, profiles!inner(full_name, email, skills, availability, residence_country, volunteer_states)",
+            "volunteer_id, profiles!inner(full_name, email, profile_picture, phone, date_of_birth, skills, availability, experience, residence_country, residence_state, volunteer_states, volunteer_countries, volunteer_lgas, average_rating, anonymous)",
           )
           .eq("project_id", projectId);
 
         setAssignedVolunteers(
           (vols || []).map((v: any) => ({
             volunteer_id: v.volunteer_id,
-            full_name: v.profiles.full_name,
-            email: v.profiles.email,
+            full_name: v.profiles.full_name ?? "",
+            email: v.profiles.email ?? "",
+            profile_picture: v.profiles.profile_picture ?? null,
+            phone: v.profiles.phone ?? null,
+            date_of_birth: v.profiles.date_of_birth ?? null,
             skills: v.profiles.skills || [],
             availability: v.profiles.availability || "N/A",
+            experience: v.profiles.experience ?? null,
             residence_country: v.profiles.residence_country || "N/A",
+            residence_state: v.profiles.residence_state ?? undefined,
             volunteer_states: v.profiles.volunteer_states || [],
             volunteer_countries: v.profiles.volunteer_countries || [],
             volunteer_lgas: v.profiles.volunteer_lgas || [],
-            average_rating: 0,
+            average_rating: typeof v.profiles.average_rating === "number" ? v.profiles.average_rating : 0,
+            anonymous: !!v.profiles.anonymous,
             joined_at: v.joined_at ?? "",
           })),
         );

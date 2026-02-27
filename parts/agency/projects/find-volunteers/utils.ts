@@ -24,6 +24,8 @@ export function mapRpcVolunteer(
     email: (v.email as string) ?? "",
     skills,
     availability: v.availability as string | undefined,
+    experience: (v.experience as string) ?? undefined,
+    anonymous: !!(v.anonymous as boolean),
     residence_country: v.residence_country as string | undefined,
     residence_state: v.residence_state as string | undefined,
     volunteer_countries: (v.volunteer_countries ?? []) as string[],

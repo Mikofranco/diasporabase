@@ -22,7 +22,6 @@ import {
   User,
   MessageCircle,
 } from "lucide-react";
-import { sendEmail } from "@/lib/email";
 import { OrganizationContact } from "@/lib/types";
 import Modal from "../ui/modal";
 import { useSendMail } from "@/services/mail";
@@ -116,8 +115,9 @@ export default function ContactOrganizationModal({
       onOpen={() => setOpen(true)}
       isOpen={open}
       onClose={() => setOpen(false)}
+      headless
     >
-      <div onClick={() => setOpen(true)} className="cursor-pointer">
+      <div onClick={() => setOpen(true)} className="cursor-pointer" role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && setOpen(true)}>
         {trigger || defaultTrigger}
       </div>
 
