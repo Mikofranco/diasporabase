@@ -3,17 +3,7 @@ import Opportunities from "@/parts/volunteer/opportunities/index";
 // app/volunteer/find-opportunity/page.tsx
 export default function VolunteerFindOpportunityPage() {
   return (
-    <div>
-      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h3 className="text-2xl font-bold tracking-tight">
-            Find Opportunities
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Browse available volunteer opportunities.
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50/50">
       <Opportunities />
     </div>
   );

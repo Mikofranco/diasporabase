@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SmallCard, { SmallCardProps } from "./small-card";
 import RecentActivity from "./recent-activity";
-import MatchingProjects from "./matching-projects";
+import RecommendedProjects from "./recommended-projects";
 import { getFirstWordShort, getUserId } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -153,7 +153,7 @@ const VolunteerDashBoard = () => {
           </div>
 
           <RecentActivity />
-          <MatchingProjects />
+          <RecommendedProjects />
         </div>
     </div>
   );
