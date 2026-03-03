@@ -572,14 +572,6 @@ const ProjectDetails: React.FC = () => {
 
   return (
     <TooltipProvider>
-      {project.status === "cancelled" && (
-        <Alert className="text-red-600 bg-red-50">
-          <AlertTitle>Warning</AlertTitle>
-          <AlertDescription>
-            Project is cancelled contact admin.
-          </AlertDescription>
-        </Alert>
-      )}
       <div className="container mx-auto p-4 sm:p-6 space-y-6 max-w-7xl">
         {/* Breadcrumb */}
         <Breadcrumb>
