@@ -3,7 +3,7 @@ import React from 'react'
 
 const RequestsPage = () => {
   return (
-    <div><VolunteerRequests/></div>
+    <div className="container mx-auto p-4 sm:p-6 max-w-8xl"><VolunteerRequests/></div>
   )
 }
 
