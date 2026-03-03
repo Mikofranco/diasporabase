@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { Volunteer } from "@/lib/types";
 
 interface SendRequestDialogProps {
@@ -17,6 +17,7 @@ interface SendRequestDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedVolunteer: Volunteer | null;
   onConfirm: (volunteer: Volunteer) => void;
+  loading?: boolean;
 }
 
 export function SendRequestDialog({
@@ -24,6 +25,7 @@ export function SendRequestDialog({
   onOpenChange,
   selectedVolunteer,
   onConfirm,
+  loading = false,
 }: SendRequestDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -45,9 +47,15 @@ export function SendRequestDialog({
             onClick={() =>
               selectedVolunteer && onConfirm(selectedVolunteer)
             }
+            disabled={loading}
             className="action-btn"
           >
-            <Send className="h-4 w-4 mr-2" /> Send request
+            {loading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-2" />
+            )}
+            {loading ? "Sending..." : "Send request"}
           </Button>
         </DialogFooter>
       </DialogContent>

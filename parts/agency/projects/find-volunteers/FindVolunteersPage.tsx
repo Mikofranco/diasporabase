@@ -124,6 +124,7 @@ export default function FindVolunteersPage({ projectId }: FindVolunteersPageProp
     volunteers,
     loading,
     error,
+    isSendingRequest,
     volunteersNeeded,
     volunteersRegistered,
     searchName,
@@ -199,7 +200,7 @@ export default function FindVolunteersPage({ projectId }: FindVolunteersPageProp
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbPage className="font-medium text-foreground">
-                Find volunteers
+                Recommended Volunteers
               </BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
@@ -208,10 +209,10 @@ export default function FindVolunteersPage({ projectId }: FindVolunteersPageProp
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              Find volunteers
+              Recommended Volunteers
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">
-              {volunteersRegistered} / {volunteersNeeded} slots filled
+              Volunteers matched to your project's skills and location. {volunteersRegistered} / {volunteersNeeded} slots filled
             </p>
           </div>
           <Button variant="outline" size="sm" asChild>
@@ -283,6 +284,7 @@ export default function FindVolunteersPage({ projectId }: FindVolunteersPageProp
           onOpenChange={closeRequestDialog}
           selectedVolunteer={selectedVolunteer}
           onConfirm={handleSendRequest}
+          loading={isSendingRequest}
         />
       </div>
     </TooltipProvider>

@@ -35,6 +35,7 @@ export function mapRpcVolunteer(
     request_status: requestStatusMap.get(volunteerId) ?? undefined,
     matched_skills: skills.filter((s) => requiredSkills.includes(s)),
     joined_at: "",
+    avatar_url: (v.profile_picture as string) ?? undefined,
   };
 }
 

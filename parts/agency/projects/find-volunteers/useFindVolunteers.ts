@@ -5,9 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
 import { startLoading, stopLoading } from "@/lib/loading";
 import { useSendMail } from "@/services/mail";
-import { matchVolunteersToProjectLocation } from "@/lib/utils/matchvolunteersToProject";
 import { Volunteer } from "@/lib/types";
-import { checkIfVolunteerHasRequested } from "@/services/requests";
+import { getVolunteersWhoRequested } from "@/services/requests";
 import { routes } from "@/lib/routes";
 import { toast } from "sonner";
 import {
@@ -31,6 +30,7 @@ export function useFindVolunteers(projectId: string) {
   const [error, setError] = useState<string | null>(null);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
 
   const [searchName, setSearchName] = useState("");
   const [searchSkills, setSearchSkills] = useState("");
@@ -76,10 +76,13 @@ export function useFindVolunteers(projectId: string) {
         : ["general"]) as string[];
 
       const { data: volunteerData, error: volunteerError } = await supabase.rpc(
-        "select_volunteers_for_project",
-        { p_project_id: projectId, p_required_skills: requiredSkills }
+        "get_recommended_volunteers",
+        { p_project_id: projectId, p_requester_id: userId }
       );
-      if (volunteerError) throw new Error(volunteerError.message);
+
+      if (volunteerError) {
+        throw new Error(volunteerError.message);
+      }
 
       const { data: requestData } = await supabase
         .from("agency_requests")
@@ -93,20 +96,15 @@ export function useFindVolunteers(projectId: string) {
         ])
       );
 
-      const recommended: Volunteer[] = (volunteerData ?? []).map((v: Record<string, unknown>) =>
-        mapRpcVolunteer(v, requestStatusMap, requiredSkills)
-      );
-      const matched = await matchVolunteersToProjectLocation(projectId, recommended);
-      const withRequestStatus = await Promise.all(
-        matched.map(async (v) => {
-          const hasRequested = await checkIfVolunteerHasRequested({
-            projectId,
-            volunteerId: v.volunteer_id,
-          });
-          return { ...v, hasRequested };
-        })
-      );
-      const shuffled = shuffle(withRequestStatus);
+      const volunteersWhoRequested = await getVolunteersWhoRequested(projectId);
+
+      const recommended: Volunteer[] = (volunteerData ?? []).map((v: Record<string, unknown>) => {
+        const mapped = mapRpcVolunteer(v, requestStatusMap, requiredSkills);
+        const hasRequested = volunteersWhoRequested.has(mapped.volunteer_id);
+        return { ...mapped, hasRequested: { hasRequested } };
+      });
+
+      const shuffled = shuffle(recommended);
       setVolunteers(shuffled.slice(0, MAX_RECOMMENDATIONS));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong";
@@ -203,15 +201,11 @@ export function useFindVolunteers(projectId: string) {
         joined_at: "",
       }));
 
-      const withRequestStatus = await Promise.all(
-        list.map(async (v) => {
-          const hasRequested = await checkIfVolunteerHasRequested({
-            projectId,
-            volunteerId: v.volunteer_id,
-          });
-          return { ...v, hasRequested };
-        })
-      );
+      const volunteersWhoRequested = await getVolunteersWhoRequested(projectId);
+      const withRequestStatus = list.map((v) => ({
+        ...v,
+        hasRequested: { hasRequested: volunteersWhoRequested.has(v.volunteer_id) },
+      }));
       setVolunteers(withRequestStatus);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong";
@@ -234,6 +228,7 @@ export function useFindVolunteers(projectId: string) {
   const handleSendRequest = useCallback(
     async (volunteer: Volunteer) => {
       try {
+        setIsSendingRequest(true);
         startLoading();
         const { data: userId, error: userIdError } = await getUserId();
         if (userIdError || !userId)
@@ -375,6 +370,7 @@ export function useFindVolunteers(projectId: string) {
     searching,
     isRequestDialogOpen,
     selectedVolunteer,
+    isSendingRequest,
     fetchProject,
     fetchRecommendations,
     runSearch,
