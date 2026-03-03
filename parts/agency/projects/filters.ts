@@ -21,7 +21,7 @@ export const PROJECT_STATUS_STYLES: Record<
   },
   active: {
     label: "Active",
-    className: "bg-emerald-100 text-emerald-800 border-emerald-200 border",
+    className: "bg-diaspora-blue/10 text-diaspora-darkBlue border-diaspora-blue/30 border",
   },
   approved: {
     label: "Approved",
@@ -29,7 +29,7 @@ export const PROJECT_STATUS_STYLES: Record<
   },
   completed: {
     label: "Completed",
-    className: "bg-slate-100 text-slate-700 border-slate-200 border",
+    className: "bg-green-100 text-green-800 border-green-200 border",
   },
   rejected: {
     label: "Rejected",
@@ -37,7 +37,7 @@ export const PROJECT_STATUS_STYLES: Record<
   },
   cancelled: {
     label: "Cancelled",
-    className: "bg-gray-100 text-gray-600 border-gray-200 border",
+    className: "bg-orange-100 text-orange-800 border-orange-200 border",
   },
 };
 

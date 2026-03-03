@@ -12,10 +12,13 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  CircleSlash,
 } from "lucide-react";
 import SmallCard from "./small-card";
 import RecentProjects from "./recent-projects";
 import AgencyRequestFromVolunteer from "./requests";
+import { ProjectStatusChart } from "./project-status-chart";
+import { TopProjectsByVolunteerInterest } from "./top-projects-by-interest";
 import { routes } from "@/lib/routes";
 
 const AgencyDashboard = () => {
@@ -24,6 +27,7 @@ const AgencyDashboard = () => {
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
   const [pendingProjects, setPendingProjects] = useState<Project[]>([]);
   const [rejectedProjects, setRejectedProjects] = useState<Project[]>([]);
+  const [cancelledProjects, setCancelledProjects] = useState<Project[]>([]);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [projectIsLoading, setProjectIsLoading] = useState<boolean>(true);
   const router = useRouter();
@@ -58,17 +62,19 @@ const AgencyDashboard = () => {
     setProjectError(null);
 
     try {
-      const [ongoing, completed, pending, rejected] = await Promise.all([
+      const [ongoing, completed, pending, rejected, cancelled] = await Promise.all([
         fetchProjects(orgId, "active"),
         fetchProjects(orgId, "completed"),
         fetchProjects(orgId, "pending"),
         fetchProjects(orgId, "rejected"),
+        fetchProjects(orgId, "cancelled"),
       ]);
       if (!isMountedRef.current) return;
       setOngoingProjects(ongoing);
       setCompletedProjects(completed);
       setPendingProjects(pending);
       setRejectedProjects(rejected);
+      setCancelledProjects(cancelled);
     } catch (error) {
       if (!isMountedRef.current) return;
       const msg =
@@ -177,13 +183,14 @@ const AgencyDashboard = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 md:gap-6 mb-10">
               <SmallCard
                 count={
                   ongoingProjects.length +
                   completedProjects.length +
                   pendingProjects.length +
-                  rejectedProjects.length
+                  rejectedProjects.length +
+                  cancelledProjects.length
                 }
                 title="Total Projects"
                 icon={<LayoutGrid className="w-6 h-6" />}
@@ -191,7 +198,7 @@ const AgencyDashboard = () => {
               <SmallCard
                 count={ongoingProjects.length}
                 title="Ongoing Projects"
-                icon={<PlayCircle className="w-6 h-6 text-emerald-600" />}
+                icon={<PlayCircle className="w-6 h-6 text-diaspora-blue" />}
               />
               <SmallCard
                 count={pendingProjects.length}
@@ -201,13 +208,31 @@ const AgencyDashboard = () => {
               <SmallCard
                 count={completedProjects.length}
                 title="Completed Projects"
-                icon={<CheckCircle2 className="w-6 h-6 text-slate-600" />}
+                icon={<CheckCircle2 className="w-6 h-6 text-green-600" />}
               />
               <SmallCard
                 count={rejectedProjects.length}
                 title="Rejected Projects"
                 icon={<XCircle className="w-6 h-6 text-red-600" />}
               />
+              <SmallCard
+                count={cancelledProjects.length}
+                title="Cancelled Projects"
+                icon={<CircleSlash className="w-6 h-6 text-orange-600" />}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-8 mb-8">
+              <ProjectStatusChart
+                statusCounts={{
+                  pending: pendingProjects.length,
+                  active: ongoingProjects.length,
+                  completed: completedProjects.length,
+                  rejected: rejectedProjects.length,
+                  cancelled: cancelledProjects.length,
+                }}
+              />
+              <TopProjectsByVolunteerInterest />
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 xl:gap-8">
