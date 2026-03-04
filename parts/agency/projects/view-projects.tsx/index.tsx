@@ -202,9 +202,14 @@ const ProjectDetails: React.FC = () => {
   });
 
   const router = useRouter();
-  const { projectId } = useParams();
+  const params = useParams<{ projectId?: string | string[] }>();
+  const projectId = Array.isArray(params.projectId)
+    ? params.projectId[0]
+    : params.projectId;
 
   useEffect(() => {
+    if (!projectId) return;
+
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -572,14 +577,6 @@ const ProjectDetails: React.FC = () => {
 
   return (
     <TooltipProvider>
-      {project.status === "cancelled" && (
-        <Alert className="text-red-600 bg-red-50">
-          <AlertTitle>Warning</AlertTitle>
-          <AlertDescription>
-            Project is cancelled contact admin.
-          </AlertDescription>
-        </Alert>
-      )}
       <div className="container mx-auto p-4 sm:p-6 space-y-6 max-w-7xl">
         {/* Breadcrumb */}
         <Breadcrumb>
@@ -884,7 +881,7 @@ const ProjectDetails: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <AssignedVolunteersTable volunteers={assignedVolunteers} />
+            <AssignedVolunteersTable projectId={projectId ?? ""} volunteers={assignedVolunteers} />
           </CardContent>
         </Card>
 
@@ -942,7 +939,11 @@ const ProjectDetails: React.FC = () => {
                 projectId={project.id}
                 currentStatus={project.status as ProjectStatus}
                 isAuthorized={true}
-                onProjectClosed={() => router.refresh()}
+                onProjectClosed={() =>
+                  setProject((prev) =>
+                    prev ? { ...prev, status: "completed" } : prev
+                  )
+                }
               />
             </CardContent>
           </Card>

@@ -42,21 +42,7 @@ export default function AgencyRequestsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 max-w-4xl">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href={routes.agencyDashboard}>Dashboard</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage className="font-medium">Volunteer Requests</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
+    <div className="container mx-auto p-4 sm:p-6 max-w-8xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Volunteer Requests</h1>
         <p className="text-muted-foreground text-sm mt-0.5">

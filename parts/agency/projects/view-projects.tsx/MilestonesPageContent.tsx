@@ -21,25 +21,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Plus, Loader2, AlertCircle } from "lucide-react";
+import { Calendar, Plus, AlertCircle, Edit2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -49,6 +32,7 @@ import { milestoneStatusLabel } from "./milestone-types";
 import { MilestoneCard } from "./MilestoneCard";
 import { DeliverableRow } from "./DeliverableRow";
 import { CreateDeliverableModal } from "./CreateDeliverableModal";
+import { CreateMilestoneModal } from "./CreateMilestoneModal";
 import type { Volunteer } from "@/lib/types";
 
 const supabase = createClient();
@@ -84,20 +68,13 @@ export function MilestonesPageContent({
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<DeliverableFilter>("all");
   const [createMilestoneOpen, setCreateMilestoneOpen] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState<MilestoneSectionMilestone | null>(null);
   const [createDeliverableOpen, setCreateDeliverableOpen] = useState(false);
   const [deliverableModalMilestoneId, setDeliverableModalMilestoneId] = useState<string | null>(null);
   const [editingDeliverable, setEditingDeliverable] = useState<MilestoneSectionDeliverable | null>(null);
-  const [savingMilestone, setSavingMilestone] = useState(false);
-
-  const [milestoneForm, setMilestoneForm] = useState({
-    title: "",
-    description: "",
-    due_date: "",
-    status: "Pending" as const,
-  });
 
   const canAddMilestone = isAgency && ["pending", "approved", "active"].includes(projectStatus.toLowerCase());
-  const canEditDeliverables = true;
+  const canEditDeliverables = ["approved", "active"].includes(projectStatus.toLowerCase());
 
   const fetchMilestones = useCallback(async () => {
     const { data: milestonesData } = await supabase
@@ -154,6 +131,27 @@ export function MilestonesPageContent({
     fetchMilestones().finally(() => setLoading(false));
   }, [fetchMilestones]);
 
+  const openAddMilestone = () => {
+    setEditingMilestone(null);
+    setCreateMilestoneOpen(true);
+  };
+
+  const openEditMilestone = (m: MilestoneSectionMilestone) => {
+    setEditingMilestone(m);
+    setCreateMilestoneOpen(true);
+  };
+
+  const deleteMilestone = async (id: string) => {
+    if (!confirm("Delete this milestone? Its deliverables will also be removed.")) return;
+    const { error } = await supabase.from("milestones").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete milestone");
+    } else {
+      toast.success("Milestone deleted");
+      fetchMilestones();
+    }
+  };
+
   const openAddDeliverable = (milestoneId: string) => {
     setEditingDeliverable(null);
     setDeliverableModalMilestoneId(milestoneId);
@@ -183,30 +181,6 @@ export function MilestonesPageContent({
     if (filter === "unassigned") return list.filter((d) => !d.assigned_to);
     if (filter === "mine" && currentUserId) return list.filter((d) => d.assigned_to === currentUserId);
     return list;
-  };
-
-  const handleCreateMilestone = async () => {
-    if (!milestoneForm.title.trim() || !milestoneForm.due_date) {
-      toast.error("Title and due date are required");
-      return;
-    }
-    setSavingMilestone(true);
-    const { error } = await supabase.from("milestones").insert({
-      project_id: projectId,
-      title: milestoneForm.title.trim(),
-      description: milestoneForm.description.trim() || null,
-      due_date: milestoneForm.due_date,
-      status: milestoneForm.status,
-    });
-    setSavingMilestone(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success("Milestone created");
-    setCreateMilestoneOpen(false);
-    setMilestoneForm({ title: "", description: "", due_date: "", status: "Pending" });
-    fetchMilestones();
   };
 
   const totalDeliverables = milestones.reduce((acc, m) => acc + (m.deliverables?.length ?? 0), 0);
@@ -266,7 +240,7 @@ export function MilestonesPageContent({
         </div>
         {canAddMilestone && (
           <Button
-            onClick={() => setCreateMilestoneOpen(true)}
+            onClick={openAddMilestone}
             className="shrink-0 border-diaspora-darkBlue text-diaspora-darkBlue hover:bg-diaspora-darkBlue/10"
             variant="outline"
           >
@@ -288,7 +262,7 @@ export function MilestonesPageContent({
             </p>
             {canAddMilestone && (
               <Button
-                onClick={() => setCreateMilestoneOpen(true)}
+                onClick={openAddMilestone}
                 variant="outline"
                 className="border-diaspora-darkBlue text-diaspora-darkBlue hover:bg-diaspora-darkBlue/10"
               >
@@ -342,17 +316,42 @@ export function MilestonesPageContent({
                           </span>
                         </div>
                       </div>
-                      {(canAddMilestone || role === "volunteer") && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openAddDeliverable(milestone.id!)}
-                          className="shrink-0 border-diaspora-darkBlue text-diaspora-darkBlue hover:bg-diaspora-darkBlue/10"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Deliverable
-                        </Button>
-                      )}
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        {canAddMilestone && (
+                          <>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => openEditMilestone(milestone)}
+                              aria-label="Edit milestone"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => milestone.id && deleteMilestone(milestone.id)}
+                              aria-label="Delete milestone"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        {(canAddMilestone || role === "volunteer") && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openAddDeliverable(milestone.id!)}
+                            className="border-diaspora-darkBlue text-diaspora-darkBlue hover:bg-diaspora-darkBlue/10"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Deliverable
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-4">
@@ -400,65 +399,16 @@ export function MilestonesPageContent({
         onSuccess={fetchMilestones}
       />
 
-      <Dialog open={createMilestoneOpen} onOpenChange={setCreateMilestoneOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add Milestone</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Title</Label>
-              <Input
-                value={milestoneForm.title}
-                onChange={(e) => setMilestoneForm((f) => ({ ...f, title: e.target.value }))}
-                placeholder="Milestone title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Description (optional)</Label>
-              <Textarea
-                value={milestoneForm.description}
-                onChange={(e) => setMilestoneForm((f) => ({ ...f, description: e.target.value }))}
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Due date</Label>
-              <Input
-                type="date"
-                value={milestoneForm.due_date}
-                onChange={(e) => setMilestoneForm((f) => ({ ...f, due_date: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                value={milestoneForm.status}
-                onValueChange={(v) => setMilestoneForm((f) => ({ ...f, status: v as "Pending" }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Done">Completed</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateMilestoneOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateMilestone} disabled={savingMilestone} className="action-btn">
-              {savingMilestone && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Milestone
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateMilestoneModal
+        open={createMilestoneOpen}
+        onOpenChange={(open) => {
+          setCreateMilestoneOpen(open);
+          if (!open) setEditingMilestone(null);
+        }}
+        projectId={projectId}
+        initialData={editingMilestone}
+        onSuccess={fetchMilestones}
+      />
     </div>
   );
 }

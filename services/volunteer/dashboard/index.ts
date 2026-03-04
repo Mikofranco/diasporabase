@@ -297,7 +297,6 @@ export const useFetchSkillMatchedProjects = () => {
         console.error("Error fetching skill-matched projects:", errorMessage);
         toast.error(`Failed to load skill-matched projects: ${errorMessage}`, {
           duration: 4000,
-          position: "top-right",
         });
         setSkillMatchedProjectError(errorMessage);
         setSkillMatchedProjectdata(null);

@@ -114,12 +114,16 @@ export default function AgencyAnalytics() {
           totalApplications,
         });
 
-        // Pie: Project Status (including Rejected)
+        // Pie: Project Status (including Rejected and Cancelled)
+        const cancelled = projects.filter((p) => p.status === "cancelled").length;
+        const approved = projects.filter((p) => p.status === "approved").length;
         setPieData([
-          { name: "Active", value: active, color: "#10b981", description: "Projects currently in progress" },
-          { name: "Completed", value: completed, color: "#3b82f6", description: "Successfully finished projects" },
+          { name: "Active", value: active, color: "#0ea5e9", description: "Projects currently in progress" },
+          { name: "Completed", value: completed, color: "#22c55e", description: "Successfully finished projects" },
           { name: "Pending", value: pending, color: "#f59e0b", description: "Awaiting approval or start" },
+          { name: "Approved", value: approved, color: "#3b82f6", description: "Approved, not yet active" },
           { name: "Rejected", value: rejected, color: "#ef4444", description: "Not approved" },
+          { name: "Cancelled", value: cancelled, color: "#f97316", description: "Cancelled or stopped" },
         ].filter((d) => d.value > 0));
 
         // Pie: Volunteer request status breakdown
