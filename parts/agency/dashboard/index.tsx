@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase/client";
 import { Project } from "@/lib/types";
 import { getUserId } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   LayoutGrid,
@@ -21,141 +21,143 @@ import { ProjectStatusChart } from "./project-status-chart";
 import { TopProjectsByVolunteerInterest } from "./top-projects-by-interest";
 import { routes } from "@/lib/routes";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ProjectStatus = "active" | "completed" | "pending" | "rejected" | "cancelled";
+
+interface GroupedProjects {
+  active: Project[];
+  completed: Project[];
+  pending: Project[];
+  rejected: Project[];
+  cancelled: Project[];
+}
+
+// ─── Data fetching ────────────────────────────────────────────────────────────
+
+/**
+ * Fetches all projects for an org in a single query and groups them by status.
+ * Returns null if the request was aborted.
+ */
+const fetchGroupedProjects = async (
+  orgId: string,
+  signal: AbortSignal,
+): Promise<GroupedProjects | null> => {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("organization_id", orgId)
+    .abortSignal(signal);
+
+  if (signal.aborted) return null;
+
+  if (error) {
+    throw new Error(`Failed to fetch projects: ${error.message}`);
+  }
+
+  const empty: GroupedProjects = {
+    active: [],
+    completed: [],
+    pending: [],
+    rejected: [],
+    cancelled: [],
+  };
+
+  return (data as Project[]).reduce((acc, project) => {
+    const status = project.status as ProjectStatus;
+    if (status in acc) acc[status].push(project);
+    return acc;
+  }, empty);
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const AgencyDashboard = () => {
-  const [isActive, setIsActive] = useState<boolean | null>(null);
-  const [ongoingProjects, setOngoingProjects] = useState<Project[]>([]);
-  const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
-  const [pendingProjects, setPendingProjects] = useState<Project[]>([]);
-  const [rejectedProjects, setRejectedProjects] = useState<Project[]>([]);
-  const [cancelledProjects, setCancelledProjects] = useState<Project[]>([]);
-  const [projectError, setProjectError] = useState<string | null>(null);
-  const [projectIsLoading, setProjectIsLoading] = useState<boolean>(true);
   const router = useRouter();
+
   const [userId, setUserId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<GroupedProjects>({
+    active: [],
+    completed: [],
+    pending: [],
+    rejected: [],
+    cancelled: [],
+  });
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
 
-  // Fetch projects by status
-  const fetchProjects = async (
-    orgId: string,
-    status: string,
-  ): Promise<Project[]> => {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("organization_id", orgId)
-      .eq("status", status);
-
-    if (error) {
-      throw new Error(`Failed to fetch ${status} projects: ${error.message}`);
-    }
-    return (data as Project[]) ?? [];
-  };
-
-  // Ref so async callbacks (fetchAllProjects) can read current mount state
-  const isMountedRef = useRef(true);
-
-  // Fetch all projects by status (guards setState with isMountedRef to avoid updates after unmount)
-  const fetchAllProjects = async (orgId: string) => {
-    if (!orgId) return;
-    if (!isMountedRef.current) return;
-
-    setProjectIsLoading(true);
-    setProjectError(null);
-
-    try {
-      const [ongoing, completed, pending, rejected, cancelled] = await Promise.all([
-        fetchProjects(orgId, "active"),
-        fetchProjects(orgId, "completed"),
-        fetchProjects(orgId, "pending"),
-        fetchProjects(orgId, "rejected"),
-        fetchProjects(orgId, "cancelled"),
-      ]);
-      if (!isMountedRef.current) return;
-      setOngoingProjects(ongoing);
-      setCompletedProjects(completed);
-      setPendingProjects(pending);
-      setRejectedProjects(rejected);
-      setCancelledProjects(cancelled);
-    } catch (error) {
-      if (!isMountedRef.current) return;
-      const msg =
-        error instanceof Error ? error.message : "Failed to load projects";
-      setProjectError(msg);
-      toast.error(msg);
-    } finally {
-      if (!isMountedRef.current) return;
-      setProjectIsLoading(false);
-    }
-  };
-
-  // Main initialization effect – fetch user, profile and all dependent data once
   useEffect(() => {
-    let isMounted = true;
-    isMountedRef.current = true;
+    const controller = new AbortController();
+    const { signal } = controller;
 
     const initialize = async () => {
       try {
+        // 1. Resolve user
         const { data: currentUserId, error: userError } = await getUserId();
         if (userError || !currentUserId) {
-          throw new Error(userError?.message || "Failed to fetch user ID");
+          throw new Error(userError?.message ?? "Failed to fetch user ID");
         }
 
+        // 2. Fetch profile
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("is_active, tax_id")
           .eq("id", currentUserId)
+          .abortSignal(signal)
           .single();
 
-        if (profileError || profile === null) {
-          throw new Error(profileError?.message || "Failed to fetch profile");
+        if (signal.aborted) return;
+
+        if (profileError || !profile) {
+          throw new Error(profileError?.message ?? "Failed to fetch profile");
         }
 
-        if (!isMounted) return;
-
-        setUserId(currentUserId);
-        setIsActive(profile.is_active);
-
+        // 3. Guard: onboarding incomplete
         if (!profile.tax_id) {
           router.replace(routes.agencyOnboarding);
           return;
         }
 
+        // 4. Guard: pending approval
         if (!profile.is_active) {
           toast.error("Your agency is pending approval.");
           router.replace(routes.approvalPending);
           return;
         }
 
-        await fetchAllProjects(currentUserId);
+        setUserId(currentUserId);
+
+        // 5. Fetch projects
+        const grouped = await fetchGroupedProjects(currentUserId, signal);
+        if (!grouped) return; // aborted
+
+        setProjects(grouped);
       } catch (error) {
-        if (!isMounted) return;
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-        );
-        setIsActive(false); // Or handle appropriately
+        if (signal.aborted) return;
+        const message =
+          error instanceof Error ? error.message : "An unexpected error occurred";
+        setProjectsError(message);
+        toast.error(message);
+      } finally {
+        if (!signal.aborted) setProjectsLoading(false);
       }
     };
 
     initialize();
 
-    return () => {
-      isMounted = false;
-      isMountedRef.current = false;
-    };
-  }, []);
+    return () => controller.abort();
+  }, [router]);
 
-  if (isActive === null) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600"></div>
-      </div>
-    );
-  }
 
-  if (!isActive) {
-    return null; // Redirect handled above
-  }
+
+  const totalProjects =
+    projects.active.length +
+    projects.completed.length +
+    projects.pending.length +
+    projects.rejected.length +
+    projects.cancelled.length;
+
+  // ─── Main render ─────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50/80 to-white w-full">
@@ -169,54 +171,38 @@ const AgencyDashboard = () => {
           </p>
         </header>
 
-        {projectIsLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-10">
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="min-h-[100px] bg-white border border-slate-200 rounded-xl p-5 sm:p-6 animate-pulse shadow-sm"
-              >
-                <div className="h-4 bg-slate-200 rounded w-3/4 mb-4" />
-                <div className="h-8 bg-slate-200 rounded w-1/2" />
-              </div>
-            ))}
-          </div>
+        {projectsLoading ? (
+          <SkeletonCards count={6} />
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 md:gap-6 mb-10">
               <SmallCard
-                count={
-                  ongoingProjects.length +
-                  completedProjects.length +
-                  pendingProjects.length +
-                  rejectedProjects.length +
-                  cancelledProjects.length
-                }
+                count={totalProjects}
                 title="Total Projects"
                 icon={<LayoutGrid className="w-6 h-6" />}
               />
               <SmallCard
-                count={ongoingProjects.length}
+                count={projects.active.length}
                 title="Ongoing Projects"
                 icon={<PlayCircle className="w-6 h-6 text-diaspora-blue" />}
               />
               <SmallCard
-                count={pendingProjects.length}
+                count={projects.pending.length}
                 title="Pending Projects"
                 icon={<Clock className="w-6 h-6 text-amber-600" />}
               />
               <SmallCard
-                count={completedProjects.length}
+                count={projects.completed.length}
                 title="Completed Projects"
                 icon={<CheckCircle2 className="w-6 h-6 text-green-600" />}
               />
               <SmallCard
-                count={rejectedProjects.length}
+                count={projects.rejected.length}
                 title="Rejected Projects"
                 icon={<XCircle className="w-6 h-6 text-red-600" />}
               />
               <SmallCard
-                count={cancelledProjects.length}
+                count={projects.cancelled.length}
                 title="Cancelled Projects"
                 icon={<CircleSlash className="w-6 h-6 text-orange-600" />}
               />
@@ -225,11 +211,11 @@ const AgencyDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-8 mb-8">
               <ProjectStatusChart
                 statusCounts={{
-                  pending: pendingProjects.length,
-                  active: ongoingProjects.length,
-                  completed: completedProjects.length,
-                  rejected: rejectedProjects.length,
-                  cancelled: cancelledProjects.length,
+                  pending: projects.pending.length,
+                  active: projects.active.length,
+                  completed: projects.completed.length,
+                  rejected: projects.rejected.length,
+                  cancelled: projects.cancelled.length,
                 }}
               />
               <TopProjectsByVolunteerInterest />
@@ -237,12 +223,12 @@ const AgencyDashboard = () => {
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 xl:gap-8">
               <RecentProjects
-                userId={userId || ""}
+                userId={userId ?? ""}
                 limitRows={5}
                 viewAllHref={routes.agencyProjects}
               />
               <AgencyRequestFromVolunteer
-                userId={userId || ""}
+                userId={userId ?? ""}
                 limitRows={5}
                 viewAllHref={routes.agencyRequests}
               />
@@ -250,9 +236,9 @@ const AgencyDashboard = () => {
           </>
         )}
 
-        {projectError && (
+        {projectsError && (
           <div className="mt-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm">
-            {projectError}
+            {projectsError}
           </div>
         )}
       </div>
@@ -260,4 +246,21 @@ const AgencyDashboard = () => {
   );
 };
 
+// ─── Skeleton loader ──────────────────────────────────────────────────────────
+
+const SkeletonCards = ({ count }: { count: number }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 md:gap-6 mb-10">
+    {Array.from({ length: count }).map((_, i) => (
+      <div
+        key={i}
+        className="min-h-[100px] bg-white border border-slate-200 rounded-xl p-5 sm:p-6 animate-pulse shadow-sm"
+      >
+        <div className="h-4 bg-slate-200 rounded w-3/4 mb-4" />
+        <div className="h-8 bg-slate-200 rounded w-1/2" />
+      </div>
+    ))}
+  </div>
+);
+
 export default AgencyDashboard;
+
