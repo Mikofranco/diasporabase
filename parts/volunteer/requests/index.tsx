@@ -401,19 +401,19 @@ const VolunteerRequests: React.FC = () => {
     switch (status) {
       case "pending":
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
             Pending
           </Badge>
         );
       case "accepted":
         return (
-          <Badge variant="default" className="bg-green-100 text-green-800">
+          <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
             Accepted
           </Badge>
         );
       case "rejected":
         return (
-          <Badge variant="destructive" className="bg-red-100 text-red-800">
+          <Badge variant="destructive" className="bg-red-100 text-red-800 hover:bg-red-200">
             Rejected
           </Badge>
         );
@@ -430,25 +430,25 @@ const VolunteerRequests: React.FC = () => {
     switch (status) {
       case "active":
         return (
-          <Badge variant="default" className="bg-emerald-50 text-emerald-700">
+          <Badge variant="default" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-200">
             Active
           </Badge>
         );
       case "pending":
         return (
-          <Badge variant="secondary" className="bg-yellow-50 text-yellow-700">
+          <Badge variant="secondary" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-200">
             Pending
           </Badge>
         );
       case "completed":
         return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700">
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-200">
             Completed
           </Badge>
         );
       case "cancelled":
         return (
-          <Badge variant="destructive" className="bg-red-50 text-red-700">
+          <Badge variant="destructive" className="bg-red-50 text-red-700 hover:bg-red-200">
             Cancelled
           </Badge>
         );

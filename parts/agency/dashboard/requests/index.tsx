@@ -2,11 +2,30 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
-import RequestSlate from "./request-slate";
 import { toast } from "sonner";
 import { useSendMail } from "@/services/mail";
 import { volunteerApplicationStatusHtml } from "@/lib/email-templates/volunteerApplicationStatus";
 import { ChevronRight } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Mail, MapPin, Calendar, Star, Phone } from "lucide-react";
 
 interface VolunteerRequest {
   id: string;
@@ -18,6 +37,16 @@ interface VolunteerRequest {
   applicant_name: string;
   project_title: string;
   applicant_email: string;
+  applicant_profile_picture?: string | null;
+  applicant_phone?: string | null;
+  applicant_date_of_birth?: string | null;
+  applicant_skills: string[];
+  applicant_availability: string;
+  applicant_experience?: string | null;
+  applicant_residence_country?: string | null;
+  applicant_residence_state?: string | null;
+  applicant_average_rating?: number | null;
+  anonymous?: boolean;
 }
 
 interface AgencyRequestFromVolunteerProps {
@@ -38,6 +67,8 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
   const [requests, setRequests] = useState<VolunteerRequest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<VolunteerRequest | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const fetchRequests = async (userId: string) => {
     try {
@@ -54,7 +85,7 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
           project_id,
           status,
           created_at,
-          profiles:volunteer_id (full_name, email),
+          profiles:volunteer_id (full_name, email, profile_picture, phone, date_of_birth, skills, availability, experience, residence_country, residence_state, average_rating, anonymous),
           projects:project_id (title)
         `,
         )
@@ -66,24 +97,53 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
         throw new Error("Error fetching requests: " + error.message);
       }
 
+      // Normalize profile: Supabase may return relation as object or single-element array
+      const getProfile = (request: any) => {
+        const p = request.profiles;
+        return Array.isArray(p) ? p[0] : p;
+      };
+
       const formattedRequests: VolunteerRequest[] = volunteerRequestData.map(
-        (request: any) => ({
-          id: request.id,
-          organization_id: request.organization_id,
-          volunteer_id: request.volunteer_id,
-          project_id: request.project_id,
-          status: request.status,
-          created_at: request.created_at,
-          applicant_name: request.profiles?.full_name || "Unknown",
-          project_title: request.projects?.title || "Unknown Project",
-          applicant_email: request.profiles?.email || "",
-        }),
+        (request: any) => {
+          const profile = getProfile(request);
+          const rawSkills = profile?.skills;
+          const skills = Array.isArray(rawSkills)
+            ? rawSkills
+            : typeof rawSkills === "string"
+              ? [rawSkills]
+              : [];
+          return {
+            id: request.id,
+            organization_id: request.organization_id,
+            volunteer_id: request.volunteer_id,
+            project_id: request.project_id,
+            status: request.status,
+            created_at: request.created_at,
+            applicant_name: profile?.full_name || "Unknown",
+            project_title: request.projects?.title || "Unknown Project",
+            applicant_email: profile?.email || "",
+            applicant_profile_picture: profile?.profile_picture ?? null,
+            applicant_phone: profile?.phone ?? null,
+            applicant_date_of_birth: profile?.date_of_birth ?? null,
+            applicant_skills: skills,
+            applicant_availability:
+              profile?.availability ?? "N/A",
+            applicant_experience: profile?.experience ?? null,
+            applicant_residence_country: profile?.residence_country ?? null,
+            applicant_residence_state: profile?.residence_state ?? null,
+            applicant_average_rating:
+              profile?.average_rating != null
+                ? Number(profile.average_rating)
+                : null,
+            anonymous: !!profile?.anonymous,
+          };
+        },
       );
 
       setRequests(formattedRequests);
     } catch (err: any) {
       setError(err.message);
-      toast.error(err.message, { position: "top-right" });
+      toast.error(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -110,12 +170,10 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
         throw new Error("Error accepting request: " + error.message);
       }
 
-      setRequests((prev) =>
-        prev.map((req) =>
-          req.id === requestId ? { ...req, status: "accepted" } : req
-        )
-      );
-      toast.success("Request accepted successfully!", { position: "top-right" });
+      setRequests((prev) => prev.filter((req) => req.id !== requestId));
+      setSelectedRequest(null);
+      setDetailsOpen(false);
+      toast.success("Request accepted successfully!");
 
       const request = requests.find((req) => req.id === requestId);
       if(request){
@@ -152,7 +210,7 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
         },
       });
     } catch (err: any) {
-      toast.error(err.message, { position: "top-right" });
+      toast.error(err.message);
     }
   };
 
@@ -176,11 +234,9 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
         throw new Error("Error declining request: " + error.message);
       }
 
-      setRequests((prev) =>
-        prev.map((req) =>
-          req.id === requestId ? { ...req, status: "declined" } : req,
-        ),
-      );
+      setRequests((prev) => prev.filter((req) => req.id !== requestId));
+      setSelectedRequest(null);
+      setDetailsOpen(false);
 
       await useSendMail({
         to: requests.find((req) => req.id === requestId)?.applicant_email || "",
@@ -197,9 +253,7 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
           console.log("Decline email sent successfully");
         },
       });
-      toast.success("Request declined successfully!", {
-        position: "top-right",
-      });
+      toast.success("Request declined successfully!");
 
       const request = requests.find((req) => req.id === requestId);
       if (request) {
@@ -214,7 +268,7 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
         });
       }
     } catch (err: any) {
-      toast.error(err.message, { position: "top-right" });
+      toast.error(err.message);
     }
   };
 
@@ -229,9 +283,7 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
       const { data: resolvedUserId, error: userError } = await getUserId();
       if (userError || !resolvedUserId) {
         setError("Failed to authenticate user");
-        toast.error("Please log in to view requests", {
-          position: "top-right",
-        });
+        toast.error("Please log in to view requests");
         setIsLoading(false);
         return;
       }
@@ -248,6 +300,25 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
       timeZone: "Africa/Lagos",
     }).format(date);
   };
+
+  const formatMonthDay = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return "—";
+    try {
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+    } catch {
+      return "—";
+    }
+  };
+
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "?";
 
   const displayRequests = limitRows != null && limitRows > 0
     ? requests.slice(0, limitRows)
@@ -310,20 +381,267 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
       )}
 
       {!isLoading && !error && displayRequests.length > 0 && (
-        <div className="space-y-4">
-          {displayRequests.map((request) => (
-            <RequestSlate
-              key={request.id}
-              requestId={request.id}
-              applicantName={request.applicant_name}
-              projectTitle={request.project_title}
-              createdAt={formatDate(request.created_at)}
-              status={request.status}
-              onAccept={() => handleAccept(request.id)}
-              onDecline={() => handleDecline(request.id)}
-            />
-          ))}
-        </div>
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Applicant</TableHead>
+                <TableHead>Project</TableHead>
+                <TableHead>Applied</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayRequests.map((request) => (
+                <TableRow
+                  key={request.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => {
+                    setSelectedRequest(request);
+                    setDetailsOpen(true);
+                  }}
+                >
+                  <TableCell className="font-medium">
+                    {request.anonymous ? "Volunteer" : request.applicant_name}
+                  </TableCell>
+                  <TableCell>{request.project_title}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDate(request.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        request.status === "pending"
+                          ? "bg-amber-100 text-amber-800"
+                          : request.status === "accepted"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {request.status}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+            <DialogContent
+              className="max-w-2xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {selectedRequest && (() => {
+                const hidePersonal = selectedRequest.anonymous === true;
+                const displayName = hidePersonal
+                  ? "Volunteer"
+                  : selectedRequest.applicant_name;
+                return (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl font-bold flex items-center gap-4">
+                        <Avatar className="h-16 w-16 border-2 border-diaspora-blue/20 shrink-0">
+                          {!hidePersonal && (
+                            <AvatarImage
+                              src={
+                                selectedRequest.applicant_profile_picture ||
+                                undefined
+                              }
+                              alt=""
+                            />
+                          )}
+                          <AvatarFallback className="text-2xl bg-diaspora-blue/10 text-diaspora-darkBlue">
+                            {hidePersonal
+                              ? "?"
+                              : getInitials(selectedRequest.applicant_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <span className="block truncate">{displayName}</span>
+                          <p className="text-sm font-normal text-muted-foreground mt-1">
+                            Application for {selectedRequest.project_title}
+                          </p>
+                          <Badge
+                            variant={
+                              selectedRequest.status === "accepted"
+                                ? "default"
+                                : selectedRequest.status === "declined"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                            className="mt-1.5"
+                          >
+                            {selectedRequest.status}
+                          </Badge>
+                        </div>
+                      </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-6 py-4">
+                      {/* Contact & basic info – hidden when anonymous */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {!hidePersonal && (
+                          <>
+                            <div>
+                              <p className="text-sm text-muted-foreground">
+                                Email
+                              </p>
+                              <a
+                                href={`mailto:${selectedRequest.applicant_email}`}
+                                className="flex items-center gap-2 text-diaspora-blue hover:underline break-all mt-1"
+                              >
+                                <Mail className="h-4 w-4 shrink-0" />
+                                {selectedRequest.applicant_email || "—"}
+                              </a>
+                            </div>
+                            {selectedRequest.applicant_phone && (
+                              <div>
+                                <p className="text-sm text-muted-foreground">
+                                  Phone
+                                </p>
+                                <a
+                                  href={`tel:${selectedRequest.applicant_phone}`}
+                                  className="flex items-center gap-2 text-diaspora-blue hover:underline mt-1"
+                                >
+                                  <Phone className="h-4 w-4 shrink-0" />
+                                  {selectedRequest.applicant_phone}
+                                </a>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {hidePersonal && (
+                          <p className="text-sm text-muted-foreground sm:col-span-2">
+                            This volunteer has chosen to remain anonymous.
+                          </p>
+                        )}
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Applied
+                          </p>
+                          <p className="flex items-center gap-2 text-foreground mt-1">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            {formatDate(selectedRequest.created_at)}
+                          </p>
+                        </div>
+                        {!hidePersonal &&
+                          selectedRequest.applicant_date_of_birth && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">
+                                Date of birth
+                              </p>
+                              <p className="flex items-center gap-2 text-foreground mt-1">
+                                {formatMonthDay(
+                                  selectedRequest.applicant_date_of_birth,
+                                )}
+                              </p>
+                            </div>
+                          )}
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Availability
+                          </p>
+                          <Badge
+                            variant="outline"
+                            className="capitalize mt-1"
+                          >
+                            {selectedRequest.applicant_availability || "—"}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Location */}
+                      {(selectedRequest.applicant_residence_country ||
+                        selectedRequest.applicant_residence_state) && (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Location
+                          </p>
+                          <div className="flex items-center gap-2 text-base">
+                            <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
+                            <span>
+                              {[
+                                selectedRequest.applicant_residence_state,
+                                selectedRequest.applicant_residence_country,
+                              ]
+                                .filter(Boolean)
+                                .join(", ") || "Not specified"}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Experience */}
+                      {selectedRequest.applicant_experience && (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Experience
+                          </p>
+                          <p className="text-sm text-foreground whitespace-pre-wrap rounded-md bg-muted/50 p-3">
+                            {selectedRequest.applicant_experience}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Skills */}
+                      {selectedRequest.applicant_skills?.length > 0 && (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Skills
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedRequest.applicant_skills.map((skill) => (
+                              <Badge
+                                key={skill}
+                                className="bg-diaspora-blue/10 text-diaspora-darkBlue border-diaspora-blue/20 cursor-default hover:bg-diaspora-blue/10"
+                              >
+                                {skill.replace(/_/g, " ")}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Rating */}
+                      {selectedRequest.applicant_average_rating != null && (
+                        <div className="flex items-center gap-3 pt-4 border-t">
+                          <div className="flex items-center gap-1">
+                            <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+                            <span className="text-2xl font-bold">
+                              {Number(
+                                selectedRequest.applicant_average_rating,
+                              ).toFixed(1)}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground">
+                            Average rating
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedRequest.status === "pending" && (
+                      <DialogFooter className="gap-2 sm:gap-0 border-t pt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => handleDecline(selectedRequest.id)}
+                        >
+                          Decline
+                        </Button>
+                        <Button
+                          onClick={() => handleAccept(selectedRequest.id)}
+                          className="action-btn"
+                        >
+                          Accept
+                        </Button>
+                      </DialogFooter>
+                    )}
+                  </>
+                );
+              })()}
+            </DialogContent>
+          </Dialog>
+        </>
       )}
     </div>
   );

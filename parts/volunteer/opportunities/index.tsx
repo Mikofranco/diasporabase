@@ -1,50 +1,30 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatLocation, getUserId, LocationData } from "@/lib/utils";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { getUserId } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
 import {
   MapPin,
-  Briefcase,
-  Calendar,
-  Users,
   Search,
   ChevronLeft,
   ChevronRight,
-  ArrowRight,
   RotateCcw,
   AlertCircle,
   Sparkles,
 } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useProjectRecommendations, RecommendedProject } from "@/hooks/useProjectRecommendations";
+import { RecommendationCard } from "@/parts/volunteer/dashboard/recommended-projects";
 import { routes } from "@/lib/routes";
 
-const supabase = createClient();
 const PAGE_SIZE_OPTIONS = [6, 12, 24];
-
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  organization_name: string;
-  location: LocationData;
-  start_date: string;
-  end_date: string;
-  volunteers_needed: number;
-  volunteers_registered: number;
-  status: string;
-  category: string;
-  required_skills: string[] | null;
-  created_at: string;
-}
 
 type OpportunityFilters = {
   search: string;
@@ -60,126 +40,219 @@ const DEFAULT_FILTERS: OpportunityFilters = {
   skills: [],
 };
 
+function getLocationString(p: RecommendedProject): string {
+  const parts: string[] = [];
+  if (p.location_lga) parts.push(p.location_lga);
+  if (p.location_state) parts.push(p.location_state);
+  if (p.location_country) parts.push(p.location_country === "NG" ? "Nigeria" : p.location_country);
+  return parts.join(" ").toLowerCase();
+}
+
+function matchesFilters(project: RecommendedProject, filters: OpportunityFilters): boolean {
+  const search = filters.search.trim().toLowerCase();
+  if (search) {
+    const title = (project.title ?? "").toLowerCase();
+    const desc = (project.description ?? "").toLowerCase();
+    const org = (project.organization_name ?? "").toLowerCase();
+    const cat = (project.category ?? "").toLowerCase();
+    if (!title.includes(search) && !desc.includes(search) && !org.includes(search) && !cat.includes(search)) {
+      return false;
+    }
+  }
+
+  const loc = filters.location.trim().toLowerCase();
+  if (loc && !getLocationString(project).includes(loc)) {
+    return false;
+  }
+
+  if (filters.category && project.category !== filters.category) {
+    return false;
+  }
+
+  if (filters.skills.length > 0) {
+    const projectSkills = new Set(project.required_skills ?? []);
+    const hasAll = filters.skills.every((s) => projectSkills.has(s));
+    if (!hasAll) return false;
+  }
+
+  return true;
+}
+
+/** Map raw project from DB to RecommendedProject format */
+function projectToRecommended(project: {
+  id: string;
+  title?: string | null;
+  description?: string | null;
+  organization_name?: string | null;
+  location?: { country?: string; state?: string; lga?: string } | null;
+  country?: string | null;
+  state?: string | null;
+  lga?: string | null;
+  required_skills?: string[] | null;
+  category?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  volunteers_needed?: number | null;
+  volunteers_registered?: number | null;
+  created_at?: string | null;
+}): RecommendedProject {
+  const loc = project.location && typeof project.location === "object" ? project.location : null;
+  return {
+    project_id: project.id,
+    title: project.title ?? "",
+    description: project.description ?? null,
+    location_country: project.country ?? loc?.country ?? null,
+    location_state: project.state ?? loc?.state ?? null,
+    location_lga: project.lga ?? loc?.lga ?? null,
+    required_skills: project.required_skills ?? null,
+    category: project.category ?? "",
+    organization_name: project.organization_name ?? null,
+    start_date: project.start_date ?? null,
+    end_date: project.end_date ?? null,
+    volunteers_needed: project.volunteers_needed ?? null,
+    volunteers_registered: project.volunteers_registered ?? null,
+    score: 0,
+    created_at: project.created_at ?? null,
+  };
+}
+
 const Opportunities: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const supabase = createClient();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [volunteerSkills, setVolunteerSkills] = useState<string[]>([]);
   const [draftFilters, setDraftFilters] = useState<OpportunityFilters>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<OpportunityFilters>(DEFAULT_FILTERS);
-  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
-  const [totalCount, setTotalCount] = useState(0);
-  const [activeProjectsCount, setActiveProjectsCount] = useState(0);
+  const [searchResults, setSearchResults] = useState<RecommendedProject[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [allProjectsForFilters, setAllProjectsForFilters] = useState<RecommendedProject[]>([]);
 
-  const loadFilterOptions = async () => {
-    const { data, error: optionsError, count } = await supabase
+  const { recommendations, isLoading, error, refetch } = useProjectRecommendations(userId);
+
+  const isSearchMode =
+    !!appliedFilters.search.trim() ||
+    !!appliedFilters.location.trim() ||
+    !!appliedFilters.category ||
+    appliedFilters.skills.length > 0;
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: uid, error: uidErr } = await getUserId();
+      if (uidErr || !uid) return;
+      setUserId(uid);
+
+      const supabase = createClient();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("skills")
+        .eq("id", uid)
+        .single();
+      if (profile) setVolunteerSkills(profile.skills ?? []);
+    };
+    loadUser();
+  }, []);
+
+  const loadFilterOptions = useCallback(async () => {
+    const { data } = await supabase
       .from("projects")
-      .select("category, required_skills", { count: "exact" })
+      .select("id, title, description, organization_name, location, country, state, lga, required_skills, category, start_date, end_date, volunteers_needed, volunteers_registered, created_at")
       .eq("status", "active");
+    if (data) {
+      setAllProjectsForFilters(data.map(projectToRecommended));
+    }
+  }, []);
 
-    if (optionsError) throw new Error(optionsError.message);
+  useEffect(() => {
+    loadFilterOptions();
+  }, [loadFilterOptions]);
 
-    const skillsSet = new Set<string>();
-    const categorySet = new Set<string>();
-    (data || []).forEach((item: any) => {
-      if (item.category) categorySet.add(item.category);
-      if (Array.isArray(item.required_skills)) {
-        item.required_skills.forEach((skill: string) => skillsSet.add(skill));
-      }
-    });
-    setAvailableSkills(Array.from(skillsSet).sort());
-    setAvailableCategories(Array.from(categorySet).sort());
-    setActiveProjectsCount(count || 0);
-  };
-
-  const fetchProjects = async (
-    filters: OpportunityFilters,
-    page: number,
-    size: number,
-    isInitial = false
-  ) => {
-    if (isInitial) setLoading(true);
-    else setSearching(true);
-    setError(null);
-
+  const fetchSearchResults = useCallback(async (filters: OpportunityFilters) => {
+    setSearchLoading(true);
+    setSearchError(null);
     try {
-      const { data: userId, error: userIdError } = await getUserId();
-      if (userIdError) throw new Error(userIdError);
-      if (!userId) throw new Error("Please log in to view opportunities.");
-
-      const from = (page - 1) * size;
-      const to = from + size - 1;
-
       let query = supabase
         .from("projects")
-        .select(
-          "id, title, description, organization_name, location, start_date, end_date, volunteers_needed, volunteers_registered, status, category, required_skills, created_at",
-          { count: "exact" }
-        )
+        .select("id, title, description, organization_name, location, country, state, lga, required_skills, category, start_date, end_date, volunteers_needed, volunteers_registered, created_at")
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
       if (filters.search.trim()) {
-        const value = filters.search.trim();
-        query = query.or(
-          `title.ilike.%${value}%,description.ilike.%${value}%,organization_name.ilike.%${value}%`
-        );
+        const v = filters.search.trim();
+        query = query.or(`title.ilike.%${v}%,description.ilike.%${v}%,organization_name.ilike.%${v}%`);
       }
       if (filters.location.trim()) {
-        const value = filters.location.trim();
-        query = query.or(
-          `location->>state.ilike.%${value}%,location->>country.ilike.%${value}%,location->>lga.ilike.%${value}%`
-        );
+        const v = filters.location.trim();
+        query = query.or(`country.ilike.%${v}%,state.ilike.%${v}%,lga.ilike.%${v}%`);
       }
       if (filters.category) query = query.eq("category", filters.category);
       if (filters.skills.length > 0) query = query.contains("required_skills", filters.skills);
 
-      const { data, error: projectsError, count } = await query.range(from, to);
-      if (projectsError) throw new Error(projectsError.message);
-
-      setProjects(data || []);
-      setTotalCount(count || 0);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Something went wrong.";
-      setError(message);
-      toast.error(message);
+      const { data, error: qError } = await query;
+      if (qError) throw new Error(qError.message);
+      setSearchResults((data ?? []).map(projectToRecommended));
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : "Search failed");
+      setSearchResults([]);
     } finally {
-      setLoading(false);
-      setSearching(false);
+      setSearchLoading(false);
     }
-  };
-
-  useEffect(() => {
-    (async () => {
-      try {
-        await loadFilterOptions();
-        await fetchProjects(DEFAULT_FILTERS, 1, pageSize, true);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Something went wrong.";
-        setError(message);
-        setLoading(false);
-      }
-    })();
   }, []);
 
-  useEffect(() => {
-    if (!loading) fetchProjects(appliedFilters, currentPage, pageSize);
-  }, [currentPage, pageSize]);
+  const filteredRecommendations = useMemo(() => {
+    if (!recommendations) return [];
+    return recommendations.filter((p) => matchesFilters(p, appliedFilters));
+  }, [recommendations, appliedFilters]);
+
+  const displayProjects = isSearchMode ? searchResults : filteredRecommendations;
+
+  const availableCategories = useMemo(() => {
+    const source = isSearchMode ? allProjectsForFilters : (recommendations ?? []);
+    const set = new Set<string>();
+    source.forEach((p) => {
+      if (p.category) set.add(p.category);
+    });
+    return Array.from(set).sort();
+  }, [isSearchMode, allProjectsForFilters, recommendations]);
+
+  const availableSkills = useMemo(() => {
+    const source = isSearchMode ? allProjectsForFilters : (recommendations ?? []);
+    const set = new Set<string>();
+    source.forEach((p) => {
+      (p.required_skills ?? []).forEach((s) => set.add(s));
+    });
+    return Array.from(set).sort();
+  }, [isSearchMode, allProjectsForFilters, recommendations]);
+
+  const totalCount = displayProjects.length;
+  const totalPages = totalCount === 0 ? 1 : Math.ceil(totalCount / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedProjects = displayProjects.slice(startIndex, startIndex + pageSize);
+
+  const hasActiveFilters =
+    !!draftFilters.search.trim() ||
+    !!draftFilters.location.trim() ||
+    !!draftFilters.category ||
+    draftFilters.skills.length > 0;
 
   const handleSearch = async () => {
     setAppliedFilters(draftFilters);
     setCurrentPage(1);
-    await fetchProjects(draftFilters, 1, pageSize);
+    if (hasActiveFilters) {
+      await fetchSearchResults(draftFilters);
+    } else {
+      setSearchResults([]);
+    }
   };
 
-  const handleClearFilters = async () => {
+  const handleClearFilters = () => {
     setDraftFilters(DEFAULT_FILTERS);
     setAppliedFilters(DEFAULT_FILTERS);
     setCurrentPage(1);
-    await fetchProjects(DEFAULT_FILTERS, 1, pageSize);
+    setSearchResults([]);
+    setSearchError(null);
   };
 
   const toggleSkill = (skill: string) => {
@@ -191,33 +264,39 @@ const Opportunities: React.FC = () => {
     }));
   };
 
-  const totalPages = totalCount === 0 ? 1 : Math.ceil(totalCount / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const hasActiveFilters =
-    !!draftFilters.search.trim() ||
-    !!draftFilters.location.trim() ||
-    !!draftFilters.category ||
-    draftFilters.skills.length > 0;
+  const handleViewProject = (projectId: string) => {
+    router.push(routes.volunteerViewProject(projectId));
+  };
 
-  const formatDate = (date: string) =>
-    date
-      ? new Date(date).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })
-      : "-";
+  if (!userId) {
+    return (
+      <div className="container mx-auto p-6 max-w-8xl">
+        <div className="flex items-center justify-center min-h-[300px]">
+          <p className="text-muted-foreground">Please log in to view opportunities.</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (loading) {
+  const showInitialLoading = isLoading && !isSearchMode;
+  const showSearchLoading = searchLoading;
+
+  if (showInitialLoading) {
     return (
       <div className="container mx-auto space-y-6 p-6 max-w-8xl">
         <Skeleton className="h-8 w-64" />
-        <Card><CardContent className="pt-4"><Skeleton className="h-10 w-full" /></CardContent></Card>
+        <Card>
+          <CardContent className="pt-4">
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <Card key={i}>
-              <CardHeader><Skeleton className="h-6 w-4/5" /></CardHeader>
-              <CardContent><Skeleton className="h-32 w-full" /></CardContent>
+              <CardContent className="pt-4">
+                <Skeleton className="h-6 w-4/5" />
+                <Skeleton className="h-32 w-full mt-4" />
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -225,14 +304,14 @@ const Opportunities: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (error && !isSearchMode) {
     return (
       <div className="container mx-auto p-6 max-w-8xl">
         <Card className="border-destructive/50 bg-destructive/5">
           <CardContent className="py-12 text-center">
             <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-3" />
             <p className="text-destructive mb-4">{error}</p>
-            <Button variant="outline" onClick={() => fetchProjects(appliedFilters, currentPage, pageSize)}>
+            <Button variant="outline" onClick={() => refetch()}>
               Retry
             </Button>
           </CardContent>
@@ -244,9 +323,9 @@ const Opportunities: React.FC = () => {
   return (
     <div className="container mx-auto space-y-6 p-6 max-w-8xl">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Volunteer Opportunities</h1>
-        <p className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{activeProjectsCount}</span> active projects available.
+        <h1 className="text-2xl md:text-3xl font-bold">Recommended for You</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Projects matched to your skills and interests. Use filters to narrow your search.
         </p>
       </div>
 
@@ -285,26 +364,36 @@ const Opportunities: React.FC = () => {
                 value={draftFilters.category || "all"}
                 onValueChange={(v) => setDraftFilters((p) => ({ ...p, category: v === "all" ? "" : v }))}
               >
-                <SelectTrigger className="h-9"><SelectValue placeholder="All categories" /></SelectTrigger>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All categories</SelectItem>
                   {availableCategories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Skills</Label>
-              <Select value="" onValueChange={(v) => v && toggleSkill(v)}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Add skill filter..." /></SelectTrigger>
+              <Select value="" onValueChange={(v) => v && v !== "none" && toggleSkill(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Add skill filter..." />
+                </SelectTrigger>
                 <SelectContent>
                   {availableSkills.length > 0 ? (
                     availableSkills.map((skill) => (
-                      <SelectItem key={skill} value={skill}>{skill.replace(/_/g, " ")}</SelectItem>
+                      <SelectItem key={skill} value={skill}>
+                        {skill.replace(/_/g, " ")}
+                      </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="none" disabled>No skills in projects</SelectItem>
+                    <SelectItem value="none" disabled>
+                      No skills in recommendations
+                    </SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -314,7 +403,12 @@ const Opportunities: React.FC = () => {
           {draftFilters.skills.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {draftFilters.skills.map((skill) => (
-                <Badge key={skill} variant="secondary" className="cursor-pointer" onClick={() => toggleSkill(skill)}>
+                <Badge
+                  key={skill}
+                  variant="secondary"
+                  className="cursor-pointer"
+                  onClick={() => toggleSkill(skill)}
+                >
                   {skill.replace(/_/g, " ")} ×
                 </Badge>
               ))}
@@ -323,78 +417,137 @@ const Opportunities: React.FC = () => {
 
           <div className="flex items-center justify-between border-t pt-3">
             <p className="text-xs text-muted-foreground">
-              Showing <span className="font-medium text-foreground">{totalCount}</span> matching projects
+              <span className="font-medium text-foreground">{totalCount}</span>{" "}
+              {isSearchMode
+                ? `matching ${totalCount === 1 ? "project" : "projects"} (includes projects you're on)`
+                : `matching ${totalCount === 1 ? "project" : "projects"}`}
             </p>
             <div className="flex gap-2">
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={handleClearFilters} disabled={searching}>
+                <Button variant="ghost" size="sm" onClick={handleClearFilters}>
                   <RotateCcw className="h-4 w-4 mr-1" /> Clear
                 </Button>
               )}
-              <Button size="sm" className="action-btn" onClick={handleSearch} disabled={searching}>
-                <Search className="h-4 w-4 mr-1" /> {searching ? "Searching..." : "Search"}
+              <Button
+                size="sm"
+                className="action-btn"
+                onClick={handleSearch}
+                disabled={showSearchLoading}
+              >
+                <Search className="h-4 w-4 mr-1" /> {showSearchLoading ? "Searching..." : "Search"}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {projects.length === 0 ? (
+      {searchError && isSearchMode && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="py-4">
+            <p className="text-sm text-destructive">{searchError}</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchSearchResults(appliedFilters)}>
+              Retry search
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {showSearchLoading ? (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="pt-4">
+                <Skeleton className="h-6 w-4/5" />
+                <Skeleton className="h-32 w-full mt-4" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : paginatedProjects.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-16 text-center">
-            <Sparkles className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <h3 className="font-semibold mb-2">No projects match your criteria</h3>
-            <Button variant="outline" onClick={handleClearFilters}>Clear filters</Button>
+            <div className="flex justify-center mb-3">
+              <Sparkles className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold mb-2">
+              {!isSearchMode && recommendations?.length === 0
+                ? "No recommendations yet"
+                : isSearchMode
+                  ? "No projects match your search"
+                  : "No projects match your filters"}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+              {!isSearchMode && recommendations?.length === 0
+                ? "Complete your profile with skills and preferred locations to get personalized project matches."
+                : "Try adjusting your filters or clear them to see recommendations."}
+            </p>
+            <Button
+              variant="outline"
+              onClick={() =>
+                !isSearchMode && recommendations?.length === 0
+                  ? router.push(routes.volunteerProfile)
+                  : handleClearFilters()
+              }
+            >
+              {!isSearchMode && recommendations?.length === 0 ? "Complete Profile" : "Clear filters"}
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <Card key={project.id} className="flex flex-col">
-                <CardHeader>
-                  <CardTitle className="line-clamp-2 text-lg">{project.title}</CardTitle>
-                  <CardDescription className="flex items-center gap-1.5">
-                    <Briefcase className="h-4 w-4" />
-                    {project.organization_name}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 space-y-2 text-sm text-muted-foreground">
-                  <p className="line-clamp-3">{project.description}</p>
-                  <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {formatLocation(project.location)}</p>
-                  <p className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {formatDate(project.start_date)} - {formatDate(project.end_date)}</p>
-                  <p className="flex items-center gap-2"><Users className="h-4 w-4" /> {project.volunteers_registered} / {project.volunteers_needed} volunteers</p>
-                </CardContent>
-                <CardFooter>
-                  <Button asChild className="w-full action-btn group">
-                    <Link href={routes.volunteerViewProject(project.id)}>
-                      View details <ArrowRight className="h-4 w-4 ml-2" />
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
+            {paginatedProjects.map((project) => (
+              <RecommendationCard
+                key={project.project_id}
+                project={project}
+                volunteerSkills={volunteerSkills}
+                onViewProject={handleViewProject}
+              />
             ))}
           </div>
 
           {totalPages > 1 && (
             <div className="flex flex-col md:flex-row items-center justify-between gap-3 border-t pt-4">
               <p className="text-sm text-muted-foreground">
-                Showing {totalCount === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + pageSize, totalCount)} of {totalCount} projects
+                Showing {totalCount === 0 ? 0 : startIndex + 1}–
+                {Math.min(startIndex + pageSize, totalCount)} of {totalCount} projects
               </p>
               <div className="flex items-center gap-2">
-                <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
-                  <SelectTrigger className="h-8 w-[72px]"><SelectValue /></SelectTrigger>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => {
+                    setPageSize(Number(v));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[72px]">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {PAGE_SIZE_OPTIONS.map((n) => (
-                      <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                      <SelectItem key={n} value={String(n)}>
+                        {n}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1 || searching}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
                   <ChevronLeft className="h-4 w-4 mr-1" /> Previous
                 </Button>
-                <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || searching}>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
                   Next <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>

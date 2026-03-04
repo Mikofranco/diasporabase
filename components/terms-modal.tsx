@@ -40,7 +40,10 @@ export function TermsModal({
           {children}
         </div>
         <div className="flex justify-end pt-4">
-          <Button onClick={handleAgree} className="min-w-[120px]">
+          <Button
+            onClick={handleAgree}
+            className="min-w-[120px] bg-primary text-primary-foreground hover:bg-primary/90 border border-border shadow-none"
+          >
             I Agree
           </Button>
         </div>

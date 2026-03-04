@@ -167,15 +167,29 @@ export async function checkIfVolunteerHasRequested({
     .select("id")
     .eq("project_id", projectId)
     .eq("volunteer_id", volunteerId)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
+  if (error) {
     console.error("Error checking volunteer request:", error);
     throw error;
   }
-  console.log("volunteer id ", volunteerId, "data", !!data);
 
   return { hasRequested: !!data };
+}
+
+/** Batch fetch volunteer IDs who have applied to this project (volunteer_requests). */
+export async function getVolunteersWhoRequested(projectId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("volunteer_requests")
+    .select("volunteer_id")
+    .eq("project_id", projectId);
+
+  if (error) {
+    console.error("Error fetching volunteer requests:", error);
+    return new Set();
+  }
+
+  return new Set((data ?? []).map((r: { volunteer_id: string }) => r.volunteer_id));
 }
 
 export async function checkIfAgencyHasRequested({
