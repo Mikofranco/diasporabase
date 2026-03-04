@@ -96,6 +96,7 @@ export default function LoginForm() {
                   JSON.stringify(safeUser),
                 );
                 localStorage.setItem("diaspobase_role", role);
+                localStorage.setItem("diaspobase_fullName", safeUser.full_name ?? "");
                 localStorage.setItem("diaspobase_userId", user.id);
               } catch {
                 // Swallow storage errors; do not block login

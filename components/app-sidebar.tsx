@@ -209,17 +209,10 @@ export function AppSidebar({ onSignOutClick }: AppSidebarProps) {
                     }`}
                     aria-current={isActive(item.path, pathname) ? "page" : undefined}
                   >
-                    {pathname === routes.agencyDashboard && item.path !== routes.agencyDashboard ? (
-                      <a href={item.path} className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4 mr-2" />
-                        <span>{item.label}</span>
-                      </a>
-                    ) : (
                       <Link href={item.path} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4 mr-2" />
                         <span>{item.label}</span>
                       </Link>
-                    )}
                   </SidebarMenuButton>
                 </div>
               </SidebarMenuItem>
