@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,19 +19,43 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
 import { StepIndicator } from "./stepIndicator";
 import LocationSelector, {
   LocationSelectorHandle,
   SelectedData,
 } from "@/components/location-selector";
-// import SkillsSelector from "@/components/skill-selector";
 import SkillsSelector, {
   SkillsSelectorHandle,
   SelectedSkillsData,
 } from "@/components/skill-selector";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import { routes } from "@/lib/routes";
 // import { LocationSelectorHandle, SelectedData } from "@/app/dashboard/volunteer/profile/page";
+
+// Resolve a selected id (category, subcategory, or skill) to its label from expertiseData
+function getLabelForSkillId(id: string): string {
+  for (const cat of expertiseData) {
+    if (cat.id === id) return cat.label;
+    for (const sub of cat.children) {
+      if (sub.id === id) return sub.label;
+      for (const skill of sub.subChildren) {
+        if (skill.id === id) return skill.label;
+      }
+    }
+  }
+  return id;
+}
+
+// True if id is a leaf skill (appears in some sub.subChildren), not a category or subcategory
+function isLeafSkillId(id: string): boolean {
+  for (const cat of expertiseData) {
+    for (const sub of cat.children) {
+      if (sub.subChildren.some((s) => s.id === id)) return true;
+    }
+  }
+  return false;
+}
 
 const onboardingSchema = z
   .object({
@@ -98,6 +122,18 @@ export function VolunteerOnboardingForm() {
 
   const availabilityType = watch("availabilityType");
   const skillsSelectorRef = useRef<SkillsSelectorHandle>(null);
+  const watchedSkills = watch("skills");
+
+  // When returning to step 1, sync SkillsSelector with form's existing selection
+  useEffect(() => {
+    if (step === 1 && watchedSkills?.length > 0 && skillsSelectorRef.current) {
+      skillsSelectorRef.current.setSelected({
+        selectedCategories: [],
+        selectedSubCategories: [],
+        selectedSkills: watchedSkills,
+      });
+    }
+  }, [step]);
 
   const onSubmit = async (data: OnboardingFormData) => {
     setIsLoading(true);
@@ -204,6 +240,22 @@ export function VolunteerOnboardingForm() {
     setSelectedLocations(data);
   }, []);
 
+  const handleRemoveSkill = useCallback(
+    (idToRemove: string) => {
+      const next = (watchedSkills ?? []).filter((id) => id !== idToRemove);
+      setValue("skills", next, { shouldValidate: true });
+      const remainingLeafIds = next.filter(isLeafSkillId);
+      queueMicrotask(() => {
+        skillsSelectorRef.current?.setSelected({
+          selectedCategories: [],
+          selectedSubCategories: [],
+          selectedSkills: remainingLeafIds,
+        });
+      });
+    },
+    [watchedSkills, setValue]
+  );
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6 sm:mb-8">
@@ -216,39 +268,65 @@ export function VolunteerOnboardingForm() {
         <StepIndicator currentStep={step} totalSteps={totalSteps} />
       </div>
 
-      <div className="rounded-2xl border-0 bg-white shadow-xl overflow-hidden max-h-[calc(100vh-14rem)] flex flex-col">
+      <div className="rounded-2xl border-0 bg-white shadow-xl overflow-hidden max-h-[calc(100vh-17rem)] flex flex-col">
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1 min-h-0">
-          {/* Step 1: Skills */}
+          {/* Step 1: Skills — same 3-layer expand/checkbox UX as agency create-project */}
           {step === 1 && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-gray-900">
                 Select Your Skills
               </h2>
-              <CheckboxReactHookFormMultiple
-                items={expertiseData}
-                initialValues={watch("skills") ?? []}
-                onChange={(selected) => setValue("skills", selected)}
-              />
-            {errors.skills && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.skills.message}
+              <p className="text-sm text-gray-600">
+                Expand categories and subcategories, then select the skills that match your expertise.
               </p>
-            )}
-
-            {/* <SkillsSelector
-              ref={skillsSelectorRef}
-              onSelectionChange={(data) => {
-                // Combine all selected ids into one flat array for your form
-                const allSelected = [
-                  ...data.selectedCategories,
-                  ...data.selectedSubCategories,
-                  ...data.selectedSkills,
-                ];
-                setValue("skills", allSelected, { shouldValidate: true });
-              }}
-            /> */}
-          </div>
-        )}
+              <SkillsSelector
+                ref={skillsSelectorRef}
+                onSelectionChange={(data: SelectedSkillsData) => {
+                  const allSelected = [
+                    ...data.selectedCategories,
+                    ...data.selectedSubCategories,
+                    ...data.selectedSkills,
+                  ];
+                  setValue("skills", allSelected, { shouldValidate: true });
+                }}
+              />
+              {/* Selected skills display — only show leaf skills (not category/subcategory labels) */}
+              {(() => {
+                const displayedSkills = (watchedSkills ?? []).filter(isLeafSkillId);
+                return displayedSkills.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">
+                      Selected ({displayedSkills.length})
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {displayedSkills.map((id, index) => (
+                        <Badge
+                          key={`${id}-${index}`}
+                          variant="secondary"
+                          className="text-gray-800 text-xs pl-2 pr-1 py-0.5 rounded-full gap-1 inline-flex items-center"
+                        >
+                          <span>{getLabelForSkillId(id)}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSkill(id)}
+                            className="rounded-full p-0.5 hover:bg-gray-300/80 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                            aria-label={`Remove ${getLabelForSkillId(id)}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+              {errors.skills && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.skills.message}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Step 2: Availability */}
           {step === 2 && (

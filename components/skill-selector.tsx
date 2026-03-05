@@ -405,7 +405,7 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
                             {/* Skill level (sub sub) - smallest */}
                             {subCat.subChildren.map((skill) => (
                               <label
-                                key={skill.id}
+                                key={`${catId}-${subId}-${skill.id}`}
                                 htmlFor={`skill-${catId}-${subId}-${skill.id}`}
                                 className="flex items-center py-1 px-2 hover:bg-gray-50 rounded-md cursor-pointer text-xs text-gray-700"
                               >
