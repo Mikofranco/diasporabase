@@ -224,7 +224,7 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
           }
 
           const skillsMap = next[categoryId].subCategories[subCatId].skills;
-          skillsMap[skillId] = !skillsMap[skillId] ?? true;
+          skillsMap[skillId] = !(skillsMap[skillId] ?? false);
 
           // Cleanup
           if (!anyTrue(skillsMap)) {
@@ -375,7 +375,7 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
                         <div className="flex items-center py-2 px-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                           <Checkbox
                             id={`sub-${catId}-${subId}`}
-                            className="h-4.5 w-4.5 mr-3 data-[state=indeterminate]:bg-diaspora-blue"
+                            className="h-4 w-4 shrink-0 rounded-[4px] border-2 border-gray-400 mr-3 data-[state=indeterminate]:bg-diaspora-blue data-[state=checked]:border-diaspora-blue"
                             checked={
                               selected[catId]?.subCategories?.[subId]?.indeterminate
                                 ? "indeterminate"
