@@ -244,12 +244,11 @@ export function VolunteerOnboardingForm() {
     (idToRemove: string) => {
       const next = (watchedSkills ?? []).filter((id) => id !== idToRemove);
       setValue("skills", next, { shouldValidate: true });
-      const remainingLeafIds = next.filter(isLeafSkillId);
       queueMicrotask(() => {
         skillsSelectorRef.current?.setSelected({
           selectedCategories: [],
           selectedSubCategories: [],
-          selectedSkills: remainingLeafIds,
+          selectedSkills: next,
         });
       });
     },
@@ -282,17 +281,13 @@ export function VolunteerOnboardingForm() {
               <SkillsSelector
                 ref={skillsSelectorRef}
                 onSelectionChange={(data: SelectedSkillsData) => {
-                  const allSelected = [
-                    ...data.selectedCategories,
-                    ...data.selectedSubCategories,
-                    ...data.selectedSkills,
-                  ];
-                  setValue("skills", allSelected, { shouldValidate: true });
+                  // Only store leaf skills (3rd level), not categories or subcategories
+                  setValue("skills", data.selectedSkills, { shouldValidate: true });
                 }}
               />
-              {/* Selected skills display — only show leaf skills (not category/subcategory labels) */}
+              {/* Selected skills display — only leaf skills are stored */}
               {(() => {
-                const displayedSkills = (watchedSkills ?? []).filter(isLeafSkillId);
+                const displayedSkills = watchedSkills ?? [];
                 return displayedSkills.length > 0 ? (
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-gray-700">

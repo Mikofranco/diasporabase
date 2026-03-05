@@ -13,28 +13,19 @@ interface RequiredSkillsSectionProps {
   onEditClick: () => void;
 }
 
-// Resolve id (category, subcategory, or skill) to label from expertiseData
-function getLabelForSkillId(id: string): string {
+// Try to resolve an id or label to the human label in expertiseData.
+// If we can't find a match (e.g. new skills from Supabase), just show the value.
+function getLabelForSkillId(value: string): string {
   for (const cat of expertiseData) {
-    if (cat.id === id) return cat.label;
+    if (cat.id === value || cat.label === value) return cat.label;
     for (const sub of cat.children) {
-      if (sub.id === id) return sub.label;
+      if (sub.id === value || sub.label === value) return sub.label;
       for (const skill of sub.subChildren) {
-        if (skill.id === id) return skill.label;
+        if (skill.id === value || skill.label === value) return skill.label;
       }
     }
   }
-  return id;
-}
-
-// True if id is a leaf skill (appears in some sub.subChildren)
-function isLeafSkillId(id: string): boolean {
-  for (const cat of expertiseData) {
-    for (const sub of cat.children) {
-      if (sub.subChildren.some((s) => s.id === id)) return true;
-    }
-  }
-  return false;
+  return value;
 }
 
 export function RequiredSkillsSection({
@@ -42,11 +33,7 @@ export function RequiredSkillsSection({
   isAdmin,
   onEditClick,
 }: RequiredSkillsSectionProps) {
-  const rawSkills = project.required_skills || [];
-  const leafSkills = rawSkills.filter(isLeafSkillId);
-  // For new data (from the SkillsSelector), we'll have leaf IDs; for older
-  // projects that stored plain labels, fall back to raw values.
-  const displayedSkills = leafSkills.length > 0 ? leafSkills : rawSkills;
+  const displayedSkills = project.required_skills || [];
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">

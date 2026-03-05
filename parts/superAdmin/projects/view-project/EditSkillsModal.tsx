@@ -26,41 +26,15 @@ interface EditSkillsModalProps {
   saving: boolean;
 }
 
-// Resolve either an id or a label to the canonical id used in expertiseData.
-// This lets us pre-select skills even if older projects stored human labels.
-function resolveToCanonicalId(value: string): string | null {
-  for (const cat of expertiseData) {
-    if (cat.id === value || cat.label === value) return cat.id;
-    for (const sub of cat.children) {
-      if (sub.id === value || sub.label === value) return sub.id;
-      for (const skill of sub.subChildren) {
-        if (skill.id === value || skill.label === value) return skill.id;
-      }
-    }
-  }
-  return null;
-}
-
-// True if id is a leaf skill (appears in some sub.subChildren)
-function isLeafId(id: string): boolean {
-  for (const cat of expertiseData) {
-    for (const sub of cat.children) {
-      if (sub.subChildren.some((s) => s.id === id)) return true;
-    }
-  }
-  return false;
-}
-
-// Resolve id (category, subcategory, or skill) to label from expertiseData
+// Try to resolve an id or label to the human label in expertiseData.
+// If we can't find a match (e.g. new skills from Supabase), just show the value.
 function getLabelForSkillId(value: string): string {
-  // Prefer matching by canonical id, but also support old stored labels.
-  const id = resolveToCanonicalId(value) ?? value;
   for (const cat of expertiseData) {
-    if (cat.id === id) return cat.label;
+    if (cat.id === value || cat.label === value) return cat.label;
     for (const sub of cat.children) {
-      if (sub.id === id) return sub.label;
+      if (sub.id === value || sub.label === value) return sub.label;
       for (const skill of sub.subChildren) {
-        if (skill.id === id) return skill.label;
+        if (skill.id === value || skill.label === value) return skill.label;
       }
     }
   }
@@ -68,25 +42,16 @@ function getLabelForSkillId(value: string): string {
   return value;
 }
 
-// True if the value corresponds to a leaf skill in expertiseData
-function isLeafSkill(value: string): boolean {
-  const id = resolveToCanonicalId(value) ?? value;
-  return isLeafId(id);
-}
-
 // Convert flat list of ids/labels into SelectedSkillsData for syncing the selector.
-// For edit mode we ONLY seed leaf skills so we don't auto-select all siblings
-// in a subcategory or entire categories.
+// For edit mode, treat all values as skill ids; we only pre-select what the selector
+// can actually match in its tree (Supabase-backed skillsets).
 function flatIdsToSelectedData(flatValues: string[]): SelectedSkillsData {
   const selectedCategories: string[] = [];
   const selectedSubCategories: string[] = [];
   const selectedSkills: string[] = [];
 
   for (const raw of flatValues) {
-    const id = resolveToCanonicalId(raw) ?? raw;
-    if (isLeafId(id)) {
-      selectedSkills.push(id);
-    }
+    selectedSkills.push(raw);
   }
 
   return {
@@ -122,11 +87,8 @@ export function EditSkillsModal({
     });
   }, [open]);
 
-  // For the summary chips, prefer leaf skills; if none, fall back to raw values
-  const displayedSkills = (() => {
-    const leaf = (editingSkills || []).filter(isLeafSkill);
-    return leaf.length > 0 ? leaf : editingSkills || [];
-  })();
+  // For the summary chips, just show whatever is currently selected.
+  const displayedSkills = editingSkills || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -183,12 +145,8 @@ export function EditSkillsModal({
               ref={selectorRef}
               onSelectionChange={(data: SelectedSkillsData) => {
                 if (initializingRef.current) return;
-                const allSelected = [
-                  ...data.selectedCategories,
-                  ...data.selectedSubCategories,
-                  ...data.selectedSkills,
-                ];
-                onEditingSkillsChange(allSelected);
+                // Only store leaf skills (3rd level), not categories or subcategories
+                onEditingSkillsChange(data.selectedSkills);
               }}
             />
           )}
