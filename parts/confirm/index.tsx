@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { routes } from "@/lib/routes";
-import { signOutUser } from "@/lib/utils";
+import { signOutUser, persistUserSnapshot } from "@/lib/utils";
 
 const CONFIRM_TOKEN_KEY = "diasporabase_confirm_token";
 const REDIRECT_DELAY_SEC = 3;
@@ -169,13 +169,28 @@ export default function ConfirmEmailPage() {
       if (currentId === confirmedUserId) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role, tax_id")
+          .select("role, tax_id, is_active, full_name, email, phone")
           .eq("id", currentId)
           .single();
 
         const role = (profile?.role?.toLowerCase() || null) as UserRole;
         setUserRole(role);
         setUserTaxId(profile?.tax_id ?? null);
+
+        // Persist same snapshot as login so sidebar has user data on dashboard
+        if (profile && role) {
+          const user = sessionData.session.user;
+          const safeUser = {
+            id: currentId,
+            email: profile.email ?? user?.email ?? null,
+            role,
+            full_name: profile.full_name ?? null,
+            phone: profile.phone ?? null,
+            tax_id: profile.tax_id ?? null,
+            is_active: profile.is_active ?? null,
+          };
+          persistUserSnapshot(safeUser);
+        }
       } else {
         const result = await signOutUser();
         if (!result.success) {

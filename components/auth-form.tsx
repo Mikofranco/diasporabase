@@ -19,6 +19,7 @@ import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { SignInWithGoogle } from "./loginWithGoogle";
 import { routes } from "@/lib/routes";
+import { persistUserSnapshot } from "@/lib/utils";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -90,17 +91,7 @@ export default function LoginForm() {
                 is_active: profile.is_active ?? null,
               };
 
-              try {
-                localStorage.setItem(
-                  "diasporabase_user",
-                  JSON.stringify(safeUser),
-                );
-                localStorage.setItem("diaspobase_role", role);
-                localStorage.setItem("diaspobase_fullName", safeUser.full_name ?? "");
-                localStorage.setItem("diaspobase_userId", user.id);
-              } catch {
-                // Swallow storage errors; do not block login
-              }
+              persistUserSnapshot(safeUser);
 
               // Route to the correct dashboard, including agency gating.
               if (role === "super_admin") {

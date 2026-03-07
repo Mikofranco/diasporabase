@@ -38,6 +38,7 @@ import { MilestonesTab } from "./milestones";
 import { DeliverablesTab } from "./deliverables";
 import { Deliverable, Milestone, Project } from "@/lib/types";
 import { TeamTab } from "./team-tab";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 
 const supabase = createClient();
 
@@ -211,8 +212,8 @@ export default function ProjectManagementScreen() {
             <Building2 className="h-4 w-4" />
             <span>{project.organization_name}</span>
           </div>{/* @ts-ignore */}
-          <Badge className={getStatusColor(project.status)}>
-            {project.status}
+          <Badge className={getProjectStatusStyle(project.status).className}>
+            {getProjectStatusStyle(project.status).label}
           </Badge>
           <span className="text-sm">• You are the Project Manager</span>
         </div>
