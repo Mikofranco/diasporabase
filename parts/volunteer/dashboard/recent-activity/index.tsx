@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client"; // Adjust import path as needed
+import { createClient } from "@/lib/supabase/client";
 import { GreenTickBoxed, PlusBoxed, StarBoxed } from "@/public/icon";
 import RecentActivityItems, { RecentActivityItemsProps } from "./recent-activity-items";
-import { formatDistanceToNow } from "date-fns"; // npm install date-fns for relative time
+import { formatDistanceToNow } from "date-fns";
 import { VolunteerRequest } from "@/lib/types";
+import { Send } from "lucide-react";
 
 const supabase = createClient(); // Initialize Supabase client
 
@@ -76,44 +77,79 @@ const RecentActivity = () => {
           .order("created_at", { ascending: false })
           .limit(5);
 
-        // Map to activity items
-        const activityItems: RecentActivityItemsProps[] = [];
+        // Fetch pending agency requests (invitations to volunteer) – only pending; accepted/rejected are excluded
+        const { data: agencyRequests } = await supabase
+          .from("agency_requests")
+          .select(`
+            id,
+            created_at,
+            project_id,
+            projects!project_id (
+              title,
+              organization_name
+            )
+          `)
+          .eq("volunteer_id", profileId)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(5);
 
-        // Applied
-        requests?.forEach((req:VolunteerRequest) => {
+        // Map to activity items (with sort date for merging)
+        type ActivityWithDate = RecentActivityItemsProps & { sortAt: string };
+        const activityItems: ActivityWithDate[] = [];
+
+        // Applied (volunteer applied to project)
+        requests?.forEach((req: VolunteerRequest) => {
           activityItems.push({
             icon: <PlusBoxed />,
-            period: formatDistanceToNow(new Date(req.created_at), { addSuffix: true }),//@ts-ignore
-            title: `Applied for "${req.projects.title}"`,
+            period: formatDistanceToNow(new Date(req.created_at), { addSuffix: true }),
+            // @ts-ignore – projects from join
+            title: `Applied for "${req.projects?.title ?? "project"}"`,
+            sortAt: req.created_at,
+          });
+        });
+
+        // Pending request from agency (invitation to join project – only pending; disappears when accepted/rejected)
+        agencyRequests?.forEach((ar: { created_at: string; projects?: { title?: string; organization_name?: string } }) => {
+          const title = ar.projects?.title ?? "a project";
+          const org = ar.projects?.organization_name ?? "An agency";
+          activityItems.push({
+            icon: (
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[#DBEAFE] border border-[#E5E7EB]">
+                <Send className="h-5 w-5 text-[#2563EB]" aria-hidden />
+              </span>
+            ),
+            period: formatDistanceToNow(new Date(ar.created_at), { addSuffix: true }),
+            title: `Pending request from ${org} for "${title}"`,
+            sortAt: ar.created_at,
           });
         });
 
         // Completed
-        completedProjects?.forEach((proj:any) => {
+        completedProjects?.forEach((proj: any) => {
           activityItems.push({
             icon: <GreenTickBoxed />,
             period: formatDistanceToNow(new Date(proj.updated_at), { addSuffix: true }),
             title: `Completed "${proj.title}" project`,
+            sortAt: proj.updated_at,
           });
         });
 
         // Ratings
-        ratings?.forEach((rating:any) => {
+        ratings?.forEach((rating: any) => {
           activityItems.push({
             icon: <StarBoxed />,
             period: formatDistanceToNow(new Date(rating.created_at), { addSuffix: true }),
             title: `Received ${rating.rating}-star rating from ${rating.projects.organization_name}`,
+            sortAt: rating.created_at,
           });
         });
 
-        // Sort by date descending (most recent first)
-        activityItems.sort((a, b) => {
-          // Note: You'd need to store dates in the items for accurate sorting; for simplicity, assuming fetch order is recent
-          // To improve: Add date to each item and sort here
-          return 0; // Placeholder; enhance as needed
-        });
+        // Sort by date descending (most recent first), then limit to 5
+        activityItems.sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime());
+        const displayItems = activityItems.slice(0, 5).map(({ sortAt: _, ...item }) => item);
 
-        setActivities(activityItems.slice(0, 5)); // Limit to 5 recent
+        setActivities(displayItems);
       } catch (err) {
         setError("Failed to fetch activities");
         console.error(err);

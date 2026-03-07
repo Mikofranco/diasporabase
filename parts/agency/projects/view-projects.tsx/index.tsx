@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import AssignProjectManager from "@/parts/PM";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 import { MilestonesSection } from "./milestone-section";
 import { AssignedVolunteersTable } from "./assigned-volunteer";
 import { ClosingRemarksModal } from "@/components/closing-remarks";
@@ -155,6 +156,7 @@ interface Deliverable {
 }
 
 const ProjectDetails: React.FC = () => {
+  const { getLabel } = useSkillLabels();
   const [project, setProject] = useState<Project | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
@@ -714,7 +716,7 @@ const ProjectDetails: React.FC = () => {
                         variant="secondary"
                         className="font-normal"
                       >
-                        {skill}
+                        {getLabel(skill)}
                       </Badge>
                     ))}
                   </div>

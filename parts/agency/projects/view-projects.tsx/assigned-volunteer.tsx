@@ -24,6 +24,7 @@ import { MapPin, Mail, Calendar, Star, Phone, StarOff } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 /** Format date string to "Month Day" (e.g. "March 15") for display only. */
 function formatMonthDay(dateStr: string | null | undefined): string {
@@ -71,6 +72,7 @@ export function AssignedVolunteersTable({ projectId, volunteers, onRatingSubmitt
   const [rateComment, setRateComment] = useState("");
   const [rateLoading, setRateLoading] = useState(false);
   const { toast } = useToast();
+  const { getLabel } = useSkillLabels();
 
   useEffect(() => {
     if (!projectId || volunteers.length === 0) return;
@@ -224,7 +226,7 @@ export function AssignedVolunteersTable({ projectId, volunteers, onRatingSubmitt
                   <div className="flex flex-wrap gap-2">
                     {volunteer.skills.slice(0, 3).map((skill) => (
                       <Badge key={skill} variant="secondary" className="text-xs">
-                        {skill.replace(/_/g, " ")}
+                        {getLabel(skill)}
                       </Badge>
                     ))}
                     {volunteer.skills.length > 3 && (
@@ -356,7 +358,7 @@ export function AssignedVolunteersTable({ projectId, volunteers, onRatingSubmitt
                   <div className="flex flex-wrap gap-2">
                     {selectedVolunteer.skills.map((skill) => (
                       <Badge key={skill} className="bg-diaspora-blue/10 text-diaspora-darkBlue border-diaspora-blue/20">
-                        {skill.replace(/_/g, " ")}
+                        {getLabel(skill)}
                       </Badge>
                     ))}
                   </div>

@@ -259,6 +259,37 @@ export async function getSkillsets(): Promise<Item[]> {
   }
 }
 
+/** Flatten hierarchical skillsets into id → label for display. */
+function flattenSkillItems(items: Item[]): Map<string, string> {
+  const map = new Map<string, string>();
+  function add(node: { id: string; label: string; children?: Item[] }) {
+    map.set(node.id, node.label);
+    node.children?.forEach((child) => {
+      map.set(child.id, child.label);
+      child.subChildren?.forEach((s: { id: string; label: string }) => map.set(s.id, s.label));
+    });
+  }
+  items.forEach(add);
+  return map;
+}
+
+/** Fetch skillsets and return a flat map of skill id → display label. */
+export async function getSkillLabelsMap(): Promise<Map<string, string>> {
+  const items = await getSkillsets();
+  return flattenSkillItems(items);
+}
+
+/**
+ * Get the display label for a skill id. Use for all user-facing skill text.
+ * @param id - Skill id (e.g. "arts_design")
+ * @param labelsMap - Map from getSkillLabelsMap(); if null, falls back to formatting id (e.g. "Arts design")
+ */
+export function getSkillLabel(id: string, labelsMap: Map<string, string> | null): string {
+  if (!id) return "";
+  const label = labelsMap?.get(id);
+  if (label) return label;
+  return id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export async function getUnreadNotificationCount(): Promise<{
   data: number | null;

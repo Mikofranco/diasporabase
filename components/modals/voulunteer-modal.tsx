@@ -6,6 +6,7 @@ import { Calendar, Mail, MapPin, Star } from 'lucide-react'
 import { Separator } from '../ui/separator'
 import { Button } from '../ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import { useSkillLabels } from '@/hooks/useSkillLabels'
 
 /** Who is viewing: admin = always show all; volunteer_same_project = show personal + skills, no DOB, ignore anonymous; public = respect anonymous. */
 export type VolunteerViewerRole = 'admin' | 'volunteer_same_project' | 'public';
@@ -20,6 +21,7 @@ interface VolunteerInfoModalProps {
 const VolunteerInfoModal = ({ showAll, volunteer, viewerRole = 'public' }: VolunteerInfoModalProps) => {
     const [open, setOpen] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
+    const { getLabel } = useSkillLabels();
 
     if (!volunteer) {
     return (
@@ -132,7 +134,7 @@ const VolunteerInfoModal = ({ showAll, volunteer, viewerRole = 'public' }: Volun
               <div className="flex flex-wrap gap-2">
                 {volunteer.skills.map(skill => (
                   <Badge key={skill} variant="secondary" className="px-3 py-1">
-                    {skill}
+                    {getLabel(skill)}
                   </Badge>
                 ))}
               </div>
@@ -150,7 +152,7 @@ const VolunteerInfoModal = ({ showAll, volunteer, viewerRole = 'public' }: Volun
                   {/*@ts-ignore*/}
                   {volunteer.matched_skills.map(skill => (
                     <Badge key={skill} className="bg-green-50 text-green-800 border-green-200 hover:bg-green-50">
-                      {skill}
+                      {getLabel(skill)}
                     </Badge>
                   ))}
                 </div>
