@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import Logo from "@/components/logo";
 import { getMileStonesAndDeliverablesForProject } from "@/services/projects";
 import { formatLocation } from "@/lib/utils";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 
 interface ViewProjectModalProps {
   project: Project | null;
@@ -74,6 +75,8 @@ export function ViewProjectModal({ project, open, onOpenChange }: ViewProjectMod
     return null;
   }
 
+  const statusConfig = getProjectStatusStyle(project.status);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
@@ -86,19 +89,8 @@ export function ViewProjectModal({ project, open, onOpenChange }: ViewProjectMod
           {/* Status */}
           <div className="flex items-center gap-3">
             <span className="font-medium text-gray-700">Status:</span>
-            <Badge
-              variant="outline"
-              className={
-                project.status === "active"
-                  ? "bg-blue-100 text-blue-800"
-                  : project.status === "completed"
-                  ? "bg-green-100 text-green-800"
-                  : project.status === "pending"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-red-100 text-red-800"
-              }
-            >
-              {project.status?.charAt(0).toUpperCase() + project.status?.slice(1)}
+            <Badge variant="outline" className={statusConfig.className}>
+              {statusConfig.label}
             </Badge>
           </div>
 

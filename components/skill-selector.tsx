@@ -13,8 +13,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-
-import { expertiseData } from "@/data/expertise"; // your data import
+import { getSkillsets } from "@/lib/utils";
 
 // ────────────────────────────────────────────────
 // Types
@@ -91,8 +90,38 @@ interface SkillsSelectorProps {
 
 const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
   ({ onSelectionChange }, ref) => {
+    const [categories, setCategories] = useState<SkillCategory[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
     const [expanded, setExpanded] = useState<ExpandedState>({});
     const [selected, setSelected] = useState<SelectedSkillsState>({});
+    const [pendingSelection, setPendingSelection] = useState<SelectedSkillsData | null>(null);
+
+    // Load skill categories from Supabase
+    useEffect(() => {
+      let cancelled = false;
+      const load = async () => {
+        setLoading(true);
+        try {
+          const items = await getSkillsets();
+          if (!cancelled) {
+            setCategories(items as SkillCategory[]);
+          }
+        } catch {
+          if (!cancelled) {
+            toast.error("Failed to load skills. Please try again.");
+          }
+        } finally {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        }
+      };
+
+      load();
+      return () => {
+        cancelled = true;
+      };
+    }, []);
 
     // Helpers
     const allTrue = (obj: Record<string, boolean>) =>
@@ -136,65 +165,89 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
     );
 
     // Build state from flat selected data
-    const buildSelectedState = useCallback((data: SelectedSkillsData): SelectedSkillsState => {
-      const newState: SelectedSkillsState = {};
+    const buildSelectedState = useCallback(
+      (data: SelectedSkillsData): SelectedSkillsState => {
+        const newState: SelectedSkillsState = {};
 
-      // Add selected skills
-      data.selectedSkills.forEach((skillId) => {
-        for (const cat of expertiseData) {
-          for (const sub of cat.children) {
-            if (sub.subChildren.some((s) => s.id === skillId)) {
-              if (!newState[cat.id]) newState[cat.id] = { checked: false, subCategories: {} };
-              if (!newState[cat.id].subCategories[sub.id]) {
-                newState[cat.id].subCategories[sub.id] = { checked: false, skills: {} };
+        if (!categories.length) {
+          return newState;
+        }
+
+        // Add selected skills
+        data.selectedSkills.forEach((skillId) => {
+          for (const cat of categories) {
+            for (const sub of cat.children) {
+              if (sub.subChildren.some((s) => s.id === skillId)) {
+                if (!newState[cat.id]) {
+                  newState[cat.id] = { checked: false, subCategories: {} };
+                }
+                if (!newState[cat.id].subCategories[sub.id]) {
+                  newState[cat.id].subCategories[sub.id] = { checked: false, skills: {} };
+                }
+                newState[cat.id].subCategories[sub.id].skills[skillId] = true;
+                updateParentsUpward(newState, cat.id, sub.id);
+                break;
               }
-              newState[cat.id].subCategories[sub.id].skills[skillId] = true;
-              updateParentsUpward(newState, cat.id, sub.id);
+            }
+          }
+        });
+
+        // Add selected subcategories (override if partial skills already set)
+        data.selectedSubCategories.forEach((subId) => {
+          for (const cat of categories) {
+            const sub = cat.children.find((s) => s.id === subId);
+            if (sub) {
+              if (!newState[cat.id]) {
+                newState[cat.id] = { checked: false, subCategories: {} };
+              }
+              newState[cat.id].subCategories[subId] = {
+                checked: true,
+                indeterminate: false,
+                skills: Object.fromEntries(sub.subChildren.map((s) => [s.id, true])),
+              };
+              updateParentsUpward(newState, cat.id);
               break;
             }
           }
-        }
-      });
+        });
 
-      // Add selected subcategories (override if partial skills already set)
-      data.selectedSubCategories.forEach((subId) => {
-        for (const cat of expertiseData) {
-          const sub = cat.children.find((s) => s.id === subId);
-          if (sub) {
-            if (!newState[cat.id]) newState[cat.id] = { checked: false, subCategories: {} };
-            newState[cat.id].subCategories[subId] = {
-              checked: true,
-              indeterminate: false,
-              skills: Object.fromEntries(sub.subChildren.map((s) => [s.id, true])),
-            };
-            updateParentsUpward(newState, cat.id);
-            break;
+        // Add selected categories
+        data.selectedCategories.forEach((catId) => {
+          if (!newState[catId]) {
+            newState[catId] = { checked: true, indeterminate: false, subCategories: {} };
+          } else {
+            newState[catId].checked = true;
+            newState[catId].indeterminate = false;
           }
-        }
-      });
+        });
 
-      // Add selected categories
-      data.selectedCategories.forEach((catId) => {
-        if (!newState[catId]) {
-          newState[catId] = { checked: true, indeterminate: false, subCategories: {} };
-        } else {
-          newState[catId].checked = true;
-          newState[catId].indeterminate = false;
-        }
-      });
-
-      return newState;
-    }, [updateParentsUpward]);
-
-    useImperativeHandle(ref, () => ({
-      setSelected: (data: SelectedSkillsData) => {
-        setSelected(buildSelectedState(data));
+        return newState;
       },
-      clear: () => {
-        setSelected({});
-        toast.info("Skills selection cleared");
-      },
-    }), [buildSelectedState]);
+      [categories, updateParentsUpward]
+    );
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        setSelected: (data: SelectedSkillsData) => {
+          setPendingSelection(data);
+          setSelected(buildSelectedState(data));
+        },
+        clear: () => {
+          setPendingSelection(null);
+          setSelected({});
+          toast.info("Skills selection cleared");
+        },
+      }),
+      [buildSelectedState]
+    );
+
+    // When categories load (or reload), re-apply any pending selection
+    useEffect(() => {
+      if (categories.length && pendingSelection) {
+        setSelected(buildSelectedState(pendingSelection));
+      }
+    }, [categories, pendingSelection, buildSelectedState]);
 
     useEffect(() => {
       onSelectionChange?.(getSelectedData());
@@ -224,7 +277,7 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
           }
 
           const skillsMap = next[categoryId].subCategories[subCatId].skills;
-          skillsMap[skillId] = !skillsMap[skillId] ?? true;
+          skillsMap[skillId] = !(skillsMap[skillId] ?? false);
 
           // Cleanup
           if (!anyTrue(skillsMap)) {
@@ -245,7 +298,7 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
           if (wasChecked) {
             delete subMap[subCatId];
           } else {
-            const catData = expertiseData.find((c) => c.id === categoryId);
+            const catData = categories.find((c) => c.id === categoryId);
             const subData = catData?.children.find((s) => s.id === subCatId);
             if (subData) {
               subMap[subCatId] = {
@@ -263,7 +316,7 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
           const willCheck = !(cat?.checked ?? false);
 
           if (willCheck) {
-            const catData = expertiseData.find((c) => c.id === categoryId);
+            const catData = categories.find((c) => c.id === categoryId);
             if (catData) {
               next[categoryId] = {
                 checked: true,
@@ -331,7 +384,20 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
       </div>
 
       <div className="max-h-[520px] overflow-y-auto pr-3 space-y-3">
-        {expertiseData.map((category) => {
+        {loading && !categories.length && (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="h-9 rounded-md bg-gray-100 animate-pulse"
+              />
+            ))}
+          </div>
+        )}
+        {!loading && !categories.length && (
+          <p className="text-sm text-gray-500">No skills configured yet.</p>
+        )}
+        {categories.map((category) => {
           const catId = category.id;
           const isCatExpanded = expanded[catId] ?? false;
 
@@ -375,7 +441,7 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
                         <div className="flex items-center py-2 px-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                           <Checkbox
                             id={`sub-${catId}-${subId}`}
-                            className="h-4.5 w-4.5 mr-3 data-[state=indeterminate]:bg-diaspora-blue"
+                            className="h-4 w-4 shrink-0 rounded-[4px] border-2 border-gray-400 mr-3 data-[state=indeterminate]:bg-diaspora-blue data-[state=checked]:border-diaspora-blue"
                             checked={
                               selected[catId]?.subCategories?.[subId]?.indeterminate
                                 ? "indeterminate"
@@ -405,7 +471,7 @@ const SkillsSelector = forwardRef<SkillsSelectorHandle, SkillsSelectorProps>(
                             {/* Skill level (sub sub) - smallest */}
                             {subCat.subChildren.map((skill) => (
                               <label
-                                key={skill.id}
+                                key={`${catId}-${subId}-${skill.id}`}
                                 htmlFor={`skill-${catId}-${subId}-${skill.id}`}
                                 className="flex items-center py-1 px-2 hover:bg-gray-50 rounded-md cursor-pointer text-xs text-gray-700"
                               >

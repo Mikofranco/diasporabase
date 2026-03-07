@@ -37,32 +37,7 @@ import { useSendMail } from "@/services/mail";
 import { RatingForm } from "./rating-form";
 import { formatLocation } from "@/lib/utils";
 import { routes } from "@/lib/routes";
-
-const statusConfig: Record<
-  ProjectStatus,
-  { label: string; icon: React.ReactNode; color: string }
-> = {
-  pending: {
-    label: "Pending",
-    icon: <AlertCircle className="h-4 w-4" />,
-    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  },
-  active: {
-    label: "Active",
-    icon: <CheckCircle2 className="h-4 w-4" />,
-    color: "bg-green-100 text-green-800 border-green-200",
-  },
-  completed: {
-    label: "Completed",
-    icon: <CheckCircle2 className="h-4 w-4" />,
-    color: "bg-blue-100 text-blue-800 border-blue-200",
-  },
-  cancelled: {
-    label: "Cancelled",
-    icon: <XCircle className="h-4 w-4" />,
-    color: "bg-red-100 text-red-800 border-red-200",
-  },
-};
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 
 interface ProjectViewProps {
   project: Project;
@@ -117,7 +92,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
     router.refresh();
   };
 
-  const status = statusConfig[project.status ?? "pending"];
+  const statusConfig = getProjectStatusStyle(project.status ?? "pending");
 
   const handleContactOrganizer = () => {
     if (!onboardingComplete) {
@@ -184,10 +159,9 @@ const ProjectView: React.FC<ProjectViewProps> = ({
 
           <Badge
             variant="outline"
-            className={`self-start px-4 py-2 text-sm font-medium flex items-center gap-2 border-2 ${status.color}`}
+            className={`self-start px-4 py-2 text-sm font-medium border-2 ${statusConfig.className}`}
           >
-            {status.icon}
-            {status.label}
+            {statusConfig.label}
           </Badge>
         </div>
       </div>

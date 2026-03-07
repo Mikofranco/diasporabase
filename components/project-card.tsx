@@ -11,6 +11,7 @@ import { Calendar, Users, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 
 export interface Project {
   id: string;
@@ -23,25 +24,6 @@ export interface Project {
   volunteers_registered: number;
   volunteers_needed: number;
   status: string;
-}
-
-const STATUS_STYLES: Record<string, { label: string; className: string }> = {
-  active: { label: "Active", className: "bg-emerald-100 text-emerald-800 border-emerald-200 border" },
-  pending: { label: "Pending", className: "bg-amber-100 text-amber-800 border-amber-200 border" },
-  approved: { label: "Approved", className: "bg-blue-100 text-blue-800 border-blue-200 border" },
-  completed: { label: "Completed", className: "bg-slate-100 text-slate-700 border-slate-200 border" },
-  rejected: { label: "Rejected", className: "bg-red-100 text-red-800 border-red-200 border" },
-  cancelled: { label: "Cancelled", className: "bg-gray-100 text-gray-600 border-gray-200 border" },
-};
-
-function getStatusStyle(status: string) {
-  const key = (status || "pending").toLowerCase();
-  return (
-    STATUS_STYLES[key] ?? {
-      label: status ? status.charAt(0).toUpperCase() + status.slice(1) : "Pending",
-      className: "bg-gray-100 text-gray-700 border-gray-200 border",
-    }
-  );
 }
 
 function formatDate(dateStr: string) {
@@ -67,7 +49,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   handleProjectSelect,
   className,
 }) => {
-  const statusConfig = getStatusStyle(project.status);
+  const statusConfig = getProjectStatusStyle(project.status);
   const volunteersNeeded = project.volunteers_needed ?? 0;
 
   return (

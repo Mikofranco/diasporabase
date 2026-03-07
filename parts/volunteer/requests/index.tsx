@@ -42,6 +42,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { startLoading, stopLoading } from "@/lib/loading";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 
 const supabase = createClient();
 
@@ -426,35 +427,12 @@ const VolunteerRequests: React.FC = () => {
     if (!status) {
       return <Badge variant="outline">Unknown</Badge>;
     }
-
-    switch (status) {
-      case "active":
-        return (
-          <Badge variant="default" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-200">
-            Active
-          </Badge>
-        );
-      case "pending":
-        return (
-          <Badge variant="secondary" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-200">
-            Pending
-          </Badge>
-        );
-      case "completed":
-        return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-200">
-            Completed
-          </Badge>
-        );
-      case "cancelled":
-        return (
-          <Badge variant="destructive" className="bg-red-50 text-red-700 hover:bg-red-200">
-            Cancelled
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    const { label, className } = getProjectStatusStyle(status);
+    return (
+      <Badge variant="outline" className={className}>
+        {label}
+      </Badge>
+    );
   };
 
   const getRequestTypeLabel = (type: "volunteer" | "agency") => {
