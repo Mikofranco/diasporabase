@@ -21,6 +21,7 @@ import {
 import { Project } from "@/lib/types";
 import { routes } from "@/lib/routes";
 import { ChevronRight, FileText } from "lucide-react";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 
 interface TableProps {
   data: Project[];
@@ -46,19 +47,10 @@ const columns: ColumnDef<Project>[] = [
     header: "Status",
     cell: ({ row }) => {
       const status = (row.getValue("status") as string) || "";
-      const statusStyles: Record<string, string> = {
-        active: "bg-blue-100 text-blue-800",
-        completed: "bg-gray-100 text-gray-800",
-        pending: "bg-yellow-100 text-yellow-800",
-        cancelled: "bg-red-100 text-red-800",
-      };
+      const { label, className } = getProjectStatusStyle(status);
       return (
-        <span
-          className={`capitalize px-2 py-0.5 rounded-full text-xs font-medium ${
-            statusStyles[status.toLowerCase()] || "bg-gray-100 text-gray-800"
-          }`}
-        >
-          {status || "—"}
+        <span className={`capitalize px-2 py-0.5 rounded-full text-xs font-medium border ${className}`}>
+          {label || "—"}
         </span>
       );
     },

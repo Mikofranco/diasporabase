@@ -53,6 +53,37 @@ export async function signOutUser(): Promise<{ success: boolean; error?: string 
   }
 }
 
+/**
+ * User snapshot shape stored in localStorage for dashboard/sidebar use.
+ * Must match what the sidebar and other dashboard code expect.
+ */
+export type UserSnapshot = {
+  id: string;
+  email: string | null;
+  role: string;
+  full_name: string | null;
+  phone: string | null;
+  tax_id: string | null;
+  is_active: boolean | null;
+};
+
+/**
+ * Persist user snapshot to localStorage so the sidebar and dashboard
+ * have role, fullName, userId without calling the profile API.
+ * Use after login (email/password, OAuth, or email verification).
+ */
+export function persistUserSnapshot(snapshot: UserSnapshot): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("diasporabase_user", JSON.stringify(snapshot));
+    localStorage.setItem("diaspobase_role", snapshot.role);
+    localStorage.setItem("diaspobase_fullName", snapshot.full_name ?? "");
+    localStorage.setItem("diaspobase_userId", snapshot.id);
+  } catch {
+    // Swallow storage errors; do not block login
+  }
+}
+
 export async function getUserId() {
   try {
     // Prefer the cached user id from localStorage when running in the browser.

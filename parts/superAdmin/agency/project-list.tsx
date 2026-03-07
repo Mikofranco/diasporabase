@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { formatLocation } from "@/lib/utils";
 import { routes } from "@/lib/routes";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 
 const supabase = createClient();
 
@@ -184,26 +185,12 @@ export default function ProjectsList({ agencyId, getProjectViewUrl }: ProjectsLi
   );
 }
 
-
-const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
-  active: { label: "Active", class: "bg-green-100 text-green-800 border-green-300" },
-  approved: { label: "Approved", class: "bg-emerald-100 text-emerald-800 border-emerald-300" },
-  completed: { label: "Completed", class: "bg-blue-100 text-blue-800 border-blue-300" },
-  pending: { label: "Pending", class: "bg-amber-100 text-amber-800 border-amber-300" },
-  cancelled: { label: "Cancelled", class: "bg-red-100 text-red-800 border-red-300" },
-  rejected: { label: "Rejected", class: "bg-red-100 text-red-800 border-red-300" },
-};
-
 function StatusBadge({ status }: { status: string }) {
-  const key = (status || "pending").toLowerCase();
-  const config = STATUS_CONFIG[key] ?? {
-    label: status ? status.charAt(0).toUpperCase() + status.slice(1) : "Pending",
-    class: "bg-gray-100 text-gray-800 border-gray-300",
-  };
+  const statusConfig = getProjectStatusStyle(status);
 
   return (
-    <Badge variant="outline" className={`font-medium ${config.class}`}>
-      {config.label}
+    <Badge variant="outline" className={`font-medium ${statusConfig.className}`}>
+      {statusConfig.label}
     </Badge>
   );
 }

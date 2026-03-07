@@ -42,17 +42,7 @@ import {
   CalendarIcon,
 } from "lucide-react";
 import { Project, ProjectStatus } from "@/lib/types";
-
-// Update status variant to match your actual statuses
-const statusVariant: Record<
-  ProjectStatus,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  pending: "secondary",
-  active: "outline",
-  completed: "outline",
-  cancelled: "destructive",
-};
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 
 type VolunteerFilters = {
   title: string;
@@ -594,10 +584,10 @@ export default function VolunteerProjectsManagement() {
                         {project.title}
                       </CardTitle>
                       <Badge
-                        variant={statusVariant[project.status!]}
-                        className="capitalize"
+                        variant="outline"
+                        className={`font-medium capitalize ${getProjectStatusStyle(project.status ?? "").className}`}
                       >
-                        {project.status}
+                        {getProjectStatusStyle(project.status ?? "").label}
                       </Badge>
                     </div>
                     <CardDescription className="line-clamp-2 text-sm">

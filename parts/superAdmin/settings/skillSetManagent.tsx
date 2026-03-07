@@ -67,6 +67,7 @@ export default function SkillsetManagementPage() {
   const [skillsets, setSkillsets] = useState<Item[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
   const [form, setForm] = useState<SkillsetForm>({ id: "", label: "", parent_id: null });
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -202,10 +203,15 @@ export default function SkillsetManagementPage() {
     }
   };
 
-  // Handle delete
-  const handleDelete = async (id: string) => {
-    if (!confirm(`Are you sure you want to delete "${id}" and all its children?`)) return;
+  // Open delete confirmation dialog
+  const handleDeleteClick = (item: Item) => {
+    setDeleteTarget({ id: item.id, label: item.label });
+  };
 
+  // Handle confirmed delete
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
     try {
       const { error } = await supabase.from("skillsets").delete().eq("id", id);
       if (error) throw new Error(`Error deleting skillset: ${error.message}`);
@@ -219,6 +225,7 @@ export default function SkillsetManagementPage() {
         delete newExpanded[id];
         return newExpanded;
       });
+      setDeleteTarget(null);
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -263,7 +270,7 @@ export default function SkillsetManagementPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleDelete(item.id)}
+            onClick={() => handleDeleteClick(item)}
             className="text-rose-600 hover:text-rose-800"
             title="Delete Skillset"
             aria-label="Delete Skillset"
@@ -289,16 +296,6 @@ export default function SkillsetManagementPage() {
         {(item.children || item.subChildren) && expanded[item.id] && (
           <div className="ml-2.5">
             {item.children && renderSkillsets(item.children, level + 1)}
-            {item.children?.some((child: any) => child.subChildren) &&
-              item.children.map(
-                (child: any) =>
-                  child.subChildren &&
-                  expanded[child.id] && (
-                    <div key={child.id} className="ml-2.5">
-                      {renderSkillsets(child.subChildren, level + 2)}
-                    </div>
-                  )
-              )}
             {item.subChildren && renderSkillsets(item.subChildren, level + 1)}
           </div>
         )}
@@ -398,6 +395,37 @@ export default function SkillsetManagementPage() {
             </Button>
             <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700">
               {isEditing ? "Save Changes" : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete skillset?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            This will remove{" "}
+            <span className="font-semibold">
+              {deleteTarget?.label} ({deleteTarget?.id})
+            </span>{" "}
+            and all of its child items. This action cannot be undone.
+          </p>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              className="hover:bg-gray-100"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

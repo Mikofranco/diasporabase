@@ -36,17 +36,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
-import { useState } from "react";
 import { routes } from "@/lib/routes";
 
 type UserRole = "admin" | "volunteer" | "agency" | "super_admin" | null;
-
-interface Profile {
-  role: UserRole;
-  full_name: string | null;
-}
 
 interface AppSidebarProps {
   onSignOutClick?: () => void;
@@ -131,56 +124,45 @@ const MENU_ITEMS = {
 export function AppSidebar({ onSignOutClick }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
 
   const [userRole, setUserRole] = React.useState<UserRole>(null);
   const [userName, setUserName] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
 
   React.useEffect(() => {
-    const fetchUser = async () => {
-      setLoading(true);
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    setLoading(true);
 
-      if (sessionError) console.error("Session error:", sessionError);
-      if (!session) {
-        setUserRole(null);
-        setUserName(null);
-        setLoading(false);
-        return;
-      }
-
-      const { data: profile, error: profileError } = (await supabase
-        .from("profiles")
-        .select("role, full_name")
-        .eq("id", session.user.id)
-        .single()) as { data: Profile | null; error: any };
-
-      if (profileError || !profile) {
-        console.error("Profile error:", profileError);
-        setUserRole(null);
-        setUserName(null);
-      } else {
-        setUserRole(profile.role || null);
-        setUserName(profile.full_name);
-      }
+    if (typeof window === "undefined") {
       setLoading(false);
-    };
+      return;
+    }
 
-    fetchUser();
-    //@ts-ignore
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) fetchUser();
-      else {
-        setUserRole(null);
-        setUserName(null);
-        setLoading(false);
-      }
-    });
+    try {
+      const storedRole = window.localStorage.getItem("diaspobase_role");
+      const storedName = window.localStorage.getItem("diaspobase_fullName");
 
-    return () => authListener.subscription.unsubscribe();
-  }, [supabase]);
+      const validRoles: Exclude<UserRole, null>[] = [
+        "admin",
+        "volunteer",
+        "agency",
+        "super_admin",
+      ];
+
+      const role = validRoles.includes(storedRole as Exclude<UserRole, null>)
+        ? (storedRole as Exclude<UserRole, null>)
+        : null;
+
+      setUserRole(role);
+      setUserName(storedName);
+    } catch (error) {
+      console.error("Error reading user data from localStorage:", error);
+      setUserRole(null);
+      setUserName(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const isActive = (itemPath: string, currentPath: string) => {
     if (itemPath.includes("dashboard")) return currentPath === itemPath;
@@ -189,12 +171,13 @@ export function AppSidebar({ onSignOutClick }: AppSidebarProps) {
   };
 
   const getMenuItems = (role: UserRole) => {
-    const items = MENU_ITEMS[role || "guest"];
+    if (!role) return null;
+    const items = MENU_ITEMS[role];
     return (
       <SidebarGroup>
-        <SidebarGroupLabel className="text-sm text-white dark:text-gray-100 bg-[#0ea5e9] mb-6 mt-2 p-2 rounded">
-          {role ? `${role.charAt(0).toUpperCase() + role.slice(1)} Dashboard` : "Navigation"}
-        </SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sm text-white dark:text-gray-100 bg-[#0ea5e9] mb-6 mt-2 p-2 rounded">
+            {role.charAt(0).toUpperCase() + role.slice(1)} Dashboard
+          </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             {items.map((item) => (
@@ -209,17 +192,10 @@ export function AppSidebar({ onSignOutClick }: AppSidebarProps) {
                     }`}
                     aria-current={isActive(item.path, pathname) ? "page" : undefined}
                   >
-                    {pathname === routes.agencyDashboard && item.path !== routes.agencyDashboard ? (
-                      <a href={item.path} className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4 mr-2" />
-                        <span>{item.label}</span>
-                      </a>
-                    ) : (
                       <Link href={item.path} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4 mr-2" />
                         <span>{item.label}</span>
                       </Link>
-                    )}
                   </SidebarMenuButton>
                 </div>
               </SidebarMenuItem>
@@ -266,7 +242,9 @@ export function AppSidebar({ onSignOutClick }: AppSidebarProps) {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {Array.from({ length: MENU_ITEMS[userRole || "guest"].length }).map((_, index) => (
+                  {Array.from({
+                    length: userRole ? MENU_ITEMS[userRole].length : 0,
+                  }).map((_, index) => (
                     <SidebarMenuItem key={index}>
                       <SidebarMenuButton>
                         <div className="h-4 w-4 rounded-full bg-muted" />
@@ -292,7 +270,7 @@ export function AppSidebar({ onSignOutClick }: AppSidebarProps) {
                   <SidebarMenuButton className="text-sm">
                     <User className="h-4 w-4 mr-2 text-[#0284C7] dark:text-blue-400" />
                     <span className="text-sm text-gray-900 dark:text-gray-100">
-                      {userName || "Guest"}
+                      {userName || "User"}
                     </span>
                     <ChevronUp
                       className={`h-4 w-4 ml-auto text-gray-500 dark:text-gray-400 transition-transform ${
@@ -321,13 +299,6 @@ export function AppSidebar({ onSignOutClick }: AppSidebarProps) {
                         <span>Sign out</span>
                       </DropdownMenuItem>
                     </>
-                  )}
-                  {!userRole && (
-                    <DropdownMenuItem>
-                      <Link href={ROUTES.guest.login} className="w-full">
-                        <span>Login</span>
-                      </Link>
-                    </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>

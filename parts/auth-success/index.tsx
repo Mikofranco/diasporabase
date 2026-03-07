@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { routes } from "@/lib/routes";
+import { persistUserSnapshot } from "@/lib/utils";
 
 export default function AuthSuccessContent() {
   const router = useRouter();
   const [status, setStatus] = useState("Processing login...");
   const [userId, setUserId] = useState<string | null>(null);
-
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     const processLogin = async () => {
@@ -23,16 +22,18 @@ export default function AuthSuccessContent() {
 
         if (sessionError) throw sessionError;
 
-        if (!session?.user) {
+        let sessionUser = session?.user;
+        if (!sessionUser) {
           // If no session yet → wait a bit and retry (race condition fix)
           await new Promise((r) => setTimeout(r, 1500));
           const retry = await supabase.auth.getSession();
           if (!retry.data.session?.user) {
             throw new Error("No session after OAuth redirect");
           }
+          sessionUser = retry.data.session.user;
         }
 
-        const userId = session.user.id;
+        const userId = sessionUser.id;
         console.log("Logged in user ID:", userId);
         setUserId(userId);
       } catch (err) {
@@ -52,12 +53,13 @@ export default function AuthSuccessContent() {
       try {
         setStatus("Finalizing your login...");
 
-        const {} = await supabase.from("profiles").insert({
-          role: "agency"
-        }).eq("id")
+        const { data } = await supabase.auth.getSession();
+        const user = data?.session?.user;
+        const metadata = (user?.user_metadata as Record<string, unknown>) || {};
+
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("role, tax_id")
+          .select("role, tax_id, is_active, full_name, email, phone")
           .eq("id", userId)
           .single();
 
@@ -69,20 +71,43 @@ export default function AuthSuccessContent() {
         }
 
         const role = profile.role;
+        if (!role) {
+          setStatus("Profile role missing – redirecting to login...");
+          router.replace(routes.login);
+          return;
+        }
+
+        // Persist same snapshot as email/password login so sidebar has user data
+        const safeUser = {
+          id: userId,
+          email: profile.email ?? (user?.email as string | null) ?? null,
+          role,
+          full_name:
+            (profile.full_name as string | null) ??
+            (metadata.full_name as string | null) ??
+            null,
+          phone:
+            (profile.phone as string | null) ??
+            (metadata.phone as string | null) ??
+            null,
+          tax_id: profile.tax_id ?? null,
+          is_active: profile.is_active ?? null,
+        };
+        persistUserSnapshot(safeUser);
 
         setStatus(`Welcome! Redirecting as ${role}...`);
 
-        if (role === 'super_admin') {
+        if (role === "super_admin") {
           router.replace(routes.superAdminDashboard);
-        } else if (role === 'admin') {
+        } else if (role === "admin") {
           router.replace(routes.adminDashboard);
-        } else if (role === 'agency') {
-          if (!profile.tax_id || profile.tax_id.trim() === '') {
+        } else if (role === "agency") {
+          if (!profile.tax_id || String(profile.tax_id).trim() === "") {
             router.replace(routes.agencyOnboarding);
           } else {
             router.replace(routes.agencyDashboard);
           }
-        } else if (role === 'volunteer') {
+        } else if (role === "volunteer") {
           router.replace(routes.volunteerDashboard);
         } else {
           router.replace(routes.login);
@@ -99,7 +124,7 @@ export default function AuthSuccessContent() {
       }
     };
     finalizeLogin();
-  }, [userId]);
+  }, [userId, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center">
