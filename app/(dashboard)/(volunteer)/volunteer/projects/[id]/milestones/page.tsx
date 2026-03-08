@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { MilestonesPageContent } from "@/parts/agency/projects/view-projects.tsx/MilestonesPageContent";
+import { checkIfUserIsProjectManager } from "@/services/projects";
 import type { Volunteer } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -19,6 +20,7 @@ export default function VolunteerProjectMilestonesPage() {
   const [projectStatus, setProjectStatus] = useState<string>("");
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isProjectManager, setIsProjectManager] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,10 +61,16 @@ export default function VolunteerProjectMilestonesPage() {
         joined_at: "",
       }));
 
+      let pm = false;
+      if (userId) {
+        const { isManager } = await checkIfUserIsProjectManager(userId, projectId);
+        pm = !!isManager;
+      }
       if (!cancelled) {
         setProjectTitle((project as { title: string }).title ?? "Project");
         setProjectStatus((project as { status: string }).status ?? "");
         setVolunteers(volList);
+        setIsProjectManager(pm);
       }
     }
 
@@ -101,6 +109,7 @@ export default function VolunteerProjectMilestonesPage() {
       currentUserId={currentUserId}
       backHref={routes.volunteerViewProject(projectId)}
       isAgency={false}
+      isProjectManager={isProjectManager}
     />
   );
 }

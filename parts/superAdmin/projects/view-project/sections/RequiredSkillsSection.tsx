@@ -4,8 +4,8 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { Project } from "../types";
-import { expertiseData } from "@/data/expertise";
 import { Badge } from "@/components/ui/badge";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 interface RequiredSkillsSectionProps {
   project: Project;
@@ -13,26 +13,12 @@ interface RequiredSkillsSectionProps {
   onEditClick: () => void;
 }
 
-// Try to resolve an id or label to the human label in expertiseData.
-// If we can't find a match (e.g. new skills from Supabase), just show the value.
-function getLabelForSkillId(value: string): string {
-  for (const cat of expertiseData) {
-    if (cat.id === value || cat.label === value) return cat.label;
-    for (const sub of cat.children) {
-      if (sub.id === value || sub.label === value) return sub.label;
-      for (const skill of sub.subChildren) {
-        if (skill.id === value || skill.label === value) return skill.label;
-      }
-    }
-  }
-  return value;
-}
-
 export function RequiredSkillsSection({
   project,
   isAdmin,
   onEditClick,
 }: RequiredSkillsSectionProps) {
+  const { getLabel } = useSkillLabels();
   const displayedSkills = project.required_skills || [];
 
   return (
@@ -61,7 +47,7 @@ export function RequiredSkillsSection({
                 variant="secondary"
                 className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full border border-gray-200"
               >
-                {getLabelForSkillId(id)}
+                {getLabel(id)}
               </Badge>
             ))}
           </div>

@@ -38,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getProjectManagers } from "@/services/projects";
 import { createAgencyRequest } from "@/services/requests";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 const supabase = createClient();
 
@@ -66,6 +67,7 @@ export default function AssignProjectManager({
 }: AssignProjectManagerProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const { getLabel } = useSkillLabels();
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -305,7 +307,7 @@ export default function AssignProjectManager({
                               .slice(0, 4)
                               .map(skill => (
                                 <Badge key={skill} variant="secondary" className="text-xs">
-                                  {skill.replace(/_/g, " ")}
+                                  {getLabel(skill)}
                                 </Badge>
                               ))}
                           </div>

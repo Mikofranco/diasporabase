@@ -16,7 +16,6 @@ import { useRouter } from "next/navigation";
 import { routes } from "@/lib/routes";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -24,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 const supabase = createClient();
 
@@ -119,8 +119,8 @@ export default function DashboardLayout({
       return;
     }
 
+    setShowLogoutDialog(false);
     router.push(routes.login);
-    // Note: don't reset isSigningOut here — the component will unmount on navigation
   };
 
   return (
@@ -139,7 +139,12 @@ export default function DashboardLayout({
           {children}
         </main>
 
-        <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialog
+          open={showLogoutDialog}
+          onOpenChange={(open) => {
+            if (!isSigningOut) setShowLogoutDialog(open);
+          }}
+        >
           <AlertDialogContent className="max-w-sm sm:max-w-md rounded-xl border border-gray-200 shadow-lg bg-white py-7 px-7">
             <AlertDialogHeader>
               <div className="flex flex-col items-center gap-2 w-full">
@@ -165,7 +170,7 @@ export default function DashboardLayout({
                   </svg>
                 </div>
                 <AlertDialogTitle className="text-xl font-semibold text-gray-900 text-center">
-                  Ready to log out?
+                  Ready to sign out?
                 </AlertDialogTitle>
               </div>
               <AlertDialogDescription className="mt-1 text-gray-600 text-center max-w-xs mx-auto">
@@ -178,9 +183,10 @@ export default function DashboardLayout({
                 disabled={isSigningOut}
                 className="flex-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition text-gray-700 font-medium py-2 shadow-sm"
               >
-                Stay logged in
+                Stay signed in
               </AlertDialogCancel>
-              <AlertDialogAction
+              <Button
+                type="button"
                 onClick={handleLogout}
                 disabled={isSigningOut}
                 className="flex-1 rounded-lg bg-red-600 hover:bg-red-700 transition text-white font-semibold py-2 shadow-sm"
@@ -206,12 +212,12 @@ export default function DashboardLayout({
                         d="M4 12a8 8 0 018-8v8z"
                       />
                     </svg>
-                    Logging out...
+                    Signing out...
                   </span>
                 ) : (
-                  "Log out"
+                  "Sign out"
                 )}
-              </AlertDialogAction>
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

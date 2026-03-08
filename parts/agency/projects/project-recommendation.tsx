@@ -42,6 +42,7 @@ import { Volunteer } from "@/lib/types";
 import { checkIfVolunteerHasRequested } from "@/services/requests";
 import DiasporaBaseModal from "@/components/diasporabase-modal";
 import { routes } from "@/lib/routes";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 const supabase = createClient();
 
@@ -56,6 +57,7 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
   volunteersNeeded,
   volunteersRegistered,
 }) => {
+  const { getLabel } = useSkillLabels();
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -468,7 +470,7 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                                       : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                                   )}
                                 >
-                                  {skill}
+                                  {getLabel(skill)}
                                 </Badge>
                               </TooltipTrigger>
                               <TooltipContent>

@@ -38,6 +38,7 @@ import { RatingForm } from "./rating-form";
 import { formatLocation } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 interface ProjectViewProps {
   project: Project;
@@ -77,6 +78,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   const formatDate = (date?: string) =>
     date ? format(new Date(date), "EEEE, MMMM d, yyyy") : "Date not set";
   const [showAllSkills, setShowAllSkills] = useState(false);
+  const { getLabel } = useSkillLabels();
   const formatDateRange = () => {
     if (!project.startDate && !project.endDate) return "Dates not set";
     if (!project.startDate) return formatDate(project.endDate);
@@ -210,20 +212,6 @@ const ProjectView: React.FC<ProjectViewProps> = ({
 
                   {isUserInProject ? (
                     <div className="space-y-3">
-                      {project.project_manager_id === userID && (
-                        <Button
-                          variant="secondary"
-                          size="lg"
-                          className="w-full text-base py-6"
-                          onClick={() =>
-                            router.push(
-                              `${routes.volunteerProjectManagement}/${project.id}`
-                            )
-                          }
-                        >
-                          Manage Project
-                        </Button>
-                      )}
                       <LeaveProjectModal
                         project={{ id: project.id, title: project.title }}
                         onSuccess={handleLeaveSuccess}
@@ -351,7 +339,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                         variant="secondary"
                         className="py-1.5 px-3 text-sm font-medium"
                       >
-                        {skill}
+                        {getLabel(skill)}
                       </Badge>
                     ))}
                 </div>

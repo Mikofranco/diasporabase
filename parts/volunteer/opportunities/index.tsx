@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { useProjectRecommendations, RecommendedProject } from "@/hooks/useProjectRecommendations";
 import { RecommendationCard } from "@/parts/volunteer/dashboard/recommended-projects";
 import { routes } from "@/lib/routes";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 const PAGE_SIZE_OPTIONS = [6, 12, 24];
 
@@ -131,6 +132,7 @@ const Opportunities: React.FC = () => {
   const [allProjectsForFilters, setAllProjectsForFilters] = useState<RecommendedProject[]>([]);
 
   const { recommendations, isLoading, error, refetch } = useProjectRecommendations(userId);
+  const { getLabel } = useSkillLabels();
 
   const isSearchMode =
     !!appliedFilters.search.trim() ||
@@ -387,7 +389,7 @@ const Opportunities: React.FC = () => {
                   {availableSkills.length > 0 ? (
                     availableSkills.map((skill) => (
                       <SelectItem key={skill} value={skill}>
-                        {skill.replace(/_/g, " ")}
+                        {getLabel(skill)}
                       </SelectItem>
                     ))
                   ) : (
@@ -409,7 +411,7 @@ const Opportunities: React.FC = () => {
                   className="cursor-pointer"
                   onClick={() => toggleSkill(skill)}
                 >
-                  {skill.replace(/_/g, " ")} ×
+                  {getLabel(skill)} ×
                 </Badge>
               ))}
             </div>

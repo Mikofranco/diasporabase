@@ -123,7 +123,7 @@ export interface Database {
           id: string; // uuid
           user_id: string;
           message: string;
-          type: 'request_status_change' | 'project_approval' | 'new_agency' | 'new_project';
+          type: 'request_status_change' | 'project_approval' | 'new_agency' | 'new_project' | 'pm_invite' | 'pm_role_accepted' | 'pm_role_rejected' | 'project_manager_assigned' | 'pm_request';
           related_id: string | null;
           is_read: boolean;
           created_at: string; // timestamp with time zone

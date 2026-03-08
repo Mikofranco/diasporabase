@@ -36,6 +36,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, getSkillsets, getUserLocation } from "@/lib/utils";
 import { toast } from "sonner";
 import LocationSelector from "@/components/location-selector";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 function getInitials(name: string | null): string {
   if (!name?.trim()) return "?";
@@ -136,6 +137,7 @@ function ProfileSkeleton() {
 }
 
 export default function VolunteerProfile() {
+  const { getLabel } = useSkillLabels();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -825,7 +827,7 @@ export default function VolunteerProfile() {
                 <div className="grid gap-1">
                   <span className="text-sm text-gray-500">Skills</span>
                   <p className="text-gray-900">
-                    {profile.skills?.length ? profile.skills.join(", ") : "—"}
+                    {profile.skills?.length ? profile.skills.map(getLabel).join(", ") : "—"}
                   </p>
                 </div>
                 <div className="grid gap-1">

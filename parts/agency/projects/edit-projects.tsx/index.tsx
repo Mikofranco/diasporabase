@@ -53,6 +53,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
 import { expertiseData } from "@/data/expertise";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 import { Badge } from "@/components/ui/badge";
 import { routes } from "@/lib/routes";
 
@@ -103,6 +104,7 @@ interface Project {
 }
 
 const EditProject: React.FC = () => {
+  const { getLabel } = useSkillLabels();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -586,8 +588,7 @@ const EditProject: React.FC = () => {
                                 key={skill}
                                 className="bg-blue-600 text-white rounded-md"
                               >
-                                {skill.charAt(0).toUpperCase() +
-                                  skill.slice(1).replace("_", " ")}
+                                {getLabel(skill)}
                                 <button
                                   className="ml-2 text-white hover:text-red-200"
                                   onClick={() =>
@@ -595,7 +596,7 @@ const EditProject: React.FC = () => {
                                       field.value.filter((s) => s !== skill)
                                     )
                                   }
-                                  aria-label={`Remove ${skill} skill`}
+                                  aria-label={`Remove ${getLabel(skill)} skill`}
                                 >
                                   &times;
                                 </button>
@@ -762,8 +763,7 @@ const EditProject: React.FC = () => {
                         key={skill}
                         className="bg-blue-600 text-white rounded-md"
                       >
-                        {skill.charAt(0).toUpperCase() +
-                          skill.slice(1).replace("_", " ")}
+                        {getLabel(skill)}
                         <button
                           className="ml-2 text-white hover:text-red-200"
                           onClick={() =>
@@ -773,7 +773,7 @@ const EditProject: React.FC = () => {
                                 .filter((s) => s !== skill)
                             )
                           }
-                          aria-label={`Remove ${skill} skill`}
+                          aria-label={`Remove ${getLabel(skill)} skill`}
                         >
                           &times;
                         </button>

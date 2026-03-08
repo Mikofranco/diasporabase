@@ -76,7 +76,7 @@ const NavBar = () => {
               className={loginClass}
               aria-label="Login"
             >
-              Login
+              Sign in
             </Link>
             <button
               type="button"
@@ -84,7 +84,7 @@ const NavBar = () => {
               className={registerClass}
               aria-label="Register"
             >
-              Register
+              Sign up
             </button>
           </div>
         </nav>

@@ -45,6 +45,8 @@ interface CreateDeliverableModalProps {
   currentUserId: string | null;
   initialData?: MilestoneSectionDeliverable | null;
   onSuccess: () => void;
+  /** When true (e.g. volunteer PM), show "Assigned to" and allow assigning to any project volunteer. */
+  canAssignToVolunteers?: boolean;
 }
 
 export function CreateDeliverableModal({
@@ -57,6 +59,7 @@ export function CreateDeliverableModal({
   currentUserId,
   initialData,
   onSuccess,
+  canAssignToVolunteers = false,
 }: CreateDeliverableModalProps) {
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
@@ -67,6 +70,7 @@ export function CreateDeliverableModal({
 
   const isEdit = !!initialData?.id;
   const isVolunteer = role === "volunteer";
+  const showAssignSelect = !isVolunteer || canAssignToVolunteers;
 
   useEffect(() => {
     if (!open) return;
@@ -81,9 +85,9 @@ export function CreateDeliverableModal({
       setDescription("");
       setDueDate("");
       setStatus("Pending");
-      setAssignedTo(isVolunteer && currentUserId ? currentUserId : null);
+      setAssignedTo(showAssignSelect ? null : (currentUserId ?? null));
     }
-  }, [open, initialData, isVolunteer, currentUserId]);
+  }, [open, initialData, showAssignSelect, currentUserId]);
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -104,7 +108,7 @@ export function CreateDeliverableModal({
         status,
         project_id: projectId,
         milestone_id: milestoneId,
-        assigned_to: isVolunteer ? currentUserId : assignedTo,
+        assigned_to: showAssignSelect ? assignedTo : (isVolunteer ? currentUserId : assignedTo),
       };
 
       if (isEdit && initialData?.id) {
@@ -185,8 +189,8 @@ export function CreateDeliverableModal({
               </SelectContent>
             </Select>
           </div>
-          {/* Assigned To: only for agency; optional; hidden for volunteer */}
-          {!isVolunteer && (
+          {/* Assigned To: agency or volunteer PM can assign to any project volunteer */}
+          {showAssignSelect && (
             <div className="space-y-2">
               <Label>Assigned to (optional)</Label>
               <Select
