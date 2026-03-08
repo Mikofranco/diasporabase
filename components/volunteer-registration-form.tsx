@@ -539,7 +539,7 @@ export default function VolunteerRegistrationForm() {
                           : "Creating Account..."}
                   </>
                 ) : (
-                  "Register with Email"
+                  "Sign up with Email"
                 )}
               </Button>
             </div>

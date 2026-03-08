@@ -170,7 +170,7 @@ export default function DashboardLayout({
                   </svg>
                 </div>
                 <AlertDialogTitle className="text-xl font-semibold text-gray-900 text-center">
-                  Ready to log out?
+                  Ready to sign out?
                 </AlertDialogTitle>
               </div>
               <AlertDialogDescription className="mt-1 text-gray-600 text-center max-w-xs mx-auto">
@@ -183,7 +183,7 @@ export default function DashboardLayout({
                 disabled={isSigningOut}
                 className="flex-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition text-gray-700 font-medium py-2 shadow-sm"
               >
-                Stay logged in
+                Stay signed in
               </AlertDialogCancel>
               <Button
                 type="button"
@@ -212,10 +212,10 @@ export default function DashboardLayout({
                         d="M4 12a8 8 0 018-8v8z"
                       />
                     </svg>
-                    Logging out...
+                    Signing out...
                   </span>
                 ) : (
-                  "Log out"
+                  "Sign out"
                 )}
               </Button>
             </AlertDialogFooter>
