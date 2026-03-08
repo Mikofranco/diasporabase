@@ -42,7 +42,7 @@ export function TermsModal({
         <div className="flex justify-end pt-4">
           <Button
             onClick={handleAgree}
-            className="min-w-[120px] bg-primary text-primary-foreground hover:bg-primary/90 border border-border shadow-none"
+            className="min-w-[120px] bg-[#0ea5e9] text-white hover:bg-[#0284c7] border border-border shadow-none"
           >
             I Agree
           </Button>

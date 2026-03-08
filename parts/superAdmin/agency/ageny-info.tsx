@@ -557,16 +557,16 @@ const AgencyProfile = () => {
             <OverviewSection profile={profile} />
           </SectionBlock>
 
-          {/* Section: Contact information */}
-          <SectionBlock title="Contact information">
+          {/* Section: Contact person information */}
+          <SectionBlock title="Contact person information">
             <InfoSection
               title=""
               data={{
-                "Contact email": profile.contact_person_email ?? undefined,
-                Phone: profile.contact_person_phone ?? undefined,
-                Website: profile.website ?? undefined,
-                "Organization type": profile.organization_type ?? undefined,
-                Address: profile.address ?? undefined,
+                "Name": [profile.contact_person_first_name, profile.contact_person_last_name]
+                  .filter(Boolean)
+                  .join(" ") || undefined,
+                "Email": profile.contact_person_email ?? undefined,
+                "Phone": profile.contact_person_phone ?? undefined,
               }}
             />
           </SectionBlock>

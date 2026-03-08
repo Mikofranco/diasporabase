@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Mail, MapPin, Calendar, Star, Phone } from "lucide-react";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 interface VolunteerRequest {
   id: string;
@@ -69,6 +70,7 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<VolunteerRequest | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const { getLabel } = useSkillLabels();
 
   const fetchRequests = async (userId: string) => {
     try {
@@ -595,7 +597,7 @@ const AgencyRequestFromVolunteer: React.FC<AgencyRequestFromVolunteerProps> = ({
                                 key={skill}
                                 className="bg-diaspora-blue/10 text-diaspora-darkBlue border-diaspora-blue/20 cursor-default hover:bg-diaspora-blue/10"
                               >
-                                {skill.replace(/_/g, " ")}
+                                {getLabel(skill)}
                               </Badge>
                             ))}
                           </div>

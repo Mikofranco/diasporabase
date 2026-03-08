@@ -20,6 +20,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
 import { routes } from "@/lib/routes";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 const supabase = createClient();
 
@@ -85,6 +87,7 @@ const VolunteerProjectDetails: React.FC = () => {
   const [hasRequested, setHasRequested] = useState<boolean>(false);
   const [hasRated, setHasRated] = useState<boolean>(false);
   const [hoveredRating, setHoveredRating] = useState<number | null>(null);
+  const { getLabel } = useSkillLabels();
 
   const form = useForm<z.infer<typeof ratingSchema>>({
     resolver: zodResolver(ratingSchema),
@@ -387,7 +390,7 @@ const VolunteerProjectDetails: React.FC = () => {
                         variant="outline"
                         className="text-sm border-gray-300 text-gray-700"
                       >
-                        {skill.charAt(0).toUpperCase() + skill.slice(1).replace("_", " ")}
+                        {getLabel(skill)}
                       </Badge>
                     ))}
                   </div>

@@ -393,25 +393,38 @@ export async function getMileStonesAndDeliverablesForProject(
   return { milesRes, delsRes };
 }
 
+/** Skill IDs that qualify a volunteer as project manager. */
+const PROJECT_MANAGEMENT_SKILL_IDS = ["project_management", "project_mgt"];
+
 export async function getProjectManagers() {
-  const { data: eligiblePMs, error: dataError } = await supabase
-    .from("profiles")
-    .select(
-      "id, full_name, profile_picture, skills, residence_country, residence_state, experience"
-    )
-    .eq("role", "volunteer")
-    .contains("skills", ["project_management"]);
-  if (dataError) {
-    return { data: null, error: dataError.message };
+  const results: Array<{
+    id: string;
+    full_name: string;
+    profile_picture?: string;
+    skills: string[];
+    residence_country: string;
+    residence_state?: string | null;
+    experience?: string | null;
+  }> = [];
+  const seenIds = new Set<string>();
+
+  for (const skillId of PROJECT_MANAGEMENT_SKILL_IDS) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(
+        "id, full_name, profile_picture, skills, residence_country, residence_state, experience"
+      )
+      .eq("role", "volunteer")
+      .contains("skills", [skillId]);
+    if (error) return { data: null, error };
+    for (const row of data ?? []) {
+      if (!seenIds.has(row.id)) {
+        seenIds.add(row.id);
+        results.push(row as (typeof results)[0]);
+      }
+    }
   }
-  return {
-    data: eligiblePMs as Array<{
-      id: string;
-      full_name: string;
-      skills: string[];
-    }>,
-    error: null,
-  };
+  return { data: results, error: null };
 }
 
 export async function notifyProjectManagers(
@@ -466,12 +479,14 @@ export async function isAProjectManager(userId: string) {
     .from("profiles")
     .select("skills")
     .eq("id", userId)
-    .contains("skills", ["project_management"]);
+    .single();
 
-  if (error) {
-    return { data: null, error: error.message };
+  if (error || !data?.skills) {
+    return { data: null, error: error?.message ?? null };
   }
-  return { data: data && data.length > 0, error: null };
+  const skills = data.skills as string[];
+  const hasPmSkill = PROJECT_MANAGEMENT_SKILL_IDS.some((s) => skills.includes(s));
+  return { data: hasPmSkill, error: null };
 }
 
 export async function findProjectById(projectId: string) {
@@ -495,17 +510,16 @@ export async function checkIfUserIsProjectManager(
 ) {
   const { data, error } = await supabase
     .from("projects")
-    .select("project_manager_id")
+    .select("project_manager_id, project_manager_2_id")
     .eq("id", projectId)
-    .eq("project_manager_id", userId)
     .single();
 
-  if (error) {
-    console.error("Error checking project manager status:", error);
-    return { isManager: false, error };
+  if (error || !data) {
+    return { isManager: false, error: error?.message ?? null };
   }
-
-  return { isManager: !!data, error: null };
+  const isManager =
+    data.project_manager_id === userId || data.project_manager_2_id === userId;
+  return { isManager, error: null };
 }
 
 export async function getProjectManagerId(projectId: string) {
@@ -579,6 +593,124 @@ export const checkUserInProject = async (userId: string, projectId: string) => {
 
   return { isUserInProject: !!data, error: null };
 };
+
+const MAX_PROJECT_MANAGERS = 2;
+
+/** Create a PM role request (volunteer must already be on the project). Uses RPC so insert succeeds regardless of RLS. */
+export async function createProjectManagerRequest({
+  projectId,
+  volunteerId,
+}: {
+  projectId: string;
+  volunteerId: string;
+  requesterId?: string;
+}) {
+  const { data: result, error: rpcError } = await supabase.rpc("request_project_manager_role", {
+    p_project_id: projectId,
+    p_volunteer_id: volunteerId,
+  });
+
+  if (rpcError) {
+    throw new Error(rpcError.message || "Failed to send PM request");
+  }
+
+  const out = result as { success?: boolean; error?: string; id?: string } | null;
+  if (!out || out.success !== true) {
+    throw new Error(out?.error || "Failed to send PM request");
+  }
+
+  return { data: { id: out.id }, error: null };
+}
+
+/** Get PM requests for a project (for agency UI: pending volunteer ids, etc.). */
+export async function getProjectManagerRequestsForProject(projectId: string) {
+  const { data, error } = await supabase
+    .from("project_manager_requests")
+    .select("id, volunteer_id, status, created_at")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (error) return { data: null, error };
+  const pending = (data ?? []).filter((r) => r.status === "pending").map((r) => r.volunteer_id);
+  const accepted = (data ?? []).filter((r) => r.status === "accepted").map((r) => r.volunteer_id);
+  return {
+    data: { requests: data ?? [], pendingVolunteerIds: pending, acceptedVolunteerIds: accepted },
+    error: null,
+  };
+}
+
+/** Get PM role requests for a volunteer (for volunteer requests page). */
+export async function getProjectManagerRequestsForVolunteer(volunteerId: string) {
+  const { data, error } = await supabase
+    .from("project_manager_requests")
+    .select(`
+      id, project_id, requester_id, status, created_at,
+      projects(id, title, organization_name, status, description, location, start_date, end_date)
+    `)
+    .eq("volunteer_id", volunteerId)
+    .order("created_at", { ascending: false });
+
+  if (error) return { data: null, error };
+  return { data: data ?? [], error: null };
+}
+
+/** Volunteer accepts PM role request. Uses RPC so project update succeeds. */
+export async function acceptProjectManagerRequest(requestId: string, volunteerId: string) {
+  const { data: result, error: rpcError } = await supabase.rpc("accept_pm_request", {
+    p_request_id: requestId,
+  });
+
+  if (rpcError) throw new Error(rpcError.message || "Failed to accept request");
+
+  const out = result as { success?: boolean; error?: string } | null;
+  if (!out || out.success !== true) {
+    throw new Error(out?.error || "Failed to accept request");
+  }
+  return { data: true, error: null };
+}
+
+/** Volunteer rejects PM role request. Uses RPC for consistent behavior. */
+export async function rejectProjectManagerRequest(requestId: string, volunteerId: string) {
+  const { data: result, error: rpcError } = await supabase.rpc("reject_pm_request", {
+    p_request_id: requestId,
+  });
+
+  if (rpcError) throw new Error(rpcError.message || "Failed to reject request");
+
+  const out = result as { success?: boolean; error?: string } | null;
+  if (!out || out.success !== true) {
+    throw new Error(out?.error || "Failed to reject request");
+  }
+  return { data: true, error: null };
+}
+
+/** Agency removes a volunteer's PM role from a project (frees the slot). */
+export async function removeProjectManager(projectId: string, volunteerId: string) {
+  const { data: result, error: rpcError } = await supabase.rpc("remove_pm_role", {
+    p_project_id: projectId,
+    p_volunteer_id: volunteerId,
+  });
+
+  if (rpcError) throw new Error(rpcError.message || "Failed to remove PM");
+  const out = result as { success?: boolean; error?: string } | null;
+  if (!out || out.success !== true) {
+    throw new Error(out?.error || "Failed to remove PM");
+  }
+  return { data: true, error: null };
+}
+
+/** Get current PM ids for a project (max 2). */
+export async function getProjectManagerIds(projectId: string) {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("project_manager_id, project_manager_2_id")
+    .eq("id", projectId)
+    .single();
+
+  if (error || !data) return { data: [], error: error?.message ?? null };
+  const ids = [data.project_manager_id, data.project_manager_2_id].filter(Boolean) as string[];
+  return { data: ids, error: null };
+}
 
 export const fetchClosingRemarks = async (projectId: string) => {
   // Logic to fetch closing remarks based on projectId

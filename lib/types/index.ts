@@ -158,7 +158,8 @@ export interface Project {
   start_date?:string;
   organization_id?: string;
   organization_name?: string;
-  project_manager_id?: string;
+  project_manager_id?: string | null;
+  project_manager_2_id?: string | null;
   volunteers_needed?: number;
   volunteers_registered?: number;
   lga?: string | null;

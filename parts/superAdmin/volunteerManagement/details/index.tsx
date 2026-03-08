@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { format } from "date-fns";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 interface Volunteer {
   id: string;
@@ -106,6 +107,7 @@ const AdminVolunteerDetails: React.FC = () => {
   const [volunteer, setVolunteer] = useState<Volunteer | null>(null);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const { getLabel } = useSkillLabels();
 
   const isSuperAdmin = pathname?.includes("super-admin");
   const volunteersHref = isSuperAdmin ? routes.superAdminVolunteers : routes.adminVolunteers;
@@ -409,7 +411,7 @@ const AdminVolunteerDetails: React.FC = () => {
                 {volunteer.skills?.length
                   ? volunteer.skills.map((skill) => (
                       <Badge key={skill} variant="secondary">
-                        {skill.replace(/_/g, " ")}
+                        {getLabel(skill)}
                       </Badge>
                     ))
                   : "—"}

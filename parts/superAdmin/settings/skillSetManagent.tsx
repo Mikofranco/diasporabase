@@ -393,7 +393,10 @@ export default function SkillsetManagementPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={handleSubmit}
+              className="bg-[#0EA5E9]/90 hover:bg-[#0EA5E9] text-white"
+            >
               {isEditing ? "Save Changes" : "Create"}
             </Button>
           </DialogFooter>

@@ -169,7 +169,7 @@ export default function LoginForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-2xl">Login</CardTitle>
+        <CardTitle className="text-2xl">Sign in</CardTitle>
         <CardDescription>
           Enter your credentials to access your dashboard.
         </CardDescription>
@@ -235,7 +235,7 @@ export default function LoginForm() {
                 Loading...
               </>
             ) : (
-              "Login"
+              "Sign in"
             )}
           </Button>
           {message && (

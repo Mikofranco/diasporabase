@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { VolunteerFilters } from "./VolunteerFilters";
 import { VolunteerPaginationBar } from "./PaginationBar";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 import { VolunteerLoadingSkeleton, VolunteerTableSkeleton } from "./VolunteerLoadingSkeleton";
 import {
   DEFAULT_VOLUNTEER_FILTERS,
@@ -45,6 +46,7 @@ const VolunteersManagement: React.FC = () => {
   const [appliedFilters, setAppliedFilters] = useState<VolunteerFiltersType>(DEFAULT_VOLUNTEER_FILTERS);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_VOLUNTEER_PAGE_SIZE);
+  const { getLabel } = useSkillLabels();
 
   const fetchVolunteers = useCallback(async () => {
     setLoading(true);
@@ -251,7 +253,7 @@ const VolunteersManagement: React.FC = () => {
                             {volunteer.skills?.length ? (
                               volunteer.skills.slice(0, 3).map((skill) => (
                                 <Badge key={skill} variant="outline" className="text-xs font-normal">
-                                  {skill}
+                                  {getLabel(skill)}
                                 </Badge>
                               ))
                             ) : (

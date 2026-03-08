@@ -6,6 +6,7 @@ import { Calendar, Mail, MapPin, Star } from 'lucide-react'
 import { Separator } from '../ui/separator'
 import { Button } from '../ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import { useSkillLabels } from '@/hooks/useSkillLabels'
 
 /** Who is viewing: admin = always show all; volunteer_same_project = show personal + skills, no DOB, ignore anonymous; public = respect anonymous. */
 export type VolunteerViewerRole = 'admin' | 'volunteer_same_project' | 'public';
@@ -20,6 +21,7 @@ interface VolunteerInfoModalProps {
 const VolunteerInfoModal = ({ showAll, volunteer, viewerRole = 'public' }: VolunteerInfoModalProps) => {
     const [open, setOpen] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
+    const { getLabel } = useSkillLabels();
 
     if (!volunteer) {
     return (
@@ -53,9 +55,9 @@ const VolunteerInfoModal = ({ showAll, volunteer, viewerRole = 'public' }: Volun
 
   return (
     <Modal id='volunteer-info-modal' isOpen={open} onClose={() => setOpen(false)} onOpen={()=> setOpen(true)}>
-      <div className="w-full sm:max-w-xl max-h-[90vh] overflow-y-auto">
-        <Modal.Header className="border-b pb-4">
-          <div className="flex items-center gap-4 w-full">
+      <div className="w-full min-w-0 max-h-[90vh] overflow-y-auto flex flex-col">
+        <Modal.Header className="border-b pb-4 shrink-0">
+          <div className="flex items-center gap-4 w-full min-w-0">
             <Avatar className="h-14 w-14 shrink-0">
               {!hidePersonal && <AvatarImage src={volunteer.avatar_url ?? undefined} alt={volunteer.full_name} />}
               <AvatarFallback className="text-lg">{hidePersonal ? "?" : getInitials(volunteer.full_name)}</AvatarFallback>
@@ -78,9 +80,9 @@ const VolunteerInfoModal = ({ showAll, volunteer, viewerRole = 'public' }: Volun
           </div>
         </Modal.Header>
 
-        <Modal.Body className="space-y-6 py-6 w-full">
+        <Modal.Body className="space-y-6 py-6 w-full min-w-0 flex-1">
           {/* Contact & Basic Info – 2-col grid to use space */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 w-full">
             {!hidePersonal && volunteer.email && (
               <div className="flex items-center gap-3 min-w-0">
                 <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -123,16 +125,16 @@ const VolunteerInfoModal = ({ showAll, volunteer, viewerRole = 'public' }: Volun
 
           <Separator />
 
-          {/* Skills Section */}
+          {/* Skills Section – full width so badges wrap and fill space */}
           {volunteer.skills?.length > 0 && (
-            <div className="w-full">
+            <div className="w-full min-w-0">
               <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Key Skills
               </h4>
               <div className="flex flex-wrap gap-2">
                 {volunteer.skills.map(skill => (
                   <Badge key={skill} variant="secondary" className="px-3 py-1">
-                    {skill}
+                    {getLabel(skill)}
                   </Badge>
                 ))}
               </div>
@@ -150,7 +152,7 @@ const VolunteerInfoModal = ({ showAll, volunteer, viewerRole = 'public' }: Volun
                   {/*@ts-ignore*/}
                   {volunteer.matched_skills.map(skill => (
                     <Badge key={skill} className="bg-green-50 text-green-800 border-green-200 hover:bg-green-50">
-                      {skill}
+                      {getLabel(skill)}
                     </Badge>
                   ))}
                 </div>
@@ -162,7 +164,7 @@ const VolunteerInfoModal = ({ showAll, volunteer, viewerRole = 'public' }: Volun
           {showAll && (
             <>
               <Separator className="my-6" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm w-full">
                 <div className="min-w-0">
                   <span className="font-medium text-muted-foreground">Volunteer ID:</span>{' '}
                   <code className="bg-muted px-1.5 py-0.5 rounded text-xs break-all">
@@ -186,7 +188,7 @@ const VolunteerInfoModal = ({ showAll, volunteer, viewerRole = 'public' }: Volun
           )}
         </Modal.Body>
 
-        <Modal.Footer className="border-t pt-4">
+        <Modal.Footer className="border-t pt-4 shrink-0">
           <Button variant="outline" onClick={()=> setOpen(false)}>
             Close
           </Button>

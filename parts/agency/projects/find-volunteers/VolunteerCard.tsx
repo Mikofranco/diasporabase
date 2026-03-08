@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Volunteer } from "@/lib/types";
 import { getStatusColor } from "./utils";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 export type VolunteerWithRequest = Volunteer & {
   hasRequested?: { hasRequested?: boolean };
@@ -71,6 +72,7 @@ export function VolunteerCard({
   volunteersNeeded,
   onOpenRequestDialog,
 }: VolunteerCardProps) {
+  const { getLabel } = useSkillLabels();
   const matchedSkills = volunteer.matched_skills ?? [];
   const skills = volunteer.skills ?? [];
   const displaySkills = skills.slice(0, 4);
@@ -149,7 +151,7 @@ export function VolunteerCard({
                     isMatched && "ring-1 ring-ring/50 bg-ring/10 text-ring border-ring/30"
                   )}
                 >
-                  {skill}
+                  {getLabel(skill)}
                 </Badge>
               );
             })}
@@ -166,7 +168,7 @@ export function VolunteerCard({
                 <TooltipContent side="top" className="max-w-xs">
                   <p className="font-medium mb-1">More skills</p>
                   <p className="text-muted-foreground text-xs">
-                    {skills.slice(4).join(", ")}
+                    {skills.slice(4).map(getLabel).join(", ")}
                   </p>
                 </TooltipContent>
               </Tooltip>

@@ -18,6 +18,7 @@ import { useProjectRecommendations, RecommendedProject } from "@/hooks/useProjec
 import { getUserId } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { routes } from "@/lib/routes";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 const DASHBOARD_LIMIT = 3;
 
@@ -49,6 +50,7 @@ interface RecommendationCardProps {
 }
 
 export function RecommendationCard({ project, volunteerSkills, onViewProject }: RecommendationCardProps) {
+  const { getLabel } = useSkillLabels();
   const skills = project.required_skills ?? [];
   const matchedSkills = volunteerSkills.length
     ? skills.filter((s) => volunteerSkills.includes(s))
@@ -98,7 +100,8 @@ export function RecommendationCard({ project, volunteerSkills, onViewProject }: 
           <div className="flex flex-wrap gap-1.5 items-center">
             {skills.slice(0, 3).map((skill) => {
               const isMatched = matchedSkills.includes(skill);
-              const displaySkill = skill.length > 20 ? `${skill.slice(0, 18)}…` : skill;
+              const label = getLabel(skill);
+              const displaySkill = label.length > 20 ? `${label.slice(0, 18)}…` : label;
               return (
                 <Badge
                   key={skill}
@@ -107,7 +110,7 @@ export function RecommendationCard({ project, volunteerSkills, onViewProject }: 
                     "text-xs font-normal max-w-[120px] truncate",
                     isMatched && "bg-sky-100 text-sky-800 border-sky-200",
                   )}
-                  title={skill}
+                  title={label}
                 >
                   {displaySkill}
                 </Badge>

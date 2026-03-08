@@ -3,7 +3,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { formatLocation, getUserId } from "@/lib/utils";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   Card,
@@ -52,12 +52,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
-import AssignProjectManager from "@/parts/PM";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 import { MilestonesSection } from "./milestone-section";
 import { AssignedVolunteersTable } from "./assigned-volunteer";
 import { ClosingRemarksModal } from "@/components/closing-remarks";
 import { ProjectStatus } from "@/lib/types";
 import { routes } from "@/lib/routes";
+import { getProjectManagerRequestsForProject } from "@/services/projects";
 import { getProjectStatusStyle } from "../filters";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -102,6 +103,7 @@ interface Project {
   created_at: string;
   required_skills: string[];
   project_manager_id: string | null;
+  project_manager_2_id?: string | null;
   documents?: Array<{ title: string; url: string }>;
   cancelled_reason?: string | null;
   cancelled_at?: string | null;
@@ -155,11 +157,13 @@ interface Deliverable {
 }
 
 const ProjectDetails: React.FC = () => {
+  const { getLabel } = useSkillLabels();
   const [project, setProject] = useState<Project | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [assignedVolunteers, setAssignedVolunteers] = useState<Volunteer[]>([]);
   const [rejectionReasons, setRejectionReasons] = useState<RejectionReasonRow[]>([]);
+  const [pendingPmVolunteerIds, setPendingPmVolunteerIds] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -206,6 +210,8 @@ const ProjectDetails: React.FC = () => {
   const projectId = Array.isArray(params.projectId)
     ? params.projectId[0]
     : params.projectId;
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const onProjectManagerAssigned = useCallback(() => setRefreshTrigger((t) => t + 1), []);
 
   useEffect(() => {
     if (!projectId) return;
@@ -219,7 +225,7 @@ const ProjectDetails: React.FC = () => {
         const { data: projectData, error: projErr } = await supabase
           .from("projects")
           .select(
-            "id, title, description, organization_id, organization_name, location, country, state, lga, start_date, end_date, volunteers_needed, volunteers_registered, status, category, created_at, required_skills, project_manager_id, documents, cancelled_reason, cancelled_at"
+            "id, title, description, organization_id, organization_name, location, country, state, lga, start_date, end_date, volunteers_needed, volunteers_registered, status, category, created_at, required_skills, project_manager_id, project_manager_2_id, documents, cancelled_reason, cancelled_at"
           )
           .eq("id", projectId)
           .eq("organization_id", userId)
@@ -287,6 +293,13 @@ const ProjectDetails: React.FC = () => {
             joined_at: v.joined_at ?? "",
           })),
         );
+
+        try {
+          const { data: pmRequests } = await getProjectManagerRequestsForProject(projectId);
+          setPendingPmVolunteerIds(pmRequests?.pendingVolunteerIds ?? []);
+        } catch {
+          setPendingPmVolunteerIds([]);
+        }
       } catch (err: any) {
         setError(err.message);
         toast.error(err.message);
@@ -295,7 +308,7 @@ const ProjectDetails: React.FC = () => {
       }
     };
     fetchData();
-  }, [projectId]);
+  }, [projectId, refreshTrigger]);
 
   const handleAddMilestone = async () => {
     if (!newMilestone.title || !newMilestone.due_date)
@@ -617,11 +630,6 @@ const ProjectDetails: React.FC = () => {
               <Edit className="h-4 w-4 sm:mr-1.5" />
               Edit Project
             </Button>
-            <AssignProjectManager
-              projectId={project.id}
-              currentManagerId={project.project_manager_id}
-              disabled={project.status !== "approved" && project.status !== "active"}
-            />
           </div>
         </div>
 
@@ -714,7 +722,7 @@ const ProjectDetails: React.FC = () => {
                         variant="secondary"
                         className="font-normal"
                       >
-                        {skill}
+                        {getLabel(skill)}
                       </Badge>
                     ))}
                   </div>
@@ -881,7 +889,20 @@ const ProjectDetails: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <AssignedVolunteersTable projectId={projectId ?? ""} volunteers={assignedVolunteers} />
+            <AssignedVolunteersTable
+              projectId={projectId ?? ""}
+              volunteers={assignedVolunteers}
+              organizationId={project.organization_id}
+              projectManagerIds={[project.project_manager_id, project.project_manager_2_id].filter(Boolean) as string[]}
+              pendingPmVolunteerIds={pendingPmVolunteerIds}
+              canAssignManager={project.status === "approved" || project.status === "active"}
+              onManagerAssigned={onProjectManagerAssigned}
+              onPmRequestSent={(volunteerId) =>
+                setPendingPmVolunteerIds((prev) =>
+                  prev.includes(volunteerId) ? prev : [...prev, volunteerId]
+                )
+              }
+            />
           </CardContent>
         </Card>
 

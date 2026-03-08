@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { Project, ProjectStatus } from "@/lib/types";
 import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 type VolunteerFilters = {
   title: string;
@@ -114,6 +115,7 @@ function NativeDateTrigger({
 
 export default function VolunteerProjectsManagement() {
   const router = useRouter();
+  const { getLabel } = useSkillLabels();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -653,7 +655,7 @@ export default function VolunteerProjectsManagement() {
                                 className="flex items-center gap-1 rounded-full text-xs"
                               >
                                 <Tag className="h-3 w-3" />
-                                <span>{skill}</span>
+                                <span>{getLabel(skill)}</span>
                               </Badge>
                             ))}
                             {project.requiredSkills.length > 4 && (

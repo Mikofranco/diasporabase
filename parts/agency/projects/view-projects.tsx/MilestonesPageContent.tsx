@@ -48,6 +48,8 @@ interface MilestonesPageContentProps {
   currentUserId: string | null;
   backHref: string;
   isAgency: boolean;
+  /** When true (volunteer is PM for this project), allow create/edit milestones and create/edit/assign deliverables. */
+  isProjectManager?: boolean;
 }
 
 export function MilestonesPageContent({
@@ -59,6 +61,7 @@ export function MilestonesPageContent({
   currentUserId,
   backHref,
   isAgency,
+  isProjectManager = false,
 }: MilestonesPageContentProps) {
   const searchParams = useSearchParams();
   const highlightMilestoneId = searchParams.get("milestone");
@@ -73,8 +76,9 @@ export function MilestonesPageContent({
   const [deliverableModalMilestoneId, setDeliverableModalMilestoneId] = useState<string | null>(null);
   const [editingDeliverable, setEditingDeliverable] = useState<MilestoneSectionDeliverable | null>(null);
 
-  const canAddMilestone = isAgency && ["pending", "approved", "active"].includes(projectStatus.toLowerCase());
-  const canEditDeliverables = ["approved", "active"].includes(projectStatus.toLowerCase());
+  const allowedStatuses = ["pending", "approved", "active"].includes(projectStatus.toLowerCase());
+  const canAddMilestone = (isAgency || isProjectManager) && allowedStatuses;
+  const canEditDeliverables = (isAgency || isProjectManager) && ["approved", "active"].includes(projectStatus.toLowerCase());
 
   const fetchMilestones = useCallback(async () => {
     const { data: milestonesData } = await supabase
@@ -397,6 +401,7 @@ export function MilestonesPageContent({
         currentUserId={currentUserId}
         initialData={editingDeliverable}
         onSuccess={fetchMilestones}
+        canAssignToVolunteers={isProjectManager}
       />
 
       <CreateMilestoneModal

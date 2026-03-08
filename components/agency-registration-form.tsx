@@ -359,7 +359,7 @@ export default function AgencyRegistrationForm() {
         <CardHeader className="text-center pb-8">
           <CardTitle className="text-xl sm:text-3xl font-bold text-[#1E293B] flex items-center justify-center gap-3">
             <Building2 className="h-10 w-10  text-primary" />
-            Register Your Agency
+            Sign up Your Agency
           </CardTitle>
           <CardDescription className="text-sm sm:text-base mt-3 max-w-md mx-auto">
             Connect with skilled diaspora volunteers to power your development
@@ -511,7 +511,7 @@ export default function AgencyRegistrationForm() {
                 </button>
               </label>
             </div>
-
+            <div className="flex justify-center pt-4">
             <Button
               type="submit"
               disabled={
@@ -519,7 +519,7 @@ export default function AgencyRegistrationForm() {
                 !agreedToTerms ||
                 Object.keys(errors).length > 0
               }
-              className="w-full h-12 text-lg font-semibold action-btn shadow-lg"
+              className="w-fit h-12 px-10 text-lg font-semibold action-btn shadow-lg"
             >
               {loading ? (
                 <>
@@ -533,9 +533,11 @@ export default function AgencyRegistrationForm() {
                         : "Creating Agency Account..."}
                 </>
               ) : (
-                "Register Agency"
+                "Sign up with Email"
               )}
             </Button>
+            </div>
+
             {loading && emailSendStatus !== "idle" && emailSendStatus !== "success" && emailSendStatus !== "failed" && (
               <p className="text-center text-sm text-muted-foreground pt-2">
                 {emailSendStatus === "sending" && "Sending confirmation email..."}
