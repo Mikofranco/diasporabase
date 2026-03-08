@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { Eye, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import type { ProjectVolunteerItem } from "./index";
 
 const supabase = createClient();
 
@@ -23,6 +24,7 @@ interface DeliverablesTabProps {
   setDeliverables: React.Dispatch<React.SetStateAction<Deliverable[]>>;
   milestones: Milestone[];
   projectId: string;
+  projectVolunteers: ProjectVolunteerItem[];
   getStatusColor: (status: string) => string;
 }
 
@@ -31,6 +33,7 @@ export function DeliverablesTab({
   setDeliverables,
   milestones,
   projectId,
+  projectVolunteers,
   getStatusColor,
 }: DeliverablesTabProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -42,6 +45,7 @@ export function DeliverablesTab({
     due_date: "",
     status: "Pending",
     milestone_id: "",
+    assigned_to: "" as string | null,
   });
 
   // Helper: Get milestone name from ID
@@ -51,7 +55,13 @@ export function DeliverablesTab({
   };
 
   const resetForm = () => {
-    setForm({ title: "", description: "", due_date: "", status: "Pending", milestone_id: "" });
+    setForm({ title: "", description: "", due_date: "", status: "Pending", milestone_id: "", assigned_to: null });
+  };
+
+  const getVolunteerName = (volunteerId: string | null | undefined) => {
+    if (!volunteerId) return "Unassigned";
+    const v = projectVolunteers.find((p) => p.volunteer_id === volunteerId);
+    return v?.profiles?.full_name ?? "Unassigned";
   };
 
   const handleAddDeliverable = async () => {
@@ -61,12 +71,19 @@ export function DeliverablesTab({
     }
 
     try {
+      const payload: Record<string, unknown> = {
+        title: form.title,
+        description: form.description || null,
+        due_date: form.due_date,
+        status: form.status,
+        milestone_id: form.milestone_id,
+        project_id: projectId,
+      };
+      if (form.assigned_to) payload.assigned_to = form.assigned_to;
+
       const { data, error } = await supabase
         .from("deliverables")
-        .insert({
-          ...form,
-          project_id: projectId,
-        })
+        .insert(payload)
         .select()
         .single();
 
@@ -78,6 +95,24 @@ export function DeliverablesTab({
       resetForm();
     } catch (err: any) {
       toast.error(err.message || "Failed to add deliverable");
+    }
+  };
+
+  const handleAssignTo = async (deliverableId: string, volunteerId: string | null) => {
+    try {
+      const { error } = await supabase
+        .from("deliverables")
+        .update({ assigned_to: volunteerId || null })
+        .eq("id", deliverableId);
+
+      if (error) throw error;
+
+      setDeliverables(prev =>
+        prev.map((d) => (d.id === deliverableId ? { ...d, assigned_to: volunteerId } : d))
+      );
+      toast.success(volunteerId ? "Deliverable assigned" : "Assignment cleared");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update assignment");
     }
   };
 
@@ -172,6 +207,25 @@ export function DeliverablesTab({
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="grid gap-2">
+                    <Label>Assign to volunteer (optional)</Label>
+                    <Select
+                      value={form.assigned_to ?? "none"}
+                      onValueChange={(value) => setForm({ ...form, assigned_to: value === "none" ? null : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {projectVolunteers.map((v) => (
+                          <SelectItem key={v.volunteer_id} value={v.volunteer_id}>
+                            {v.profiles?.full_name ?? v.volunteer_id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
@@ -203,8 +257,95 @@ export function DeliverablesTab({
                 Add Deliverable
               </Button>
             </DialogTrigger>
-            {/* Same dialog form as above - omitted here for brevity but fully included in full code */}
-            {/* (Copy the exact same DialogContent from the empty state above) */}
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add New Deliverable</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="e.g., Design mockups"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Description (optional)</Label>
+                  <Textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Milestone</Label>
+                  <Select
+                    value={form.milestone_id}
+                    onValueChange={(value) => setForm({ ...form, milestone_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a milestone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {milestones.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Due Date</Label>
+                  <Input
+                    type="date"
+                    value={form.due_date}
+                    onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={form.status}
+                    onValueChange={(value) => setForm({ ...form, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="In Progress">In Progress</SelectItem>
+                      <SelectItem value="Done">Done</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Assign to volunteer (optional)</Label>
+                  <Select
+                    value={form.assigned_to ?? "none"}
+                    onValueChange={(value) => setForm({ ...form, assigned_to: value === "none" ? null : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Unassigned</SelectItem>
+                      {projectVolunteers.map((v) => (
+                        <SelectItem key={v.volunteer_id} value={v.volunteer_id}>
+                          {v.profiles?.full_name ?? v.volunteer_id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+                <Button onClick={handleAddDeliverable}>Add Deliverable</Button>
+              </DialogFooter>
+            </DialogContent>
           </Dialog>
         </div>
       </CardHeader>
@@ -216,6 +357,7 @@ export function DeliverablesTab({
               <TableHead>Title</TableHead>
               <TableHead>Milestone</TableHead>
               <TableHead>Due Date</TableHead>
+              <TableHead>Assigned to</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -229,6 +371,24 @@ export function DeliverablesTab({
                 </TableCell>
                 <TableCell>
                   {format(new Date(d.due_date), "MMM d, yyyy")}
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={d.assigned_to ?? "none"}
+                    onValueChange={(value) => handleAssignTo(d.id, value === "none" ? null : value)}
+                  >
+                    <SelectTrigger className="w-[180px] h-8">
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Unassigned</SelectItem>
+                      {projectVolunteers.map((v) => (
+                        <SelectItem key={v.volunteer_id} value={v.volunteer_id}>
+                          {v.profiles?.full_name ?? v.volunteer_id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell>
                   <Badge className={getStatusColor(d.status)}>{d.status}</Badge>
@@ -268,6 +428,10 @@ export function DeliverablesTab({
                           <div>
                             <Label>Status</Label>
                             <Badge className={getStatusColor(d.status)}>{d.status}</Badge>
+                          </div>
+                          <div>
+                            <Label>Assigned to</Label>
+                            <p className="text-sm">{getVolunteerName(d.assigned_to)}</p>
                           </div>
                         </div>
                       </DialogContent>

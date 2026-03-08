@@ -16,7 +16,6 @@ import { useRouter } from "next/navigation";
 import { routes } from "@/lib/routes";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -24,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 const supabase = createClient();
 
@@ -119,8 +119,8 @@ export default function DashboardLayout({
       return;
     }
 
+    setShowLogoutDialog(false);
     router.push(routes.login);
-    // Note: don't reset isSigningOut here — the component will unmount on navigation
   };
 
   return (
@@ -139,7 +139,12 @@ export default function DashboardLayout({
           {children}
         </main>
 
-        <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialog
+          open={showLogoutDialog}
+          onOpenChange={(open) => {
+            if (!isSigningOut) setShowLogoutDialog(open);
+          }}
+        >
           <AlertDialogContent className="max-w-sm sm:max-w-md rounded-xl border border-gray-200 shadow-lg bg-white py-7 px-7">
             <AlertDialogHeader>
               <div className="flex flex-col items-center gap-2 w-full">
@@ -180,7 +185,8 @@ export default function DashboardLayout({
               >
                 Stay logged in
               </AlertDialogCancel>
-              <AlertDialogAction
+              <Button
+                type="button"
                 onClick={handleLogout}
                 disabled={isSigningOut}
                 className="flex-1 rounded-lg bg-red-600 hover:bg-red-700 transition text-white font-semibold py-2 shadow-sm"
@@ -211,7 +217,7 @@ export default function DashboardLayout({
                 ) : (
                   "Log out"
                 )}
-              </AlertDialogAction>
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

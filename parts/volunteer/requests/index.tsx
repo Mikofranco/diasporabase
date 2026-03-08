@@ -43,6 +43,11 @@ import {
 } from "lucide-react";
 import { startLoading, stopLoading } from "@/lib/loading";
 import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
+import {
+  getProjectManagerRequestsForVolunteer,
+  acceptProjectManagerRequest,
+  rejectProjectManagerRequest,
+} from "@/services/projects";
 
 const supabase = createClient();
 
@@ -57,7 +62,7 @@ interface Request {
   start_date: string;
   end_date: string;
   status: string;
-  request_type: "volunteer" | "agency";
+  request_type: "volunteer" | "agency" | "pm_role";
   volunteer_name?: string;
   profile_picture?: string;
   organization_profile_picture?: string;
@@ -106,6 +111,7 @@ const VolunteerRequests: React.FC = () => {
 
         let volunteerData: any[] = [];
         let agencyData: any[] = [];
+        let pmRequestsAsRequests: Request[] = [];
 
         if (
           userProfile.role === "admin" ||
@@ -160,7 +166,7 @@ const VolunteerRequests: React.FC = () => {
               "Error fetching agency requests: " + aError.message
             );
           agencyData = aData;
-        } else {
+        } else if (userProfile.role === "volunteer") {
           // Volunteers see only their requests
           const { data: vData, error: vError } = await supabase
             .from("volunteer_requests")
@@ -213,6 +219,30 @@ const VolunteerRequests: React.FC = () => {
               "Error fetching agency requests: " + aError.message
             );
           agencyData = aData;
+
+          try {
+            const { data: pmRequestsData } = await getProjectManagerRequestsForVolunteer(userId);
+            pmRequestsAsRequests = (pmRequestsData ?? []).map((item: any) => {
+              const proj = item.projects || {};
+              return {
+                id: item.id,
+                project_id: item.project_id,
+                project_title: proj.title ?? "",
+                project_status: proj.status,
+                organization_name: proj.organization_name ?? "",
+                description: proj.description ?? "",
+                location: formatLocation(proj.location),
+                start_date: proj.start_date ?? "",
+                end_date: proj.end_date ?? "",
+                status: item.status,
+                request_type: "pm_role" as const,
+              };
+            });
+          } catch {
+            pmRequestsAsRequests = [];
+          }
+          agencyData = agencyData ?? [];
+          volunteerData = volunteerData ?? [];
         }
 
         // Combine requests
@@ -251,6 +281,7 @@ const VolunteerRequests: React.FC = () => {
             organization_profile_picture:
               item.projects.organization?.profile_picture,
           })) || []),
+          ...pmRequestsAsRequests,
         ];
 
         setRequests(combinedRequests);
@@ -269,13 +300,22 @@ const VolunteerRequests: React.FC = () => {
   const handleAcceptRequest = async (
     requestId: string,
     projectId: string,
-    requestType: "volunteer" | "agency"
+    requestType: "volunteer" | "agency" | "pm_role"
   ) => {
     try {
       startLoading();
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
       if (!userId) throw new Error("Please log in to accept requests.");
+
+      if (requestType === "pm_role") {
+        await acceptProjectManagerRequest(requestId, userId);
+        setRequests((prev) =>
+          prev.map((r) => (r.id === requestId ? { ...r, status: "accepted" } : r))
+        );
+        toast.success("You are now a Project Manager for this project.");
+        return;
+      }
 
       // Check if volunteer is already assigned
       const { data: existingAssignment, error: assignmentError } =
@@ -363,13 +403,22 @@ const VolunteerRequests: React.FC = () => {
 
   const handleRejectRequest = async (
     requestId: string,
-    requestType: "volunteer" | "agency"
+    requestType: "volunteer" | "agency" | "pm_role"
   ) => {
     try {
       startLoading();
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
       if (!userId) throw new Error("Please log in to reject requests.");
+
+      if (requestType === "pm_role") {
+        await rejectProjectManagerRequest(requestId, userId);
+        setRequests((prev) =>
+          prev.map((r) => (r.id === requestId ? { ...r, status: "rejected" } : r))
+        );
+        toast.success("Project Manager role request rejected.");
+        return;
+      }
 
       const table =
         requestType === "volunteer" ? "volunteer_requests" : "agency_requests";
@@ -435,7 +484,8 @@ const VolunteerRequests: React.FC = () => {
     );
   };
 
-  const getRequestTypeLabel = (type: "volunteer" | "agency") => {
+  const getRequestTypeLabel = (type: "volunteer" | "agency" | "pm_role") => {
+    if (type === "pm_role") return "Project Manager role";
     return type === "volunteer" ? "Volunteer-Initiated" : "Agency-Initiated";
   };
 
@@ -482,7 +532,8 @@ const VolunteerRequests: React.FC = () => {
 
       if (
         sourceFilter === "from_organization" &&
-        request.request_type !== "agency"
+        request.request_type !== "agency" &&
+        request.request_type !== "pm_role"
       ) {
         return false;
       }
@@ -789,7 +840,8 @@ const VolunteerRequests: React.FC = () => {
                             onClick={(e) => e.stopPropagation()}
                           >
                             {request.status === "pending" &&
-                            request.request_type === "agency" ? (
+                            (request.request_type === "agency" ||
+                              request.request_type === "pm_role") ? (
                               <div className="flex justify-end gap-2">
                                 <Button
                                   size="sm"

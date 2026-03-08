@@ -20,11 +20,30 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Mail, Calendar, Star, Phone, StarOff } from "lucide-react";
+import { MapPin, Mail, Calendar, Star, Phone, StarOff, UserCheck, Loader2, UserMinus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
 import { useSkillLabels } from "@/hooks/useSkillLabels";
+import { createProjectManagerRequest, removeProjectManager } from "@/services/projects";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+/** Skill IDs that qualify a volunteer as project manager (same access as project_management). */
+const PROJECT_MANAGEMENT_SKILLS = ["project_management", "project_mgt"];
+
+/** Volunteer has project management skill (can be assigned as PM). */
+function hasProjectManagementSkill(skills: string[]): boolean {
+  if (!skills?.length) return false;
+  return PROJECT_MANAGEMENT_SKILLS.some((s) => skills.includes(s));
+}
 
 /** Format date string to "Month Day" (e.g. "March 15") for display only. */
 function formatMonthDay(dateStr: string | null | undefined): string {
@@ -57,13 +76,32 @@ interface Volunteer {
   anonymous?: boolean;
 }
 
+const MAX_PROJECT_MANAGERS = 2;
+
 interface AssignedVolunteersTableProps {
   projectId: string;
   volunteers: Volunteer[];
+  organizationId: string;
+  projectManagerIds: string[];
+  pendingPmVolunteerIds: string[];
+  canAssignManager?: boolean;
   onRatingSubmitted?: () => void;
+  onManagerAssigned?: () => void;
+  /** Call when a PM request was just sent so UI can show "Pending Request" without waiting for refetch */
+  onPmRequestSent?: (volunteerId: string) => void;
 }
 
-export function AssignedVolunteersTable({ projectId, volunteers, onRatingSubmitted }: AssignedVolunteersTableProps) {
+export function AssignedVolunteersTable({
+  projectId,
+  volunteers,
+  organizationId,
+  projectManagerIds,
+  pendingPmVolunteerIds,
+  canAssignManager = false,
+  onRatingSubmitted,
+  onManagerAssigned,
+  onPmRequestSent,
+}: AssignedVolunteersTableProps) {
   const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
   const [ratingsMap, setRatingsMap] = useState<Record<string, { rating: number; comment?: string | null }>>({});
   const [averageRatingsMap, setAverageRatingsMap] = useState<Record<string, number>>({});
@@ -71,6 +109,10 @@ export function AssignedVolunteersTable({ projectId, volunteers, onRatingSubmitt
   const [rateValue, setRateValue] = useState(0);
   const [rateComment, setRateComment] = useState("");
   const [rateLoading, setRateLoading] = useState(false);
+  const [assignPmVolunteer, setAssignPmVolunteer] = useState<Volunteer | null>(null);
+  const [assignPmLoading, setAssignPmLoading] = useState(false);
+  const [removePmLoading, setRemovePmLoading] = useState(false);
+  const [removePmConfirmVolunteer, setRemovePmConfirmVolunteer] = useState<Volunteer | null>(null);
   const { toast } = useToast();
   const { getLabel } = useSkillLabels();
 
@@ -167,6 +209,71 @@ export function AssignedVolunteersTable({ projectId, volunteers, onRatingSubmitt
     }
   };
 
+  const handleAssignAsProjectManager = async () => {
+    if (!assignPmVolunteer || !organizationId) return;
+    setAssignPmLoading(true);
+    try {
+      await createProjectManagerRequest({
+        projectId,
+        volunteerId: assignPmVolunteer.volunteer_id,
+        requesterId: organizationId,
+      });
+      toast({
+        title: "PM role request sent",
+        description: `${assignPmVolunteer.full_name} can accept or reject the Project Manager role from their requests.`,
+      });
+      const sentVolunteerId = assignPmVolunteer.volunteer_id;
+      setAssignPmVolunteer(null);
+      setSelectedVolunteer(null);
+      onPmRequestSent?.(sentVolunteerId);
+      onManagerAssigned?.();
+    } catch (err: any) {
+      toast({
+        title: "Failed to send PM request",
+        description: err?.message ?? "Something went wrong",
+        variant: "destructive",
+      });
+      setAssignPmVolunteer(null);
+    } finally {
+      setAssignPmLoading(false);
+    }
+  };
+
+  const handleConfirmRemovePm = async () => {
+    if (!removePmConfirmVolunteer) return;
+    const volunteer = removePmConfirmVolunteer;
+    setRemovePmLoading(true);
+    try {
+      await removeProjectManager(projectId, volunteer.volunteer_id);
+      toast({
+        title: "PM role removed",
+        description: `${volunteer.full_name} is no longer a Project Manager. You can assign another volunteer from the list.`,
+      });
+      setRemovePmConfirmVolunteer(null);
+      setSelectedVolunteer(null);
+      onManagerAssigned?.();
+    } catch (err: any) {
+      toast({
+        title: "Failed to remove PM",
+        description: err?.message ?? "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setRemovePmLoading(false);
+    }
+  };
+
+  const isPendingPm = (volunteerId: string) => pendingPmVolunteerIds.includes(volunteerId);
+  const isAlreadyPm = (volunteerId: string) => projectManagerIds.includes(volunteerId);
+  const isReplaceMode = projectManagerIds.length >= MAX_PROJECT_MANAGERS;
+  const getAssignPmButtonState = (v: Volunteer) => {
+    if (!canAssignManager || !hasProjectManagementSkill(v.skills)) return null;
+    if (isAlreadyPm(v.volunteer_id)) return "already_pm";
+    if (isPendingPm(v.volunteer_id)) return "pending";
+    if (isReplaceMode) return "replace";
+    return "assign";
+  };
+
   if (volunteers.length === 0) {
     return (
       <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
@@ -205,7 +312,14 @@ export function AssignedVolunteersTable({ projectId, volunteers, onRatingSubmitt
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium">{volunteer.full_name}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium">{volunteer.full_name}</p>
+                        {isAlreadyPm(volunteer.volunteer_id) && (
+                          <Badge variant="secondary" className="text-xs bg-diaspora-blue/15 text-diaspora-darkBlue border-diaspora-blue/30">
+                            PM
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">{volunteer.email}</p>
                     </div>
                   </div>
@@ -374,11 +488,135 @@ export function AssignedVolunteersTable({ projectId, volunteers, onRatingSubmitt
                   </div>
                   <p className="text-muted-foreground">Average rating</p>
                 </div>
+
+                {/* Assign / Pending / Replace PM – only for volunteers with PM skill, already on project */}
+                {(() => {
+                  const state = getAssignPmButtonState(selectedVolunteer);
+                  if (!state) return null;
+                  if (state === "already_pm") {
+                    return (
+                      <div className="pt-4 border-t space-y-2">
+                        <p className="text-sm text-muted-foreground">This volunteer is a Project Manager.</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-amber-600 text-amber-700 hover:bg-amber-50"
+                          onClick={() => setRemovePmConfirmVolunteer(selectedVolunteer)}
+                          disabled={removePmLoading}
+                        >
+                          <UserMinus className="h-4 w-4 mr-2" />
+                          Remove as PM
+                        </Button>
+                      </div>
+                    );
+                  }
+                  if (state === "pending") {
+                    return (
+                      <div className="pt-4 border-t">
+                        <Button variant="outline" disabled className="w-full sm:w-auto">
+                          Pending Request
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          A Project Manager role request has been sent. They can accept or reject from their requests.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        className="w-full sm:w-auto border-diaspora-darkBlue text-diaspora-darkBlue hover:bg-diaspora-blue/10"
+                        onClick={() => setAssignPmVolunteer(selectedVolunteer)}
+                      >
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        {state === "replace" ? "Replace Manager" : "Assign as Project Manager"}
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {state === "replace"
+                          ? "When they accept, they will become a Project Manager (max 2 per project)."
+                          : "They will be able to create milestones, deliverables, and invite other volunteers to the project."}
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Assign / Replace PM */}
+      <AlertDialog open={!!assignPmVolunteer} onOpenChange={(open) => !open && !assignPmLoading && setAssignPmVolunteer(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {assignPmVolunteer && isReplaceMode ? "Replace Manager" : "Assign as Project Manager"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Send a Project Manager role request to {assignPmVolunteer?.full_name}. They are already on the project;
+              this only assigns the PM role. They can accept or reject from their requests. Once accepted, they can
+              create milestones, deliverables, and invite other volunteers.
+              {assignPmVolunteer && isReplaceMode && (
+                <span className="block mt-2 text-amber-700 font-medium">
+                  This project already has 2 PMs. When they accept, they will take the second PM slot.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={assignPmLoading}>Cancel</AlertDialogCancel>
+            <Button
+              onClick={handleAssignAsProjectManager}
+              disabled={assignPmLoading}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              {assignPmLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send Invitation"
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm Remove as PM */}
+      <AlertDialog
+        open={!!removePmConfirmVolunteer}
+        onOpenChange={(open) => !open && !removePmLoading && setRemovePmConfirmVolunteer(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove as Project Manager?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {removePmConfirmVolunteer?.full_name} as Project Manager? They will no
+              longer be able to manage milestones and deliverables for this project. You can assign another volunteer
+              as PM from the list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removePmLoading}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmRemovePm}
+              disabled={removePmLoading}
+            >
+              {removePmLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                "Remove as PM"
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Rate Volunteer Modal */}
       <Dialog open={!!rateModalVolunteer} onOpenChange={() => !rateLoading && setRateModalVolunteer(null)}>

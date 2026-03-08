@@ -212,20 +212,6 @@ const ProjectView: React.FC<ProjectViewProps> = ({
 
                   {isUserInProject ? (
                     <div className="space-y-3">
-                      {project.project_manager_id === userID && (
-                        <Button
-                          variant="secondary"
-                          size="lg"
-                          className="w-full text-base py-6"
-                          onClick={() =>
-                            router.push(
-                              `${routes.volunteerProjectManagement}/${project.id}`
-                            )
-                          }
-                        >
-                          Manage Project
-                        </Button>
-                      )}
                       <LeaveProjectModal
                         project={{ id: project.id, title: project.title }}
                         onSuccess={handleLeaveSuccess}

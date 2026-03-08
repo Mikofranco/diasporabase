@@ -94,6 +94,16 @@ const RecentActivity = () => {
           .order("created_at", { ascending: false })
           .limit(5);
 
+        // Fetch pending PM role requests (Project Manager invitation – already on project)
+        const { data: pmRequestsData } = await supabase
+          .from("project_manager_requests")
+          .select("id, created_at, project_id, projects(title, organization_name)")
+          .eq("volunteer_id", profileId)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(5);
+        const pmRequests = Array.isArray(pmRequestsData) ? pmRequestsData : [];
+
         // Map to activity items (with sort date for merging)
         type ActivityWithDate = RecentActivityItemsProps & { sortAt: string };
         const activityItems: ActivityWithDate[] = [];
@@ -122,6 +132,22 @@ const RecentActivity = () => {
             period: formatDistanceToNow(new Date(ar.created_at), { addSuffix: true }),
             title: `Pending request from ${org} for "${title}"`,
             sortAt: ar.created_at,
+          });
+        });
+
+        // Pending PM role requests (Project Manager invitation for a project you're already on)
+        pmRequests?.forEach((pm: { created_at: string; projects?: { title?: string; organization_name?: string } }) => {
+          const title = pm.projects?.title ?? "a project";
+          const org = pm.projects?.organization_name ?? "An agency";
+          activityItems.push({
+            icon: (
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 border border-amber-200">
+                <Send className="h-5 w-5 text-amber-700" aria-hidden />
+              </span>
+            ),
+            period: formatDistanceToNow(new Date(pm.created_at), { addSuffix: true }),
+            title: `Project Manager role: ${org} invited you to manage "${title}"`,
+            sortAt: pm.created_at,
           });
         });
 

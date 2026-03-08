@@ -151,10 +151,11 @@ export default function ViewProjectDetails() {
           }))
         );
 
-        const { isManager, error } = await checkIfUserIsProjectManager(
+        const { isManager } = await checkIfUserIsProjectManager(
           userId as string,
           id
         );
+        setIsUserProjectManager(!!isManager);
         const { isUserInProject, error: volunteerError } = await checkUserInProject(
           userId as string,
           id
@@ -379,7 +380,8 @@ export default function ViewProjectDetails() {
         <div className="space-y-8">
           <MilestonesSection
             projectId={project.id}
-            canEdit={false}
+            canEdit={isUserProjectManager}
+            canAddMilestone={isUserProjectManager && ["pending", "approved", "active"].includes((project?.status ?? "").toLowerCase())}
             volunteers={volunteers}
             milestonesPageHref={routes.volunteerProjectMilestones(project.id)}
           />
@@ -397,6 +399,7 @@ export default function ViewProjectDetails() {
             <VolunteersList
               volunteers={volunteers}
               viewerRole={isUserInProject ? "volunteer_same_project" : "public"}
+              projectManagerIds={[project.project_manager_id, project.project_manager_2_id].filter(Boolean) as string[]}
             />
           </section>
         </div>
