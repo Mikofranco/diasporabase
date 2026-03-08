@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerActionClient } from "@/lib/supabase/server";
-import { createClient } from "@supabase/supabase-js";
+import { getServerAdminClient } from "@/lib/supabase/admin";
 import { cookies } from "next/headers";
 import { sendEmail } from "@/lib/email";
 import { welcomeHtml, welcomeHtmlAgency } from "@/lib/email-templates/welcome";
-import { SUPABASE_URL } from "@/lib/supabase/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = createServerActionClient(cookieStore);
 
     // Resolve user and latest confirmation link by email
@@ -78,11 +77,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rate limit: check profile last_resend_at (use service role if available so we can read/update any profile)
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
-    const supabaseAdmin = serviceKey
-      ? createClient(SUPABASE_URL, serviceKey)
-      : supabase;
+    // Rate limit: check profile last_resend_at (service role so we can read/update any profile)
+    let supabaseAdmin;
+    try {
+      supabaseAdmin = getServerAdminClient();
+    } catch {
+      supabaseAdmin = supabase;
+    }
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")

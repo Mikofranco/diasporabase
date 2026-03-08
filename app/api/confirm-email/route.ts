@@ -1,34 +1,22 @@
-// app/api/confirm-email/route.ts
-// app/api/confirm-email/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { decryptJWT, encryptUserToJWT } from "@/lib/jwt";
 import { createServerActionClient } from "@/lib/supabase/server";
-import { supabase } from "@/lib/supabase/client";
 
 export const dynamic = "force-dynamic";
 
+const MAX_TOKEN_LENGTH = 2000;
+
 export async function GET(request: NextRequest) {
-    console.log("Confirm email request received");
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("token");
 
-  if (!token) {
+  if (!token || typeof token !== "string" || token.length > MAX_TOKEN_LENGTH) {
     return NextResponse.redirect(new URL("/confirm?status=invalid", request.url));
   }
-  
 
-  const { data, error } = await supabase.rpc('verify_confirmation_token', { p_token: token });
-  
-
-if (error) {
-  console.error('Error:', error);
-} else if (data.valid) {
-  console.log('Token valid! User:', data.user_id);
-  // Proceed (e.g., log in user, redirect)
-} else {
-  console.log('Invalid token:', data.message);
-}
+  const cookieStore = await cookies();
+  const supabase = createServerActionClient(cookieStore);
 
   try {
     const payload = await decryptJWT(token);
@@ -39,9 +27,9 @@ if (error) {
 
     const userId = payload.userId;
     const email = payload.email;
-
-    const cookieStore = cookies();
-    const supabase = createServerActionClient(cookieStore);
+    if (!userId || !email || typeof userId !== "string" || typeof email !== "string") {
+      return NextResponse.redirect(new URL("/confirm?status=invalid", request.url));
+    }
 
     // Validate link in DB
     const { data: links } = await supabase
@@ -54,18 +42,15 @@ if (error) {
     }
 
     const link = links[0];
-
     if (link.used || new Date() > new Date(link.expires_at)) {
       return NextResponse.redirect(new URL("/confirm?status=expired", request.url));
     }
 
-    // Mark as used
     await supabase
       .from("confirmation_links")
       .update({ used: true, clicked_at: new Date().toISOString() })
       .eq("id", link.id);
 
-    // Confirm email
     const { data: profile } = await supabase
       .from("profiles")
       .update({ email_confirmed: true })
