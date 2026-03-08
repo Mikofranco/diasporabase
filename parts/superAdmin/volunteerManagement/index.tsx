@@ -20,7 +20,6 @@ import { routes } from "@/lib/routes";
 import { VolunteerFilters } from "./VolunteerFilters";
 import { VolunteerPaginationBar } from "./PaginationBar";
 import { useSkillLabels } from "@/hooks/useSkillLabels";
-import { useSkillLabels } from "@/hooks/useSkillLabels";
 import { VolunteerLoadingSkeleton, VolunteerTableSkeleton } from "./VolunteerLoadingSkeleton";
 import {
   DEFAULT_VOLUNTEER_FILTERS,
