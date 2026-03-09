@@ -1,5 +1,7 @@
 "use server";
 
+import { sendEmail } from "@/lib/email";
+
 interface SendMailOptions {
   to: string;
   subject: string;
@@ -12,27 +14,16 @@ export interface SendMailResult {
   error?: string;
 }
 
+/**
+ * Sends email from the server using SMTP (lib/email).
+ * Use this from server actions or server code. Same path as /api/send-confirmation-email.
+ */
 export async function sendMailServer(
   options: SendMailOptions
 ): Promise<SendMailResult> {
   const { to, subject, html, text } = options;
 
-  // 🔍 DEBUG LOG (server console)
-  console.log("[sendMailServer] received:", {
-    to,
-    subject,
-    htmlLength: html?.length,
-    text,
-  });
-
-  // ❗ REQUIRED FIELD CHECK
   if (!to || !subject || !html) {
-    console.error("[sendMailServer] missing required fields", {
-      to,
-      subject,
-      html,
-    });
-
     return {
       success: false,
       error: "Missing required fields: to, subject, or html",
@@ -40,36 +31,14 @@ export async function sendMailServer(
   }
 
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/send-email`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ to, subject, html, text }),
-      }
-    );
-
-    const data = await response.json();
-
-    // 🔍 DEBUG API RESPONSE
-    console.log("[sendMailServer] api response:", data);
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.error || data.details || "Failed to send email",
-      };
-    }
-
+    await sendEmail({ to, subject, html, text });
     return { success: true };
-  } catch (error: any) {
-    console.error("[sendMailServer] exception:", error);
-
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Server mail error";
+    console.error("[sendMailServer]", message);
     return {
       success: false,
-      error: error.message || "Server mail error",
+      error: message,
     };
   }
 }

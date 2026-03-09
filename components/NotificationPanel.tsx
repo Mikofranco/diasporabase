@@ -7,6 +7,7 @@ import { getUserId } from '@/lib/utils';
 import { supabase } from '@/lib/supabase/client';
 import { number } from 'framer-motion';
 import { Notification } from '@/lib/types';
+import { DashboardLoader } from './ui/dashboard-loader';
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState([]);
@@ -48,7 +49,7 @@ export default function Notifications() {
       setNotifications(data);
       const unread = data.filter((n:any) => !n.is_read).length;
       setUnreadCount(unread);
-      localStorage.setItem('unreadNotifications', unread);
+      localStorage.setItem('unreadNotifications', String(unread));
     };
 
     fetchNotifications();
@@ -68,7 +69,7 @@ export default function Notifications() {
           setNotifications((prev) => [payload.new, ...prev]);
           setUnreadCount((prev) => {
             const newCount = prev + 1;//@ts-ignore
-            localStorage.setItem('unreadNotifications', newCount);
+            localStorage.setItem('unreadNotifications', String(newCount));
             return newCount;
           });
         }
@@ -98,7 +99,7 @@ export default function Notifications() {
     );
     setUnreadCount((prev) => {
       const newCount = prev - 1;
-      localStorage.setItem('unreadNotifications', newCount);
+      localStorage.setItem('unreadNotifications', String(newCount));
       return newCount;
     });
   };
@@ -137,7 +138,7 @@ export default function Notifications() {
   }
 
   if (!userId) {
-    return <div className="p-4">Loading...</div>;
+    return <DashboardLoader label="Loading" />;
   }
 
   return (
@@ -157,33 +158,32 @@ export default function Notifications() {
               }`}
             >
               <p className="text-sm text-gray-600">
-                {new Date(notification.created_at).toLocaleString()}
+                {notification.created_at
+                  ? new Date(notification.created_at).toLocaleString()
+                  : '—'}
               </p>
               <p className="font-medium">{notification.message}</p>
-              {notification.type === 'request_status_change' && (
+              {notification.type === 'request_status_change' &&
+                notification.related_id && (
                 <div className="mt-2">
                   {notification.status === 'pending' && (
                     <div className="flex space-x-2">
                       <button
-                        onClick={() =>
-                          handleVolunteerResponse(
-                            notification.related_id,
-                            'accepted',
-                            notification.related_id
-                          )
-                        }
+                        onClick={() => {
+                          const id = notification.related_id;
+                          if (id)
+                            handleVolunteerResponse(id, 'accepted', id);
+                        }}
                         className="px-4 py-2 bg-green-500 text-white rounded"
                       >
                         Accept
                       </button>
                       <button
-                        onClick={() =>
-                          handleVolunteerResponse(
-                            notification.related_id,
-                            'rejected',
-                            notification.related_id
-                          )
-                        }
+                        onClick={() => {
+                          const id = notification.related_id;
+                          if (id)
+                            handleVolunteerResponse(id, 'rejected', id);
+                        }}
                         className="px-4 py-2 bg-red-500 text-white rounded"
                       >
                         Reject

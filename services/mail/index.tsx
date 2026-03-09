@@ -1,12 +1,18 @@
+import { sendMailServer } from "@/services/mail/send-mail-server";
+
 interface SendMailOptions {
   to: string;
   subject: string;
   html: string;
-  text?: string; 
+  text?: string;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
 
+/**
+ * Sends email via the server action (which uses INTERNAL_API_SECRET).
+ * Use this from client components instead of calling /api/send-email directly.
+ */
 export async function useSendMail({
   to,
   subject,
@@ -16,34 +22,20 @@ export async function useSendMail({
   onError,
 }: SendMailOptions): Promise<{ success: boolean; error?: string }> {
   try {
-    const response = await fetch("/api/send-email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        to,
-        subject,
-        html,
-        text,
-      }),
-    });
+    const result = await sendMailServer({ to, subject, html, text });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      const errorMsg = data.error || data.details || "Failed to send email";
+    if (!result.success) {
+      const errorMsg = result.error || "Failed to send email";
       onError?.(errorMsg);
-      console.error("[sendMail] API error:", data);
       return { success: false, error: errorMsg };
     }
 
     onSuccess?.();
     return { success: true };
-  } catch (err: any) {
-    const errorMsg = err.message || "Network error";
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Network error";
     onError?.(errorMsg);
-    console.error("[sendMail] Network error:", err);
+    console.error("[sendMail] Error:", err);
     return { success: false, error: errorMsg };
   }
 }

@@ -12,14 +12,19 @@ export async function sendEmail({
   html?: string;
   text?: string;
 }) {
+  const port = Number(process.env.SMTP_PORT) || 587;
+  // Port 465 = implicit TLS (secure from start). Port 587 = STARTTLS (upgrade to TLS after connect). Both are encrypted.
+  const secure = port === 465;
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) ,
-    secure: process.env.SMTP_SECURE === "true",
+    port,
+    secure,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
   });
   try {
     const sendMailResponse = await transporter.sendMail({

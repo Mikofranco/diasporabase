@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { adminSupabase } from "./supabase/client";
+import { getServerAdminClient } from "./supabase/admin";
 
 /**
  * Logs in a user by their Supabase user ID (UUID)
@@ -14,7 +14,7 @@ export async function loginUserById(userId: string) {
     return { success: false, error: "Invalid user ID" };
   }
 
-  const supabase = adminSupabase();
+  const supabase = getServerAdminClient();
 
   try {
     // Use Supabase service role to bypass RLS and get user
