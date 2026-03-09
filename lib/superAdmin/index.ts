@@ -1,22 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
-import { SUPABASE_URL } from "../supabase/constants";
+import { getServerAdminClient } from "../supabase/admin";
 import { routes } from "../routes";
-
-function getAdminClient() {
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceKey) throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
-  return createClient(SUPABASE_URL, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 export async function deleteUser(userId: string) {
   try {
-    const admin = getAdminClient();
+    const admin = getServerAdminClient();
 
     // 1. Delete from confirmation_links (best-effort; may not exist or have no row)
     await admin.from("confirmation_links").delete().eq("user_id", userId);

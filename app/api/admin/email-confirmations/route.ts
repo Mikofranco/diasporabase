@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerActionClient } from "@/lib/supabase/server";
-import { createClient } from "@supabase/supabase-js";
+import { getServerAdminClient } from "@/lib/supabase/admin";
 import { cookies } from "next/headers";
 import { sendEmail } from "@/lib/email";
 import { welcomeHtml, welcomeHtmlAgency } from "@/lib/email-templates/welcome";
-import { SUPABASE_URL } from "@/lib/supabase/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +19,7 @@ type StatusFilter = "all" | "pending" | "failed";
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = createServerActionClient(cookieStore);
     const {
       data: { user },
@@ -38,17 +37,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const serviceKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) {
+    let admin;
+    try {
+      admin = getServerAdminClient();
+    } catch {
       return NextResponse.json(
         { error: "Server configuration error" },
         { status: 500 }
       );
     }
-
-    const admin = createClient(SUPABASE_URL, serviceKey);
     const { searchParams } = new URL(request.url);
     const statusFilter = (searchParams.get("status") as StatusFilter) || "all";
     const sortBy = searchParams.get("sort") || "registration_date";
@@ -139,23 +136,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = createServerActionClient(cookieStore);
     const adminUser = await ensureAdmin(supabase);
     if (!adminUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const serviceKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) {
+    let admin;
+    try {
+      admin = getServerAdminClient();
+    } catch {
       return NextResponse.json(
         { error: "Server configuration error" },
         { status: 500 }
       );
     }
-    const admin = createClient(SUPABASE_URL, serviceKey);
 
     const body = await request.json();
     const action = body?.action;
