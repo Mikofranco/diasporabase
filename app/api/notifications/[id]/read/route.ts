@@ -1,29 +1,42 @@
-import { createClient } from '@/lib/supabase/client';
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { createServerActionClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 
-// ADD THESE TWO LINES — this is the key fix
-export const dynamic = 'force-dynamic';
-export const revalidate = 0; // Optional: disables any caching
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PATCH(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: "Notification ID required" }, { status: 400 });
+  }
 
-  // MOVE CLIENT CREATION INSIDE THE HANDLER
-  const supabase = createClient();
+  const cookieStore = await cookies();
+  const supabase = createServerActionClient(cookieStore);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const { error } = await supabase
-      .from('notifications')
+      .from("notifications")
       .update({ is_read: true })
-      .eq('id', id);
+      .eq("id", id)
+      .eq("user_id", user.id);
 
     if (error) throw error;
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    console.error("Error marking notification as read:", error);
     return NextResponse.json(
-      { error: 'Failed to mark notification as read' },
+      { error: "Failed to mark notification as read" },
       { status: 500 }
     );
   }

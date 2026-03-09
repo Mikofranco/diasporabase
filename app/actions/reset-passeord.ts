@@ -1,9 +1,8 @@
-"use server"
+"use server";
 
 import { resetPasswordMail } from "@/lib/email-templates/reset";
-import { createAdminClient } from "@/lib/supabase/client";
+import { getServerAdminClient } from "@/lib/supabase/admin";
 import { sendMailServer } from "@/services/mail/send-mail-server";
-
 
 export async function sendCustomPasswordResetEmail(formData: FormData) {
   const email = formData.get("email") as string;
@@ -17,7 +16,7 @@ export async function sendCustomPasswordResetEmail(formData: FormData) {
     return { success: false, error: "Please enter a valid email address" };
   }
 
-  const supabaseAdmin = createAdminClient(); 
+  const supabaseAdmin = getServerAdminClient(); 
 
   try {
     console.log(`Generating reset link for: ${email}`);

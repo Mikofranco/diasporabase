@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
 import { routes } from "@/lib/routes";
+import { DashboardLoader } from "@/components/ui/dashboard-loader";
 
 const supabase = createClient();
 
@@ -71,7 +72,7 @@ const AgencyReviewPage: React.FC = () => {
     }
   };
 
-  if (loading) return <p className="text-sm text-gray-600 dark:text-gray-400">Loading...</p>;
+  if (loading) return <p className="text-sm text-gray-600 dark:text-gray-400"><DashboardLoader label="Loading" /></p>;
   if (!agency) return <p className="text-sm text-gray-600 dark:text-gray-400">Agency not found</p>;
 
   return (

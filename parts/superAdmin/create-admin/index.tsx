@@ -23,7 +23,8 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { supabase, adminSupabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
+import { checkEmailExists } from "@/app/actions/check-admin-email";
 import { toast } from "sonner";
 import { useSendMail } from "@/services/mail";
 import { routes } from "@/lib/routes";
@@ -140,14 +141,9 @@ export default function AdminManagement() {
         throw new Error("Unauthorized");
       }
 
-      // Check if email exists
-      const { data: existing } = await adminSupabase
-        .from("profiles")
-        .select("id")
-        .eq("email", data.email)
-        .maybeSingle();
-
-      if (existing) throw new Error("Email already in use");
+      // Check if email exists (server-side to avoid exposing admin client)
+      const { exists } = await checkEmailExists(data.email);
+      if (exists) throw new Error("Email already in use");
 
       // Create user
       const { data: newUser, error: authError } = await supabase.auth.signUp({
