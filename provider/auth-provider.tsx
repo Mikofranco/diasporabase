@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { routes } from '@/lib/routes';
+import { ro } from 'date-fns/locale';
 
 export default function AuthListenerProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -26,7 +28,7 @@ export default function AuthListenerProvider({ children }: { children: React.Rea
           if (error || !profile) {
             console.error('Profile fetch failed:', error);
             toast.error('Could not load profile. Please try again.');
-            router.replace('/login?error=profile_failed');
+            router.replace(routes.login + '?error=profile_failed');
             return;
           }
 
@@ -34,29 +36,31 @@ export default function AuthListenerProvider({ children }: { children: React.Rea
 
           // Only redirect if we're on a public/auth page to avoid loops
           const isPublicPage =
-            pathname === '/' ||
-            pathname === '/login' ||
+            pathname === routes.home ||
+            pathname === routes.login ||
             pathname?.startsWith('/auth');
 
           if (isPublicPage) {
-            if (role === 'super_admin' || role === 'admin') {
-              router.replace('/dashboard/admin');
+            if (role === 'super_admin') {
+              router.replace(routes.superAdminDashboard);
+            } else if (role === 'admin') {
+              router.replace(routes.adminDashboard);
             } else if (role === 'agency') {
               if (!profile.tax_id || profile.tax_id.trim() === '') {
-                router.replace('/onboarding/agency');
+                router.replace(routes.agencyOnboarding);
               } else {
-                router.replace('/dashboard/agency');
+                router.replace(routes.agencyDashboard);
               }
             } else if (role === 'volunteer') {
-              router.replace('/dashboard/volunteer');
+              router.replace(routes.volunteerDashboard);
             } else {
-              router.replace('/'); // fallback
+              router.replace(routes.home); // fallback
             }
           }
         } catch (err) {
           console.error('Auth callback error:', err);
           toast.error('Login failed. Please try again.');
-          router.replace('/login?error=callback_error');
+          router.replace(routes.login + '?error=callback_error');
         }
       }
 

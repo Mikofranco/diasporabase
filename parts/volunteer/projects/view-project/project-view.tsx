@@ -12,6 +12,7 @@ import {
   AlertCircle,
   XCircle,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 
 import {
@@ -28,38 +29,16 @@ import ViewTaskModal from "@/components/modals/view-task";
 import LeaveProjectModal from "@/components/modals/leave-project";
 import { useRouter } from "next/navigation";
 import { VolunteerActionButton } from "./volunteer-action-btn";
+import { useModal } from "@/components/ui/modal";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useSendMail } from "@/services/mail";
 import { RatingForm } from "./rating-form";
 import { formatLocation } from "@/lib/utils";
-
-const statusConfig: Record<
-  ProjectStatus,
-  { label: string; icon: React.ReactNode; color: string }
-> = {
-  pending: {
-    label: "Pending",
-    icon: <AlertCircle className="h-4 w-4" />,
-    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  },
-  active: {
-    label: "Active",
-    icon: <CheckCircle2 className="h-4 w-4" />,
-    color: "bg-green-100 text-green-800 border-green-200",
-  },
-  completed: {
-    label: "Completed",
-    icon: <CheckCircle2 className="h-4 w-4" />,
-    color: "bg-blue-100 text-blue-800 border-blue-200",
-  },
-  cancelled: {
-    label: "Cancelled",
-    icon: <XCircle className="h-4 w-4" />,
-    color: "bg-red-100 text-red-800 border-red-200",
-  },
-};
+import { routes } from "@/lib/routes";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 interface ProjectViewProps {
   project: Project;
@@ -73,6 +52,7 @@ interface ProjectViewProps {
   onLeaveSuccess?: () => void;
   volunteersRegistered?: number;
   agencyHasSentRequest?: boolean;
+  onboardingComplete?: boolean;
 }
 
 const ProjectView: React.FC<ProjectViewProps> = ({
@@ -87,15 +67,18 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   onLeaveSuccess,
   volunteersRegistered,
   agencyHasSentRequest,
+  onboardingComplete = true,
 }) => {
   const router = useRouter();
-  const [isRequesting, setIsRequesting] = useState(false); // ← NEW: loading state for request
+  const { open: openContactModal } = useModal("contact-organization-modal");
+  const [isRequesting, setIsRequesting] = useState(false);
   //@ts-ignore
   const spotsLeft = project.volunteers_needed - volunteersRegistered || 0;
   const isFull = spotsLeft === 0;
   const formatDate = (date?: string) =>
     date ? format(new Date(date), "EEEE, MMMM d, yyyy") : "Date not set";
   const [showAllSkills, setShowAllSkills] = useState(false);
+  const { getLabel } = useSkillLabels();
   const formatDateRange = () => {
     if (!project.startDate && !project.endDate) return "Dates not set";
     if (!project.startDate) return formatDate(project.endDate);
@@ -107,13 +90,29 @@ const ProjectView: React.FC<ProjectViewProps> = ({
   };
 
   const handleLeaveSuccess = () => {
-    router.push("/dashboard/volunteer/projects");
+    router.push(routes.volunteerProjects);
     router.refresh();
   };
 
-  const status = statusConfig[project.status ?? "pending"];
+  const statusConfig = getProjectStatusStyle(project.status ?? "pending");
+
+  const handleContactOrganizer = () => {
+    if (!onboardingComplete) {
+      toast.info("Complete your profile first to contact organizers.", {
+        action: { label: "Complete profile", onClick: () => router.push(routes.volunteerOnboarding) },
+      });
+      return;
+    }
+    openContactModal({});
+  };
 
   const handleVolunteerRequest = async () => {
+    if (!onboardingComplete) {
+      toast.info("Complete your profile to apply. Add your skills so organizers can match you.", {
+        action: { label: "Complete profile", onClick: () => router.push(routes.volunteerOnboarding) },
+      });
+      return;
+    }
     if (isRequesting) return;
 
     setIsRequesting(true);
@@ -162,10 +161,9 @@ const ProjectView: React.FC<ProjectViewProps> = ({
 
           <Badge
             variant="outline"
-            className={`self-start px-4 py-2 text-sm font-medium flex items-center gap-2 border-2 ${status.color}`}
+            className={`self-start px-4 py-2 text-sm font-medium border-2 ${statusConfig.className}`}
           >
-            {status.icon}
-            {status.label}
+            {statusConfig.label}
           </Badge>
         </div>
       </div>
@@ -207,27 +205,13 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     variant="outline"
                     size="lg"
                     className="w-full text-base py-6"
-                    data-modal-trigger="contact-organization-modal"
+                    onClick={handleContactOrganizer}
                   >
                     Contact Organizer
                   </Button>
 
                   {isUserInProject ? (
                     <div className="space-y-3">
-                      {project.project_manager_id === userID && (
-                        <Button
-                          variant="secondary"
-                          size="lg"
-                          className="w-full text-base py-6"
-                          onClick={() =>
-                            router.push(
-                              `/dashboard/volunteer/project_management/${project.id}`
-                            )
-                          }
-                        >
-                          Manage Project
-                        </Button>
-                      )}
                       <LeaveProjectModal
                         project={{ id: project.id, title: project.title }}
                         onSuccess={handleLeaveSuccess}
@@ -241,6 +225,16 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                       disabled
                     >
                       Agency request Pending
+                    </Button>
+                  ) : !onboardingComplete ? (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full text-base py-6 border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800"
+                      onClick={() => router.push(routes.volunteerOnboarding)}
+                    >
+                      <Sparkles className="h-5 w-5 mr-2" />
+                      Complete profile to apply
                     </Button>
                   ) : (
                     <VolunteerActionButton
@@ -345,7 +339,7 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                         variant="secondary"
                         className="py-1.5 px-3 text-sm font-medium"
                       >
-                        {skill}
+                        {getLabel(skill)}
                       </Badge>
                     ))}
                 </div>

@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getUserId } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
+import { getStatusColor, getUserId } from "@/lib/utils";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +40,9 @@ import { match } from "assert";
 import { matchVolunteersToProjectLocation } from "@/lib/utils/matchvolunteersToProject";
 import { Volunteer } from "@/lib/types";
 import { checkIfVolunteerHasRequested } from "@/services/requests";
+import DiasporaBaseModal from "@/components/diasporabase-modal";
+import { routes } from "@/lib/routes";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 const supabase = createClient();
 
@@ -54,6 +57,7 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
   volunteersNeeded,
   volunteersRegistered,
 }) => {
+  const { getLabel } = useSkillLabels();
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -252,7 +256,7 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
       const origin =
         typeof window !== "undefined" ? window.location.origin : "";
-      const volunteerDashboardUrl = `${origin}/dashboard/volunteer`;
+      const volunteerDashboardUrl = `${origin}${routes.volunteerDashboard}`;
 
       const html = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f9fafb;">
@@ -380,8 +384,8 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className={`space-y-6 ${isRequestDialogOpen ? "blur-sm" : ""}`}>
+        <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3`}>
           <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
             Recommended Volunteers
           </h3>
@@ -419,13 +423,13 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                 <Card
                   key={volunteer.volunteer_id}
                   className={cn(
-                    "group relative overflow-hidden transition-all duration-200 hover:shadow-lg",
+                    "group relative overflow-hidden transition-all duration-200 hover:shadow-lg flex flex-col",
                     "border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
                     volunteer.request_status && "opacity-90"
                   )}
                 >
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between mb-3">
+                  <CardContent className="p-5 flex-1">
+                    <div className="flex items-start justify-between mb-3 flex-col">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-gray-100 dark:ring-gray-700">
                           <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold">
@@ -466,7 +470,7 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                                       : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                                   )}
                                 >
-                                  {skill}
+                                  {getLabel(skill)}
                                 </Badge>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -509,8 +513,10 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                         / 5.0
                       </span>
                     </div>
+                  </CardContent>
 
-                    {/* Request Status or Button */}
+                  <CardFooter className="p-5 pt-0 flex-1">
+                     {/* Request Status or Button */}
                     {volunteer.request_status ? (
                       <div
                         className={cn(
@@ -563,7 +569,7 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
                         </TooltipContent>
                       </Tooltip>
                     )}
-                  </CardContent>
+                  </CardFooter>
                 </Card>
               );
             })}
@@ -609,6 +615,7 @@ const ProjectRecommendation: React.FC<ProjectRecommendationProps> = ({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
       </div>
     </TooltipProvider>
   );

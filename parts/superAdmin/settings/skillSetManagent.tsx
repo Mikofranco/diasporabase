@@ -23,10 +23,38 @@ import {
 } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Trash2, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Item } from "@/app/dashboard/volunteer/profile/page";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getSkillsets } from "@/lib/utils";
+import { routes } from "@/lib/routes";
+import { Item } from "@/components/renderedItems";
 
 const supabase = createClient();
+
+function SkillsetTreeSkeleton() {
+  return (
+    <div className="p-6 max-w-4xl mx-auto animate-in fade-in-50 duration-200">
+      <div className="flex justify-between items-center mb-4">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-9 w-36 rounded-md" />
+      </div>
+      <div className="border border-gray-200 rounded-lg p-4 max-h-[600px] space-y-1">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className="flex items-center gap-2 py-2 px-2 rounded-md"
+            style={{ paddingLeft: `${(i <= 2 ? i - 1 : 1) * 18}px` }}
+          >
+            <Skeleton className="h-4 w-4 shrink-0 rounded" />
+            <Skeleton className="h-4 flex-1 max-w-[200px]" />
+            <Skeleton className="h-8 w-8 rounded shrink-0" />
+            <Skeleton className="h-8 w-8 rounded shrink-0" />
+            <Skeleton className="h-8 w-20 rounded shrink-0" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface SkillsetForm {
   id: string;
@@ -39,6 +67,7 @@ export default function SkillsetManagementPage() {
   const [skillsets, setSkillsets] = useState<Item[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
   const [form, setForm] = useState<SkillsetForm>({ id: "", label: "", parent_id: null });
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -50,7 +79,7 @@ export default function SkillsetManagementPage() {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error || !user) {
         toast.error("Please log in to access this page.");
-        router.push("/login");
+        router.push(routes.login);
         return;
       }
 
@@ -62,13 +91,13 @@ export default function SkillsetManagementPage() {
 
       if (profileError) {
         toast.error("Error fetching user role.");
-        router.push("/dashboard");
+        router.push(routes.superAdminDashboard);
         return;
       }
 
       if (!["admin", "super_admin"].includes(data.role)) {
         toast.error("You are not authorized to access this page.");
-        router.push("/dashboard");
+        router.push(routes.superAdminDashboard);
         return;
       }
 
@@ -116,15 +145,15 @@ export default function SkillsetManagementPage() {
     const flatItems = skillsets.flatMap((i) => [
       i,
       ...(i.children || []),
-      ...(i.children?.flatMap((c) => c.subChildren || []) || []),
+      ...(i.children?.flatMap((c: any) => c.subChildren || []) || []),
     ]);
     const item = flatItems.find((i) => i.id === id);
     if (!item) return null;
 
     const parent = flatItems.find(
       (i) =>
-        i.children?.some((child) => child.id === id) ||
-        i.subChildren?.some((subChild) => subChild.id === id)
+        i.children?.some((child: any) => child.id === id) ||
+        i.subChildren?.some((subChild: any) => subChild.id === id)
     );
     return parent ? parent.id : null;
   };
@@ -174,10 +203,15 @@ export default function SkillsetManagementPage() {
     }
   };
 
-  // Handle delete
-  const handleDelete = async (id: string) => {
-    if (!confirm(`Are you sure you want to delete "${id}" and all its children?`)) return;
+  // Open delete confirmation dialog
+  const handleDeleteClick = (item: Item) => {
+    setDeleteTarget({ id: item.id, label: item.label });
+  };
 
+  // Handle confirmed delete
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
     try {
       const { error } = await supabase.from("skillsets").delete().eq("id", id);
       if (error) throw new Error(`Error deleting skillset: ${error.message}`);
@@ -191,6 +225,7 @@ export default function SkillsetManagementPage() {
         delete newExpanded[id];
         return newExpanded;
       });
+      setDeleteTarget(null);
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -223,40 +258,44 @@ export default function SkillsetManagementPage() {
             variant="ghost"
             size="sm"
             onClick={() => handleEdit(item)}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-sky-600 hover:text-sky-800"
+            title="Edit Skillset"
+            aria-label="Edit Skillset"
           >
-            <Edit className="h-4 w-4" />
+            <span className="sr-only">Edit</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 11l6-6a2 2 0 112.828 2.828l-6 6m-7 7h17" />
+            </svg>
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleDelete(item.id)}
-            className="text-red-600 hover:text-red-800"
+            onClick={() => handleDeleteClick(item)}
+            className="text-rose-600 hover:text-rose-800"
+            title="Delete Skillset"
+            aria-label="Delete Skillset"
           >
+            <span className="sr-only">Delete</span>
             <Trash2 className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleAdd(item.id)}
-            className="text-green-600 hover:text-green-800"
+            className="text-emerald-600 hover:text-emerald-800"
+            title="Add Child Skill"
+            aria-label="Add Child Skill"
           >
+            <span className="sr-only">Add Child</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
             Add Child
           </Button>
         </div>
         {(item.children || item.subChildren) && expanded[item.id] && (
           <div className="ml-2.5">
             {item.children && renderSkillsets(item.children, level + 1)}
-            {item.children?.some((child) => child.subChildren) &&
-              item.children.map(
-                (child) =>
-                  child.subChildren &&
-                  expanded[child.id] && (
-                    <div key={child.id} className="ml-2.5">
-                      {renderSkillsets(child.subChildren, level + 2)}
-                    </div>
-                  )
-              )}
             {item.subChildren && renderSkillsets(item.subChildren, level + 1)}
           </div>
         )}
@@ -269,19 +308,19 @@ export default function SkillsetManagementPage() {
     const flatItems = skillsets.flatMap((i) => [
       i,
       ...(i.children || []),
-      ...(i.children?.flatMap((c) => c.subChildren || []) || []),
+      ...(i.children?.flatMap((c: any) => c.subChildren || []) || []),
     ]);//@ts-ignore
     return flatItems.filter((item) => item.children || item.subChildren || !item.parent_id); // Allow top-level and parents
   };
 
   if (!userRole) {
-    return <div className="p-4 text-gray-500">Loading...</div>;
+    return <SkillsetTreeSkeleton />;
   }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Manage Skillsets</h1>
+        <h2 className="text-lg font-semibold text-gray-800">Skillset tree</h2>
         <Button onClick={() => handleAdd()} className="action-btn">
           Add New Skillset
         </Button>
@@ -354,8 +393,42 @@ export default function SkillsetManagementPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={handleSubmit}
+              className="bg-[#0EA5E9]/90 hover:bg-[#0EA5E9] text-white"
+            >
               {isEditing ? "Save Changes" : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete skillset?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            This will remove{" "}
+            <span className="font-semibold">
+              {deleteTarget?.label} ({deleteTarget?.id})
+            </span>{" "}
+            and all of its child items. This action cannot be undone.
+          </p>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              className="hover:bg-gray-100"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

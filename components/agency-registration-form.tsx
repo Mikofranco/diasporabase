@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TermsModal, AgencyTermsContent } from "./terms-modal";
 import Link from "next/link";
 import {
   Loader2,
@@ -28,13 +30,14 @@ import {
   RefreshCw,
   AlertCircle,
   Building2,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useSendMail } from "@/services/mail";
 import { welcomeHtmlAgency } from "@/lib/email-templates/welcome";
 import { encryptUserToJWT } from "@/lib/jwt";
-import { GoogleSignUpButton } from "./signinwithGoogleBtn";
+import { routes } from "@/lib/routes";
 
 const formSchema = z
   .object({
@@ -79,6 +82,10 @@ export default function AgencyRegistrationForm() {
     Partial<Record<keyof FormData, boolean>>
   >({});
 
+  // Terms agreement
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+
   // Modal & Resend
   const [modalOpen, setModalOpen] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -92,7 +99,39 @@ export default function AgencyRegistrationForm() {
     confirmationUrl: string;
   } | null>(null);
 
+  const [emailSendStatus, setEmailSendStatus] = useState<
+    "idle" | "sending" | "retry_1" | "retry_2" | "success" | "failed"
+  >("idle");
+
   const supabase = createClient();
+
+  const sendConfirmationWithRetry = async (
+    to: string,
+    subject: string,
+    html: string,
+    maxAttempts = 3,
+    delayMs = 3000
+  ): Promise<{ success: boolean; error?: string }> => {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (attempt === 1) setEmailSendStatus("sending");
+      else if (attempt === 2) setEmailSendStatus("retry_1");
+      else if (attempt === 3) setEmailSendStatus("retry_2");
+
+      const result = await useSendMail({ to, subject, html });
+      if (result.success) {
+        setEmailSendStatus("success");
+        return { success: true };
+      }
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, delayMs));
+      } else {
+        setEmailSendStatus("failed");
+        return { success: false, error: result.error };
+      }
+    }
+    setEmailSendStatus("failed");
+    return { success: false };
+  };
 
   // Real-time validation
   useEffect(() => {
@@ -111,17 +150,50 @@ export default function AgencyRegistrationForm() {
     }
   }, [formData, touched]);
 
-  useEffect(() => {
-    if (!modalOpen) return;
-    const timer = setTimeout(
-      () => {
-        setModalOpen(false);
-      },
-      1 * 60 * 1000,
-    );
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHoveringRef = useRef(false);
+  const AUTO_CLOSE_MS = 6000;
 
-    return () => clearTimeout(timer);
-  }, [modalOpen]);
+  const handleCloseModal = useCallback(() => {
+    setModalOpen(false);
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const startAutoCloseTimer = useCallback(() => {
+    if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    autoCloseTimerRef.current = setTimeout(() => {
+      if (!isHoveringRef.current) handleCloseModal();
+      autoCloseTimerRef.current = null;
+    }, AUTO_CLOSE_MS);
+  }, [handleCloseModal]);
+
+  const clearAutoCloseTimer = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (modalOpen) {
+      isHoveringRef.current = false;
+      startAutoCloseTimer();
+    }
+    return () => clearAutoCloseTimer();
+  }, [modalOpen, startAutoCloseTimer, clearAutoCloseTimer]);
+
+  const handleModalMouseEnter = () => {
+    isHoveringRef.current = true;
+    clearAutoCloseTimer();
+  };
+
+  const handleModalMouseLeave = () => {
+    isHoveringRef.current = false;
+    startAutoCloseTimer();
+  };
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -186,7 +258,7 @@ export default function AgencyRegistrationForm() {
         "24h", // ← Now 24 hours
       );
 
-      const confirmationUrl = `${origin}/confirm?token=${token}`;
+      const confirmationUrl = `${origin}${routes.confirmation}?token=${token}`;
 
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
@@ -200,27 +272,34 @@ export default function AgencyRegistrationForm() {
         is_resent: false,
       });
 
-      // Send welcome email
-      await useSendMail({
-        to: formData.email,
-        subject: "Welcome to DiasporaBase – Confirm Your Agency Account",
-        html: welcomeHtmlAgency(formData.companyName.trim(), confirmationUrl),
-      });
+      // Send welcome email with retry (up to 2 retries, 3s apart)
+      const sendResult = await sendConfirmationWithRetry(
+        formData.email,
+        "Welcome to DiasporaBase – Confirm Your Agency Account",
+        welcomeHtmlAgency(formData.companyName.trim(), confirmationUrl),
+        3,
+        3000
+      );
 
-      // Store for resend
+      if (!sendResult.success) {
+        toast.error(
+          sendResult.error || "Could not send confirmation email. You can resend it from the next screen."
+        );
+      }
+
       setPendingConfirmation({
         email: formData.email,
         companyName: formData.companyName.trim(),
         confirmationUrl,
       });
 
-      // toast.success("Agency registered! Please check your email to confirm.");
       setModalOpen(true);
       resetForm();
       localStorage.setItem("diasporabase-email", formData.email);
     } catch (err: any) {
       console.error("Agency registration error:", err);
       toast.error(err.message || "Registration failed. Please try again.");
+      setEmailSendStatus("idle");
     } finally {
       setLoading(false);
     }
@@ -274,21 +353,19 @@ export default function AgencyRegistrationForm() {
 
   return (
     <>
-      <Card className={`w-full max-w-2xl mx-auto shadow-xl border-0 ${modalOpen ? "blur-sm" : ""}`}>
+      <Card
+        className={`w-full max-w-2xl mx-auto shadow-xl border-0 ${modalOpen ? "blur-sm" : ""}`}
+      >
         <CardHeader className="text-center pb-8">
           <CardTitle className="text-xl sm:text-3xl font-bold text-[#1E293B] flex items-center justify-center gap-3">
             <Building2 className="h-10 w-10  text-primary" />
-            Register Your Agency
+            Sign up Your Agency
           </CardTitle>
           <CardDescription className="text-sm sm:text-base mt-3 max-w-md mx-auto">
             Connect with skilled diaspora volunteers to power your development
             projects
           </CardDescription>
         </CardHeader>
-        <div className="flex items-center justify-center mb-2 p-2">
-          <GoogleSignUpButton role="agency" />
-        </div>
-
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Organization Name */}
@@ -406,26 +483,74 @@ export default function AgencyRegistrationForm() {
               </div>
             </div>
 
+            {/* Terms & Conditions */}
+            <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/30">
+              <Checkbox
+                id="agency-terms"
+                checked={agreedToTerms}
+                onCheckedChange={(checked) =>
+                  setAgreedToTerms(checked === true)
+                }
+                disabled={loading}
+                className="mt-0.5"
+              />
+              <label
+                htmlFor="agency-terms"
+                className="text-sm leading-relaxed text-muted-foreground cursor-pointer select-none"
+              >
+                I agree to the{" "}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setTermsModalOpen(true);
+                  }}
+                  className="font-medium text-[#0ea5e9] hover:underline focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/30 rounded"
+                >
+                  Agency Agreement
+                </button>
+              </label>
+            </div>
+            <div className="flex justify-center pt-4">
             <Button
               type="submit"
-              disabled={loading || Object.keys(errors).length > 0}
-              className="w-full h-12 text-lg font-semibold action-btn shadow-lg"
+              disabled={
+                loading ||
+                !agreedToTerms ||
+                Object.keys(errors).length > 0
+              }
+              className="w-fit h-12 px-10 text-lg font-semibold action-btn shadow-lg"
             >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Creating Agency Account...
+                  {emailSendStatus === "sending"
+                    ? "Sending confirmation email..."
+                    : emailSendStatus === "retry_1"
+                      ? "Retrying (1/2)..."
+                      : emailSendStatus === "retry_2"
+                        ? "Retrying (2/2)..."
+                        : "Creating Agency Account..."}
                 </>
               ) : (
-                "Register Agency"
+                "Sign up with Email"
               )}
             </Button>
+            </div>
+
+            {loading && emailSendStatus !== "idle" && emailSendStatus !== "success" && emailSendStatus !== "failed" && (
+              <p className="text-center text-sm text-muted-foreground pt-2">
+                {emailSendStatus === "sending" && "Sending confirmation email..."}
+                {emailSendStatus === "retry_1" && "First retry in 3 seconds..."}
+                {emailSendStatus === "retry_2" && "Second retry..."}
+              </p>
+            )}
           </form>
 
           <p className="text-center text-sm text-muted-foreground pt-4">
             Already have an agency account?{" "}
             <Link
-              href="/login"
+              href={routes.login}
               className="font-semibold text-[#0ea5e9] hover:underline"
             >
               Sign in
@@ -434,53 +559,84 @@ export default function AgencyRegistrationForm() {
         </CardContent>
       </Card>
 
-      {/* Success Modal with Resend */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen} >
-        <DialogContent className="sm:max-w-md ">
-          <DialogHeader className="text-center">
-            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-              <Mail className="h-10 w-10 text-green-600" />
+      <TermsModal
+        open={termsModalOpen}
+        onOpenChange={setTermsModalOpen}
+        title="DiasporaBase Agency Terms"
+        onAgree={() => setAgreedToTerms(true)}
+      >
+        <AgencyTermsContent />
+      </TermsModal>
+
+      {/* Success Modal with Resend — auto-dismiss, overlay close, hover to pause */}
+      <Dialog
+        open={modalOpen}
+        onOpenChange={(open) =>
+          open ? setModalOpen(true) : handleCloseModal()
+        }
+      >
+        <DialogContent className="sm:max-w-md border-0 p-0 overflow-hidden shadow-xl">
+          <div
+            onMouseEnter={handleModalMouseEnter}
+            onMouseLeave={handleModalMouseLeave}
+            className="rounded-2xl border border-border/80 bg-card p-6 sm:p-8"
+          >
+            <DialogHeader className="space-y-4">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#0ea5e9]/10 ring-4 ring-[#0ea5e9]/20">
+                <CheckCircle2 className="h-10 w-10 text-[#0ea5e9]" strokeWidth={2.25} />
+              </div>
+              <DialogTitle className="text-center text-xl font-semibold tracking-tight">
+                Check Your Email
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-center text-[15px] leading-relaxed">
+                A confirmation link has been sent to
+                <br />
+                <strong className="break-all text-foreground font-medium">
+                  {pendingConfirmation?.email || "your email"}
+                </strong>
+                {emailSendStatus === "failed" && (
+                  <span className="mt-2 block text-amber-600 dark:text-amber-400 text-sm">
+                    The email could not be sent. You can resend it from the{" "}
+                    <Link href={routes.confirmEmail} className="underline font-medium">confirm email</Link> page.
+                  </span>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-6 flex flex-col items-center justify-center space-y-3">
+              {/* Resend Confirmation Email — commented out for now
+              <Button
+                onClick={handleResend}
+                disabled={resendLoading || !canResend}
+                variant="outline"
+                className="w-full max-w-[280px]"
+              >
+                {resendLoading ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Resending...
+                  </>
+                ) : canResend ? (
+                  "Resend Confirmation Email"
+                ) : (
+                  <>Resend in {resendCountdown}s</>
+                )}
+              </Button>
+              */}
+
+              <Button
+                variant="default"
+                onClick={handleCloseModal}
+                className="w-full max-w-[280px] bg-[#0ea5e9] hover:bg-[#0284c7] text-white font-medium"
+              >
+                OK, I&apos;ll check my email
+              </Button>
             </div>
-            <DialogTitle className="text-2xl text-center">Check Your Email</DialogTitle>
-            <DialogDescription className="text-base mt-3 text-center">
-              A confirmation link has been sent to
-              <br />
-              <strong className="text-foreground break-all">
-                {pendingConfirmation?.email || "your email"}
-              </strong>
-            </DialogDescription>
-          </DialogHeader>
 
-          <div className="mt-6 space-y-3 justify-center flex flex-col items-center">
-            <Button
-              onClick={handleResend}
-              disabled={resendLoading || !canResend}
-              variant="outline"
-              className="w-fit"
-            >
-              {resendLoading ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Resending...
-                </>
-              ) : canResend ? (
-                "Resend Confirmation Email"
-              ) : (
-                <>Resend in {resendCountdown}s</>
-              )}
-            </Button>
-
-            {/* <Button
-              onClick={() => setModalOpen(false)}
-              className="w-full"
-            >
-              OK, I'll check my email
-            </Button> */}
+            <p className="mt-6 text-center text-xs text-muted-foreground">
+              The confirmation link is valid for 24 hours.
+            </p>
           </div>
-
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            The confirmation link is valid for 24 hours.
-          </p>
         </DialogContent>
       </Dialog>
     </>

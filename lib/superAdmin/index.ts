@@ -1,21 +1,17 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { adminSupabase } from "../supabase/client";
+import { getServerAdminClient } from "../supabase/admin";
+import { routes } from "../routes";
 
 export async function deleteUser(userId: string) {
-
   try {
-    // 1. Delete from confirmation_link
-    const { error: linkError } = await adminSupabase
-      .from("confirmation_links")
-      .delete()
-      .eq("user_id", userId);
+    const admin = getServerAdminClient();
 
-    if (linkError) throw linkError;
+    // 1. Delete from confirmation_links (best-effort; may not exist or have no row)
+    await admin.from("confirmation_links").delete().eq("user_id", userId);
 
     // 2. Delete from profiles
-    const { error: profileError } = await adminSupabase
+    const { error: profileError } = await admin
       .from("profiles")
       .delete()
       .eq("id", userId);
@@ -23,11 +19,11 @@ export async function deleteUser(userId: string) {
     if (profileError) throw profileError;
 
     // 3. Delete the auth user
-    const { error: authError } = await adminSupabase.auth.admin.deleteUser(userId);
+    const { error: authError } = await admin.auth.admin.deleteUser(userId);
 
     if (authError) throw authError;
 
-    revalidatePath("/dashboard/super-admin/user-management");
+    revalidatePath(routes.superAdminUsers);
     return { success: true };
   } catch (error) {
     console.error("Error deleting user:", error);

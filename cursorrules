@@ -1,0 +1,994 @@
+# DiasporaBase - Cursor AI Rules (Bug Fixing & UI/UX Enhancement Mode)
+
+## Project Context
+DiasporaBase is an **EXISTING** platform connecting Agencies (who create projects), Volunteers (who work on projects for free), and Admins (who regulate the platform).
+
+**Tech Stack:**
+- Frontend: Next.js 14+ (App Router)
+- Language: TypeScript (strict mode)
+- Backend: Supabase (PostgreSQL, Auth, Storage, Realtime)
+- Styling: Tailwind CSS
+- Components: Shadcn
+
+
+## Current Focus
+🎯 **PRIMARY GOALS:**
+1. Fix bugs and errors in existing code
+2. Improve UI/UX across the application
+3. Enhance user experience for all three roles (Admin, Agency, Volunteer)
+4. Optimize performance and loading states
+5. Improve accessibility and responsive design
+
+⚠️ **IMPORTANT:** This is NOT a greenfield project. Preserve existing functionality while improving code quality and user experience.
+
+---
+
+## Bug Fixing Principles
+
+### 1. Identify Before Fixing
+When fixing bugs, ALWAYS:
+- Understand the root cause before making changes
+- Check if the bug affects other parts of the codebase
+- Verify the fix doesn't break existing functionality
+- Test the fix in different scenarios (edge cases)
+- Consider impact on all three user roles (Admin, Agency, Volunteer)
+
+### 2. Common Bug Patterns to Look For
+- **Uncaught errors:** Missing try-catch blocks around async operations
+- **Type errors:** Using `any` or incorrect types
+- **Null/undefined crashes:** Not handling null/undefined values
+- **Race conditions:** Multiple async operations causing inconsistent state
+- **Memory leaks:** Uncleared intervals, event listeners, subscriptions
+- **Infinite loops:** useEffect dependencies causing re-renders
+- **Auth issues:** Not checking authentication/authorization properly
+- **Data inconsistencies:** Not validating data before database operations
+
+### 3. Error Handling Improvements
+```typescript
+// ❌ BAD - No error handling
+const data = await supabase.from('projects').select('*')
+
+// ✅ GOOD - Proper error handling
+const { data, error } = await supabase.from('projects').select('*')
+if (error) {
+  console.error('Failed to fetch projects:', error)
+  return { success: false, error: 'Unable to load projects. Please try again.' }
+}
+```
+
+### 4. Loading State Fixes
+```typescript
+// ❌ BAD - No loading state
+const [data, setData] = useState(null)
+
+// ✅ GOOD - Proper loading state
+const [data, setData] = useState(null)
+const [isLoading, setIsLoading] = useState(true)
+const [error, setError] = useState(null)
+```
+
+---
+
+## UI/UX Enhancement Guidelines
+
+### 1. Visual Consistency
+- Use consistent spacing (Tailwind's spacing scale)
+- Maintain consistent button styles across the app
+- Use the same color scheme throughout
+- Ensure consistent typography (font sizes, weights)
+- Align elements properly (use Tailwind's flex/grid)
+
+### 2. Responsive Design Fixes
+```typescript
+// ALWAYS test on these breakpoints:
+- Mobile: 375px (iPhone SE)
+- Tablet: 768px (iPad)
+- Desktop: 1024px, 1440px
+
+// Use Tailwind responsive utilities
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+```
+
+### 3. Loading States (Critical for UX)
+EVERY data fetch MUST show:
+- Skeleton loaders (not just spinners)
+- Disabled states for buttons during operations
+- Progress indicators for multi-step processes
+- Optimistic UI updates where appropriate
+
+```typescript
+// ✅ GOOD - Skeleton loader
+{isLoading ? (
+  <div className="animate-pulse space-y-4">
+    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+  </div>
+) : (
+  <ActualContent data={data} />
+)}
+```
+
+### 4. Error States (User-Friendly)
+```typescript
+// ❌ BAD - Technical error
+"Error: PGRST116"
+
+// ✅ GOOD - User-friendly error
+"We couldn't load your projects. Please check your connection and try again."
+
+// ALWAYS provide:
+// - Clear error message
+// - Retry button
+// - Fallback UI
+```
+
+### 5. Empty States
+```typescript
+// ✅ GOOD - Helpful empty state
+{projects.length === 0 ? (
+  <div className="text-center py-12">
+    <h3 className="text-lg font-semibold">No projects yet</h3>
+    <p className="text-gray-600 mt-2">Create your first project to get started</p>
+    <Button onClick={handleCreate} className="mt-4">Create Project</Button>
+  </div>
+) : (
+  <ProjectList projects={projects} />
+)}
+```
+
+### 6. Form UX Improvements
+- Show validation errors inline (next to the field)
+- Clear error when user starts typing
+- Disable submit button while submitting
+- Show success message after submission
+- Auto-focus first field with error
+- Use proper input types (email, tel, url)
+- Add placeholder text as examples
+
+```typescript
+// ✅ GOOD - Form with validation
+<input
+  type="email"
+  placeholder="you@example.com"
+  className={cn(
+    "w-full px-4 py-2 border rounded",
+    errors.email ? "border-red-500" : "border-gray-300"
+  )}
+  aria-invalid={errors.email ? "true" : "false"}
+  aria-describedby={errors.email ? "email-error" : undefined}
+/>
+{errors.email && (
+  <p id="email-error" className="text-red-500 text-sm mt-1">
+    {errors.email}
+  </p>
+)}
+```
+
+### 7. Interactive Feedback
+- Add hover states to clickable elements
+- Show active/selected states clearly
+- Use transitions for smooth interactions
+- Provide haptic feedback (visual changes on click)
+- Show confirmation for destructive actions
+
+```typescript
+// ✅ GOOD - Interactive button
+<button className="px-4 py-2 bg-blue-600 text-white rounded 
+  hover:bg-blue-700 
+  active:scale-95
+  disabled:opacity-50 disabled:cursor-not-allowed
+  transition-all duration-200">
+  Submit
+</button>
+```
+
+### 8. Accessibility Improvements
+- Add ARIA labels to interactive elements
+- Ensure keyboard navigation works
+- Use semantic HTML (button, nav, main, article)
+- Maintain color contrast (WCAG AA minimum)
+- Add alt text to all images
+- Use proper heading hierarchy (h1 → h2 → h3)
+
+```typescript
+// ✅ GOOD - Accessible button
+<button
+  aria-label="Delete project"
+  onClick={handleDelete}
+  className="..."
+>
+  <TrashIcon className="w-5 h-5" />
+  <span className="sr-only">Delete</span>
+</button>
+```
+
+---
+
+## Core Principles
+
+### 1. Backward Compatibility
+- NEVER break existing functionality
+- Test changes against existing user workflows
+- Preserve database schema unless absolutely necessary
+- Keep existing API contracts intact
+- Maintain existing component props/interfaces
+
+### 2. Incremental Improvements
+- Make small, focused changes
+- Fix one bug at a time
+- Improve one component/page at a time
+- Test thoroughly before moving to the next
+- Document changes for team awareness
+
+### 3. TypeScript Strictness
+- Fix `any` types → use proper types
+- Add missing type definitions
+- Use type guards for runtime safety
+- Export types for reusability
+- Fix type errors, don't suppress them with `@ts-ignore`
+
+```typescript
+// ❌ BAD
+const user: any = await getUser()
+
+// ✅ GOOD
+interface User {
+  id: string
+  email: string
+  role: 'admin' | 'agency' | 'volunteer'
+}
+const user: User | null = await getUser()
+```
+
+### 4. Code Quality Over Speed
+- Write clean, maintainable code
+- Add comments for complex logic
+- Extract repeated code into utilities
+- Use meaningful variable names
+- Keep functions small and focused
+
+---
+
+## Performance Optimization
+
+### 1. Identify Performance Issues
+Common performance problems to fix:
+- **Large bundle sizes:** Dynamic imports for heavy components
+- **Unnecessary re-renders:** Use React.memo, useMemo, useCallback
+- **Slow queries:** Add database indexes, optimize queries
+- **Unoptimized images:** Use Next.js Image component
+- **Too many requests:** Batch requests, implement caching
+- **Memory leaks:** Clean up subscriptions, intervals, listeners
+
+### 2. Image Optimization
+```typescript
+// ❌ BAD
+<img src="/logo.png" alt="Logo" />
+
+// ✅ GOOD
+import Image from 'next/image'
+<Image 
+  src="/logo.png" 
+  alt="DiasporaBase Logo" 
+  width={200} 
+  height={50}
+  priority={isAboveFold}
+  placeholder="blur"
+/>
+```
+
+### 3. Code Splitting
+```typescript
+// ❌ BAD - Heavy modal loaded upfront
+import ProjectModal from './ProjectModal'
+
+// ✅ GOOD - Lazy load modal
+const ProjectModal = dynamic(() => import('./ProjectModal'), {
+  loading: () => <div>Loading...</div>
+})
+```
+
+### 4. Database Query Optimization
+```typescript
+// ❌ BAD - Fetching everything
+const { data } = await supabase.from('projects').select('*')
+
+// ✅ GOOD - Fetch only needed columns
+const { data } = await supabase
+  .from('projects')
+  .select('id, title, description, agency_id, created_at')
+  .order('created_at', { ascending: false })
+  .limit(20)
+```
+
+### 5. Caching Strategy
+```typescript
+// For data that doesn't change often
+export const revalidate = 3600 // Revalidate every hour
+
+// For real-time data
+export const dynamic = 'force-dynamic'
+
+// Use React Cache for duplicate requests
+import { cache } from 'react'
+export const getProjects = cache(async () => {
+  // fetch projects
+})
+```
+
+---
+
+## Role-Specific UX Improvements
+
+### Admin Experience
+- **Dashboard:** Clear metrics and analytics
+- **Moderation:** Easy approve/reject workflows
+- **User Management:** Bulk actions, filters, search
+- **Activity Logs:** Clear audit trail
+- **Reports:** Export capabilities
+
+### Agency Experience
+- **Project Creation:** Step-by-step wizard with validation
+- **Volunteer Management:** Clear application status
+- **Project Dashboard:** Overview of all projects
+- **Communication:** Easy messaging with volunteers
+- **Analytics:** Project performance metrics
+
+### Volunteer Experience
+- **Project Discovery:** Effective search and filters
+- **Application Process:** Simple, clear workflow
+- **Profile Management:** Easy to update skills/interests
+- **Notifications:** Clear updates on applications
+- **Project Tracking:** See active and past projects
+
+---
+
+## Common Bugs & Fixes
+
+### 1. Authentication Bugs
+```typescript
+// ❌ BAD - Not handling auth properly
+const user = await supabase.auth.getUser()
+// Assumes user exists
+
+// ✅ GOOD - Proper auth handling
+const { data: { user }, error } = await supabase.auth.getUser()
+if (error || !user) {
+  redirect('/login')
+}
+```
+
+### 2. State Management Bugs
+```typescript
+// ❌ BAD - Stale closures
+useEffect(() => {
+  const interval = setInterval(() => {
+    console.log(count) // Always logs initial count
+  }, 1000)
+  return () => clearInterval(interval)
+}, []) // Missing dependency
+
+// ✅ GOOD - Proper dependencies
+useEffect(() => {
+  const interval = setInterval(() => {
+    console.log(count)
+  }, 1000)
+  return () => clearInterval(interval)
+}, [count])
+```
+
+### 3. Data Fetching Bugs
+```typescript
+// ❌ BAD - Not handling edge cases
+const projects = data.filter(p => p.agency_id === user.id)
+
+// ✅ GOOD - Handle null/undefined
+const projects = data?.filter(p => p.agency_id === user?.id) ?? []
+```
+
+### 4. Form Submission Bugs
+```typescript
+// ❌ BAD - No loading state, no error handling
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  await createProject(formData)
+}
+
+// ✅ GOOD - Proper handling
+const [isSubmitting, setIsSubmitting] = useState(false)
+const [error, setError] = useState(null)
+
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  setIsSubmitting(true)
+  setError(null)
+  
+  try {
+    const result = await createProject(formData)
+    if (result.error) {
+      setError(result.error)
+      return
+    }
+    // Success handling
+    toast.success('Project created successfully!')
+    router.push('/agency/projects')
+  } catch (err) {
+    setError('Something went wrong. Please try again.')
+  } finally {
+    setIsSubmitting(false)
+  }
+}
+```
+
+### 5. Memory Leak Fixes
+```typescript
+// ❌ BAD - Subscription not cleaned up
+useEffect(() => {
+  const subscription = supabase
+    .channel('projects')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, 
+      (payload) => setProjects(prev => [...prev, payload.new])
+    )
+    .subscribe()
+}, [])
+
+// ✅ GOOD - Cleanup subscription
+useEffect(() => {
+  const subscription = supabase
+    .channel('projects')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, 
+      (payload) => setProjects(prev => [...prev, payload.new])
+    )
+    .subscribe()
+
+  return () => {
+    subscription.unsubscribe()
+  }
+}, [])
+```
+
+---
+
+## UI Component Improvements
+
+### 1. Button States
+```typescript
+// ✅ Complete button component
+<button
+  onClick={handleClick}
+  disabled={isLoading || disabled}
+  className={cn(
+    "px-4 py-2 rounded font-medium transition-all",
+    "bg-blue-600 text-white",
+    "hover:bg-blue-700 hover:shadow-md",
+    "active:scale-95",
+    "disabled:opacity-50 disabled:cursor-not-allowed",
+    "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+  )}
+>
+  {isLoading ? (
+    <><Spinner className="w-4 h-4 mr-2" /> Loading...</>
+  ) : (
+    children
+  )}
+</button>
+```
+
+### 2. Input Fields
+```typescript
+// ✅ Complete input component
+<div className="space-y-1">
+  <label htmlFor={id} className="block text-sm font-medium text-gray-700">
+    {label} {required && <span className="text-red-500">*</span>}
+  </label>
+  <input
+    id={id}
+    type={type}
+    value={value}
+    onChange={onChange}
+    placeholder={placeholder}
+    required={required}
+    disabled={disabled}
+    className={cn(
+      "w-full px-3 py-2 border rounded-md",
+      "focus:outline-none focus:ring-2 focus:ring-blue-500",
+      error ? "border-red-500" : "border-gray-300",
+      disabled && "bg-gray-100 cursor-not-allowed"
+    )}
+    aria-invalid={error ? "true" : "false"}
+    aria-describedby={error ? `${id}-error` : undefined}
+  />
+  {error && (
+    <p id={`${id}-error`} className="text-sm text-red-500">
+      {error}
+    </p>
+  )}
+  {helperText && !error && (
+    <p className="text-sm text-gray-500">{helperText}</p>
+  )}
+</div>
+```
+
+### 3. Card Components
+```typescript
+// ✅ Improved card with hover state
+<div className={cn(
+  "p-6 bg-white rounded-lg border border-gray-200",
+  "hover:shadow-lg hover:border-blue-300",
+  "transition-all duration-200",
+  "cursor-pointer"
+)} onClick={onClick}>
+  <h3 className="text-lg font-semibold mb-2">{title}</h3>
+  <p className="text-gray-600">{description}</p>
+</div>
+```
+
+### 4. Modal/Dialog
+```typescript
+// ✅ Accessible modal
+<Dialog open={isOpen} onOpenChange={setIsOpen}>
+  <DialogContent className="sm:max-w-md">
+    <DialogHeader>
+      <DialogTitle>{title}</DialogTitle>
+      <DialogDescription>{description}</DialogDescription>
+    </DialogHeader>
+    {children}
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setIsOpen(false)}>
+        Cancel
+      </Button>
+      <Button onClick={handleConfirm} disabled={isLoading}>
+        {isLoading ? 'Processing...' : 'Confirm'}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+---
+
+## Data Validation & Security
+
+### 1. Input Validation (Client + Server)
+```typescript
+import { z } from 'zod'
+
+// Define schema
+const projectSchema = z.object({
+  title: z.string().min(5, 'Title must be at least 5 characters'),
+  description: z.string().min(20, 'Description must be at least 20 characters'),
+  category: z.enum(['education', 'health', 'environment', 'community']),
+  deadline: z.date().min(new Date(), 'Deadline must be in the future'),
+})
+
+// Validate on client
+const handleSubmit = (data) => {
+  const result = projectSchema.safeParse(data)
+  if (!result.success) {
+    setErrors(result.error.flatten().fieldErrors)
+    return
+  }
+  // Submit valid data
+}
+
+// ALWAYS validate on server too
+'use server'
+export async function createProject(formData) {
+  const parsed = projectSchema.safeParse(formData)
+  if (!parsed.success) {
+    return { error: 'Invalid data' }
+  }
+  // Process valid data
+}
+```
+
+### 2. Authorization Checks
+```typescript
+// ✅ Check authorization before operations
+export async function updateProject(projectId: string, updates: any) {
+  const user = await getCurrentUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  // Verify user owns this project
+  const { data: project } = await supabase
+    .from('projects')
+    .select('agency_id')
+    .eq('id', projectId)
+    .single()
+
+  if (project?.agency_id !== user.id) {
+    return { error: 'You do not have permission to edit this project' }
+  }
+
+  // Proceed with update
+}
+```
+
+---
+
+## Testing & Debugging
+
+### 1. Console Logs (Temporary)
+```typescript
+// Use descriptive logs during debugging
+console.log('🔍 [ProjectList] Fetching projects for agency:', agencyId)
+console.log('✅ [ProjectList] Projects loaded:', projects.length)
+console.error('❌ [ProjectList] Failed to load projects:', error)
+
+// Remove before committing to production
+```
+
+### 2. Edge Case Testing
+Test these scenarios:
+- Empty states (no data)
+- Loading states
+- Error states
+- Long text/content overflow
+- Special characters in inputs
+- Large datasets (100+ items)
+- Slow network conditions
+- Multiple rapid clicks
+- Browser back/forward
+- Page refresh mid-operation
+
+### 3. Browser DevTools
+- Use React DevTools to inspect component state
+- Use Network tab to check API calls
+- Use Console for error tracking
+- Use Performance tab for optimization
+- Use Lighthouse for accessibility/performance audits
+
+---
+
+## Mobile Responsiveness
+
+### 1. Mobile-First Approach
+```typescript
+// ✅ GOOD - Mobile first
+<div className="
+  flex flex-col space-y-4        // Mobile: stack vertically
+  md:flex-row md:space-y-0 md:space-x-4  // Tablet+: horizontal
+  lg:space-x-6                   // Desktop: more space
+">
+
+// Test on actual devices, not just browser resize
+```
+
+### 2. Touch Targets
+```typescript
+// ✅ Minimum 44x44px touch targets
+<button className="min-h-[44px] min-w-[44px] p-3">
+  <Icon className="w-5 h-5" />
+</button>
+```
+
+### 3. Mobile Navigation
+```typescript
+// ✅ Hamburger menu for mobile, full nav for desktop
+<nav className="hidden md:flex space-x-4">
+  {/* Desktop nav */}
+</nav>
+<MobileMenu className="md:hidden" />
+```
+
+### 4. Mobile Forms
+```typescript
+// ✅ Mobile-friendly inputs
+<input
+  type="email"
+  inputMode="email"  // Shows email keyboard on mobile
+  autoComplete="email"
+  className="text-base"  // Prevents zoom on iOS (min 16px)
+/>
+```
+
+---
+
+## Notification & Feedback Systems
+
+### 1. Toast Notifications
+```typescript
+// ✅ Use toast for feedback
+import { toast } from 'sonner' // or your toast library
+
+// Success
+toast.success('Project created successfully!')
+
+// Error
+toast.error('Failed to create project. Please try again.')
+
+// Loading
+const toastId = toast.loading('Creating project...')
+// Later...
+toast.success('Project created!', { id: toastId })
+```
+
+### 2. Confirmation Dialogs
+```typescript
+// ✅ Confirm destructive actions
+const handleDelete = async () => {
+  const confirmed = await confirm({
+    title: 'Delete Project?',
+    description: 'This action cannot be undone.',
+    confirmText: 'Delete',
+    cancelText: 'Cancel'
+  })
+  
+  if (confirmed) {
+    // Proceed with deletion
+  }
+}
+```
+
+### 3. Progress Indicators
+```typescript
+// ✅ Multi-step process with progress
+<div className="flex items-center justify-between mb-8">
+  {steps.map((step, index) => (
+    <div key={step} className={cn(
+      "flex items-center",
+      index <= currentStep ? "text-blue-600" : "text-gray-400"
+    )}>
+      <div className={cn(
+        "w-8 h-8 rounded-full flex items-center justify-center",
+        index <= currentStep ? "bg-blue-600 text-white" : "bg-gray-200"
+      )}>
+        {index + 1}
+      </div>
+      <span className="ml-2">{step}</span>
+    </div>
+  ))}
+</div>
+```
+
+---
+
+## Search & Filter Improvements
+
+### 1. Debounced Search
+```typescript
+import { useDebouncedValue } from '@/hooks/useDebounce'
+
+const [searchQuery, setSearchQuery] = useState('')
+const debouncedQuery = useDebouncedValue(searchQuery, 500)
+
+useEffect(() => {
+  // Only search after user stops typing
+  if (debouncedQuery) {
+    searchProjects(debouncedQuery)
+  }
+}, [debouncedQuery])
+```
+
+### 2. Filter UI
+```typescript
+// ✅ Clear, accessible filters
+<div className="flex flex-wrap gap-4">
+  <select
+    value={category}
+    onChange={(e) => setCategory(e.target.value)}
+    className="px-4 py-2 border rounded"
+    aria-label="Filter by category"
+  >
+    <option value="">All Categories</option>
+    <option value="education">Education</option>
+    <option value="health">Health</option>
+  </select>
+  
+  {/* Clear filters button */}
+  {(category || searchQuery) && (
+    <button
+      onClick={clearFilters}
+      className="text-sm text-gray-600 hover:text-gray-900"
+    >
+      Clear filters
+    </button>
+  )}
+</div>
+```
+
+### 3. Results Count
+```typescript
+// ✅ Show results count
+<p className="text-sm text-gray-600 mb-4">
+  Showing {filteredProjects.length} of {totalProjects} projects
+</p>
+```
+
+---
+
+## Data Tables & Lists
+
+### 1. Sortable Tables
+```typescript
+const [sortBy, setSortBy] = useState<'title' | 'date'>('date')
+const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
+const sortedData = [...data].sort((a, b) => {
+  if (sortOrder === 'asc') {
+    return a[sortBy] > b[sortBy] ? 1 : -1
+  }
+  return a[sortBy] < b[sortBy] ? 1 : -1
+})
+```
+
+### 2. Pagination
+```typescript
+const ITEMS_PER_PAGE = 20
+const [currentPage, setCurrentPage] = useState(1)
+
+const paginatedData = data.slice(
+  (currentPage - 1) * ITEMS_PER_PAGE,
+  currentPage * ITEMS_PER_PAGE
+)
+
+const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE)
+```
+
+### 3. Infinite Scroll (Alternative)
+```typescript
+import { useInView } from 'react-intersection-observer'
+
+const { ref, inView } = useInView()
+
+useEffect(() => {
+  if (inView && hasMore && !isLoading) {
+    loadMore()
+  }
+}, [inView, hasMore, isLoading])
+
+return (
+  <>
+    {items.map(item => <Item key={item.id} {...item} />)}
+    <div ref={ref} className="h-10" />
+    {isLoading && <Spinner />}
+  </>
+)
+```
+
+---
+
+## File Upload Improvements
+
+### 1. Drag & Drop
+```typescript
+const [isDragging, setIsDragging] = useState(false)
+
+const handleDrop = (e: React.DragEvent) => {
+  e.preventDefault()
+  setIsDragging(false)
+  
+  const files = Array.from(e.dataTransfer.files)
+  handleFiles(files)
+}
+
+return (
+  <div
+    onDrop={handleDrop}
+    onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+    onDragLeave={() => setIsDragging(false)}
+    className={cn(
+      "border-2 border-dashed rounded-lg p-8 text-center",
+      isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300"
+    )}
+  >
+    <input
+      type="file"
+      onChange={(e) => handleFiles(Array.from(e.target.files || []))}
+      className="hidden"
+      id="file-upload"
+    />
+    <label htmlFor="file-upload" className="cursor-pointer">
+      {isDragging ? 'Drop files here' : 'Click or drag files to upload'}
+    </label>
+  </div>
+)
+```
+
+### 2. Upload Progress
+```typescript
+const [uploadProgress, setUploadProgress] = useState(0)
+
+const handleUpload = async (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  await fetch('/api/upload', {
+    method: 'POST',
+    body: formData,
+  }).then(() => {
+    setUploadProgress(100)
+    toast.success('File uploaded successfully!')
+  })
+}
+
+// Show progress bar
+{uploadProgress > 0 && uploadProgress < 100 && (
+  <div className="w-full bg-gray-200 rounded-full h-2">
+    <div
+      className="bg-blue-600 h-2 rounded-full transition-all"
+      style={{ width: `${uploadProgress}%` }}
+    />
+  </div>
+)}
+```
+
+---
+
+## When Modifying Code
+
+### ALWAYS:
+1. ✅ Read existing code before changing it
+2. ✅ Understand the current behavior
+3. ✅ Preserve existing functionality unless it's buggy
+4. ✅ Test after making changes
+5. ✅ Add comments explaining why you made changes
+6. ✅ Update related types/interfaces
+7. ✅ Check if changes affect other components
+8. ✅ Maintain consistent code style with the rest of the file
+
+### NEVER:
+1. ❌ Delete code without understanding what it does
+2. ❌ Make breaking changes without migration plan
+3. ❌ Ignore TypeScript errors
+4. ❌ Skip testing edge cases
+5. ❌ Introduce new dependencies without justification
+6. ❌ Copy-paste code without adapting it
+7. ❌ Leave commented-out code
+8. ❌ Use `@ts-ignore` to bypass type errors
+
+---
+
+## Code Review Checklist
+
+Before considering code "done":
+- [ ] TypeScript compiles without errors
+- [ ] No console errors in browser
+- [ ] All loading states work
+- [ ] All error states work
+- [ ] Forms validate correctly
+- [ ] Mobile responsive
+- [ ] Keyboard accessible
+- [ ] Proper error messages shown to users
+- [ ] Data persists correctly
+- [ ] Page refreshes don't break state
+- [ ] User feedback provided for all actions
+- [ ] Code is DRY (no unnecessary repetition)
+- [ ] Naming is clear and consistent
+- [ ] Comments added where needed
+
+---
+
+## Priority When Improving Code
+
+1. **Fix Critical Bugs** (app crashes, data loss, security issues)
+2. **Fix UX Bugs** (confusing flows, missing feedback, broken forms)
+3. **Improve Performance** (slow loads, laggy interactions)
+4. **Enhance Accessibility** (keyboard nav, screen readers, contrast)
+5. **Polish UI** (spacing, alignment, consistency)
+6. **Code Quality** (types, organization, documentation)
+7. **Nice-to-Haves** (animations, advanced features)
+
+---
+
+## When Suggesting Improvements
+
+Always explain:
+1. **What** you're improving
+2. **Why** it's better
+3. **What** might break (if anything)
+4. **How** to test the improvement
+
+Prefer small, incremental improvements over large rewrites.
+
+---
+
+## Remember
+
+This is an **EXISTING PROJECT**. Your goal is to:
+- Fix bugs systematically
+- Improve UX incrementally
+- Enhance code quality progressively
+- Not rebuild from scratch
+
+Every change should make the app better for Admins, Agencies, and Volunteers while maintaining stability.

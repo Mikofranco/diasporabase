@@ -20,7 +20,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CalendarIcon, User } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, CalendarIcon, Pencil, X } from "lucide-react";
 import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
 import { LocationSelects } from "@/components/location-selects";
 import { Calendar } from "@/components/ui/calendar";
@@ -34,8 +36,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, getSkillsets, getUserLocation } from "@/lib/utils";
 import { toast } from "sonner";
 import LocationSelector from "@/components/location-selector";
-import BackButton from "@/components/back-button";
-import { expertiseData } from "@/data/expertise";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
+
+function getInitials(name: string | null): string {
+  if (!name?.trim()) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
 
 export interface ProfileData {
   full_name: string | null;
@@ -55,6 +63,7 @@ export interface ProfileData {
   volunteer_states: string[] | null;
   volunteer_lgas: string[] | null;
   profile_picture: string | null;
+  anonymous: boolean | null;
 }
 
 export interface SelectedData {
@@ -67,9 +76,71 @@ export interface LocationSelectorHandle {
   setSelected: (data: SelectedData) => void;
 }
 
+function ProfileSkeleton() {
+  return (
+    <Card className="w-full max-w-7xl mx-auto border-gray-200 rounded-xl shadow-sm">
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </div>
+        <Skeleton className="h-10 w-24 shrink-0 rounded-md" />
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Manage your personal block */}
+        <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-6 space-y-6">
+          <Skeleton className="h-5 w-48" />
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <Skeleton className="h-24 w-24 rounded-full shrink-0" />
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* Skills & availability block */}
+        <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-6 space-y-4">
+          <Skeleton className="h-5 w-40" />
+          <div className="flex flex-wrap gap-2">
+            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <Skeleton key={i} className="h-8 w-24 rounded-full" />
+            ))}
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-28" />
+            <div className="flex gap-4">
+              <Skeleton className="h-10 w-24" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </div>
+        </div>
+        {/* Experience & preferences block */}
+        <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-6 space-y-4">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-24 w-full rounded-md" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-44" />
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-10 w-28" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function VolunteerProfile() {
+  const { getLabel } = useSkillLabels();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{
@@ -138,7 +209,7 @@ export default function VolunteerProfile() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "full_name, email, phone, date_of_birth, address, skills, availability, experience, residence_country, residence_state, origin_country, origin_state, origin_lga, volunteer_countries, volunteer_states, volunteer_lgas, profile_picture"
+          "full_name, email, phone, date_of_birth, address, skills, availability, experience, residence_country, residence_state, origin_country, origin_state, origin_lga, volunteer_countries, volunteer_states, volunteer_lgas, profile_picture, anonymous"
         )
         .eq("id", user.id)
         .single();
@@ -157,6 +228,7 @@ export default function VolunteerProfile() {
         volunteer_states: data.volunteer_states || [],
         volunteer_lgas: data.volunteer_lgas || [],
         profile_picture: data.profile_picture || null,
+        anonymous: data.anonymous ?? false,
       };
 
       setProfile(profileData);
@@ -212,16 +284,15 @@ export default function VolunteerProfile() {
     fetchProfileAndLocation();
   }, [supabase]);
 
-  // Sync saved volunteer locations into LocationSelector AFTER ref is ready
+  // Sync saved volunteer locations into LocationSelector when ref is ready (e.g. when entering edit mode)
   useEffect(() => {
-    if (locationSelectorRef.current && profile) {
-      locationSelectorRef.current.setSelected({
-        selectedCountries: profile.volunteer_countries || [],
-        selectedStates: profile.volunteer_states || [],
-        selectedLgas: profile.volunteer_lgas || [],
-      });
-    }
-  }, [profile]);
+    if (!profile || !locationSelectorRef.current) return;
+    locationSelectorRef.current.setSelected({
+      selectedCountries: profile.volunteer_countries || [],
+      selectedStates: profile.volunteer_states || [],
+      selectedLgas: profile.volunteer_lgas || [],
+    });
+  }, [profile, isEditMode]);
 
   // Handle image upload
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -305,7 +376,15 @@ export default function VolunteerProfile() {
       return;
     }
 
-    if (selectedLocations.selectedCountries.length === 0) {
+    // Use selectedLocations from state, or fall back to profile's saved locations (e.g. when LocationSelector hasn't synced yet)
+    const locationsToSave = selectedLocations.selectedCountries.length > 0
+      ? selectedLocations
+      : {
+          selectedCountries: profile.volunteer_countries || [],
+          selectedStates: profile.volunteer_states || [],
+          selectedLgas: profile.volunteer_lgas || [],
+        };
+    if (locationsToSave.selectedCountries.length === 0) {
       toast.error("Please select at least one volunteer location.");
       setSubmitting(false);
       return;
@@ -364,19 +443,20 @@ export default function VolunteerProfile() {
         origin_state: profile.origin_state,
         origin_lga: profile.origin_lga,
         volunteer_countries:
-          selectedLocations.selectedCountries.length > 0
-            ? selectedLocations.selectedCountries
+          locationsToSave.selectedCountries.length > 0
+            ? locationsToSave.selectedCountries
             : null,
         volunteer_states:
-          selectedLocations.selectedStates.length > 0
-            ? selectedLocations.selectedStates
+          locationsToSave.selectedStates.length > 0
+            ? locationsToSave.selectedStates
             : null,
         volunteer_lgas:
-          selectedLocations.selectedLgas.length > 0
-            ? selectedLocations.selectedLgas
+          locationsToSave.selectedLgas.length > 0
+            ? locationsToSave.selectedLgas
             : null,
         email: user.email,
         profile_picture: profilePictureUrl,
+        anonymous: profile.anonymous ?? false,
       })
       .eq("id", user.id);
 
@@ -387,6 +467,7 @@ export default function VolunteerProfile() {
       toast.success("Profile updated successfully!");
       router.refresh();
       setMessage({ text: "Profile updated successfully!", isError: false });
+      setIsEditMode(false);
     }
     setSubmitting(false);
   };
@@ -434,19 +515,7 @@ export default function VolunteerProfile() {
   }, [selectedLocations]);
 
   if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm p-6 h-[80vh]">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <h3 className="text-2xl font-bold text-gray-900">
-            Loading Profile...
-          </h3>
-          <p className="text-sm text-gray-500">
-            Please wait while we fetch your data.
-          </p>
-        </div>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (!profile) {
@@ -469,412 +538,418 @@ export default function VolunteerProfile() {
       .filter(Boolean)
       .join(", ") || "Unknown";
 
+  const isAnonymous = profile.anonymous === true;
+
   return (
     <Card className="w-full max-w-7xl mx-auto border-gray-200 rounded-xl shadow-sm">
-      <style>
-        {`@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap'); * { font-family: 'Roboto', sans-serif; }`}
-      </style>
-      <CardHeader className="flex flex-row items-start justify-between">
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div className="flex-1">
           <CardTitle className="text-2xl font-semibold text-gray-900">
             Volunteer Profile
           </CardTitle>
           <CardDescription className="text-gray-600 mt-1">
-            Manage your personal information, skills, and volunteer preferences.
+            {isEditMode
+              ? "Edit your personal information, skills, and volunteer preferences."
+              : "View your personal information, skills, and volunteer preferences."}
           </CardDescription>
         </div>
-
-        {/* Back Button aligned to the right */}
-        <BackButton className="ml-4" />
+        <Button
+          type="button"
+          variant={isEditMode ? "outline" : "default"}
+          className={cn(
+            "shrink-0",
+            !isEditMode && "action-btn border-0 text-white hover:opacity-90",
+            isEditMode && "border-diaspora-blue text-diaspora-blue hover:bg-diaspora-blue/10"
+          )}
+          onClick={() => setIsEditMode((prev) => !prev)}
+          aria-label={isEditMode ? "Cancel editing" : "Edit profile"}
+        >
+          {isEditMode ? (
+            <>
+              <X className="mr-2 h-4 w-4" />
+              Cancel
+            </>
+          ) : (
+            <>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </>
+          )}
+        </Button>
       </CardHeader>
 
       <CardContent>
-        <form
-          onSubmit={handleSubmit}
-          className="sm:flex flex-row-reverse gap-5"
-          aria-live="polite"
-        >
-          {/* Profile Picture */}
-          <div className="grid gap-2 h-fit border p-4 rounded-lg shadow-md bg-blue-50">
-            <Label
-              htmlFor="profile-picture"
-              className="text-base font-medium text-gray-800 text-center"
-            >
-              {profile.full_name}
-            </Label>
-            <div className="gap-4 flex flex-col items-center">
-              <div className="relative h-24 w-24 rounded-full overflow-hidden bg-gray-100">
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Profile picture"
-                    className="h-full w-full object-cover"
-                  />
+        <form onSubmit={handleSubmit} className="space-y-6" aria-live="polite">
+          {/* Section: Manage your personal — avatar at top, then fields + anonymous */}
+          <section className="rounded-xl border border-gray-200 bg-gray-50/50 p-6 space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Manage your personal information
+            </h3>
+            <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
+              {/* Avatar — top of section */}
+              <div className="flex flex-col items-center gap-3 shrink-0">
+                <Avatar className="h-24 w-24 border-2 border-diaspora-blue/20 shadow-md bg-diaspora-blue/5">
+                  {(imagePreview || profile.profile_picture) ? (
+                    <AvatarImage
+                      src={imagePreview || profile.profile_picture || undefined}
+                      alt="Profile"
+                    />
+                  ) : null}
+                  <AvatarFallback className="text-2xl bg-gradient-to-r from-diaspora-blue to-diaspora-darkBlue text-white">
+                    {getInitials(profile.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+                {isEditMode && (
+                  <div className="grid gap-1 text-center">
+                    <Label
+                      htmlFor="profile-picture"
+                      className="text-sm font-medium text-gray-700 cursor-pointer"
+                    >
+                      Change photo
+                    </Label>
+                    <Input
+                      id="profile-picture"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="text-sm text-gray-600 max-w-[140px] mx-auto"
+                      aria-label="Upload profile picture"
+                    />
+                    <p className="text-xs text-gray-500">JPEG, PNG, max 5MB</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {isEditMode ? (
+                  <>
+                    <div className="grid gap-2">
+                      <Label htmlFor="full-name" className="text-sm font-medium text-gray-800">Full Name</Label>
+                      <Input
+                        id="full-name"
+                        type="text"
+                        placeholder="John Doe"
+                        value={profile.full_name || ""}
+                        onChange={(e) => handleInputChange("full_name", e.target.value)}
+                        required
+                        className="border-gray-300 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="email" className="text-sm font-medium text-gray-800">Email</Label>
+                      <Input id="email" type="email" value={profile.email || ""} disabled className="bg-gray-100" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="phone" className="text-sm font-medium text-gray-800">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={profile.phone || ""}
+                        onChange={(e) => handleInputChange("phone", e.target.value)}
+                        className="border-gray-300 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="date-of-birth" className="text-sm font-medium text-gray-800">Date of Birth</Label>
+                      <Input
+                        id="date-of-birth"
+                        type="date"
+                        value={profile.date_of_birth || ""}
+                        onChange={(e) => handleInputChange("date_of_birth", e.target.value)}
+                        className="border-gray-300 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="grid gap-2 md:col-span-2">
+                      <Label htmlFor="address" className="text-sm font-medium text-gray-800">Address</Label>
+                      <Input
+                        id="address"
+                        type="text"
+                        placeholder="123 Main St, City, State, ZIP"
+                        value={profile.address || ""}
+                        onChange={(e) => handleInputChange("address", e.target.value)}
+                        className="border-gray-300 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="grid gap-2 md:col-span-2">
+                      <Label className="text-sm font-medium text-gray-800">Current location</Label>
+                      <Input type="text" value={locationDisplay} disabled className="bg-gray-100" />
+                    </div>
+                  </>
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <User className="h-12 w-12 text-gray-400" />
-                  </div>
-                )}
-              </div>
-              <div className="grid gap-2">
-                <Input
-                  id="profile-picture"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="text-gray-600"
-                  aria-label="Upload profile picture"
-                />
-                <p className="text-sm text-gray-500">
-                  Upload a profile picture (JPEG, PNG, max 5MB)
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 grid gap-4">
-            {/* Name & Email */}
-            <div className="border p-4 rounded-lg shadow-md grid gap-1 md:gap-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="full-name"
-                    className="text-base font-medium text-gray-800"
-                  >
-                    Full Name
-                  </Label>
-                  <Input
-                    id="full-name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={profile.full_name || ""}
-                    onChange={(e) =>
-                      handleInputChange("full_name", e.target.value)
-                    }
-                    required
-                    aria-required="true"
-                    className="border-gray-300 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="email"
-                    className="text-base font-medium text-gray-800"
-                  >
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder={userEmail || ""}
-                    value={profile.email || ""}
-                    disabled
-                    className="bg-gray-100"
-                    aria-label="User email (disabled)"
-                  />
-                </div>
-              </div>
-
-              {/* Phone & DOB */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="phone"
-                    className="text-base font-medium text-gray-800"
-                  >
-                    Phone Number
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder={userPhone || ""}
-                    value={profile.phone || ""}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    className="border-gray-300 focus:ring-blue-500"
-                    aria-label="Phone number"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="date-of-birth"
-                    className="text-base font-medium text-gray-800"
-                  >
-                    Date of Birth
-                  </Label>
-                  <Input
-                    id="date-of-birth"
-                    type="date"
-                    value={profile.date_of_birth || ""}
-                    onChange={(e) =>
-                      handleInputChange("date_of_birth", e.target.value)
-                    }
-                    className="border-gray-300 focus:ring-blue-500"
-                    aria-label="Date of birth"
-                  />
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="grid gap-2">
-                <Label
-                  htmlFor="address"
-                  className="text-base font-medium text-gray-800"
-                >
-                  Address
-                </Label>
-                <Input
-                  id="address"
-                  type="text"
-                  placeholder="123 Main St, City, State, ZIP"
-                  value={profile.address || ""}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  className="border-gray-300 focus:ring-blue-500"
-                  aria-label="Address"
-                />
-              </div>
-
-              {/* Current Location */}
-              <div className="grid gap-2">
-                <Label
-                  htmlFor="location"
-                  className="text-base font-medium text-gray-800"
-                >
-                  Location
-                </Label>
-                <Input
-                  id="location"
-                  type="text"
-                  value={locationDisplay}
-                  disabled
-                  className="bg-gray-100"
-                  aria-label="Current location (disabled)"
-                />
-              </div>
-            </div>
-
-            <div className="border p-4 rounded-lg shadow-md grid gap-1 md:gap-2">
-              {/* Skills */}
-              <div className="grid gap-2">
-                {/* <Label className="text-base font-medium text-gray-800">
-              Skills & Interests
-            </Label> */}
-                <CheckboxReactHookFormMultiple
-                  items={expertiseData}
-                  onChange={handleSkillsChange}
-                  initialValues={profile.skills || []}
-                  aria-label="Select skills and interests"
-                />
-              </div>
-
-              {/* Availability */}
-              <div className="grid gap-2">
-                <Label className="text-base font-medium text-gray-800">
-                  Availability
-                </Label>
-                <RadioGroup
-                  value={availabilityType}
-                  onValueChange={(value: "full-time" | "specific-period") => {
-                    setAvailabilityType(value);
-                    if (value === "full-time") {
-                      setAvailabilityStartDate(undefined);
-                      setAvailabilityEndDate(undefined);
-                    }
-                  }}
-                  className="flex items-center space-x-4"
-                  aria-label="Select availability type"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem
-                      value="full-time"
-                      id="availability-full-time-profile"
-                      className="text-blue-600"
-                    />
-                    <Label
-                      htmlFor="availability-full-time-profile"
-                      className="text-gray-700"
-                    >
-                      Full-time
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem
-                      value="specific-period"
-                      id="availability-specific-period-profile"
-                      className="text-blue-600"
-                    />
-                    <Label
-                      htmlFor="availability-specific-period-profile"
-                      className="text-gray-700"
-                    >
-                      Specific Period
-                    </Label>
-                  </div>
-                </RadioGroup>
-                {availabilityType === "specific-period" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                    <div className="grid gap-2">
-                      <Label
-                        htmlFor="start-date-profile"
-                        className="text-base font-medium text-gray-800"
-                      >
-                        Start Date
-                      </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal border-gray-300",
-                              !availabilityStartDate && "text-gray-500"
-                            )}
-                            aria-label="Select availability start date"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                            {availabilityStartDate ? (
-                              format(availabilityStartDate, "PPP")
-                            ) : (
-                              <span>Pick a start date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={availabilityStartDate}
-                            onSelect={setAvailabilityStartDate}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                  <>
+                    <div className="grid gap-1">
+                      <span className="text-sm text-gray-500">Full Name</span>
+                      <p className="font-medium text-gray-900">{profile.full_name || "—"}</p>
                     </div>
-                    <div className="grid gap-2">
-                      <Label
-                        htmlFor="end-date-profile"
-                        className="text-base font-medium text-gray-800"
-                      >
-                        End Date
-                      </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal border-gray-300",
-                              !availabilityEndDate && "text-gray-500"
-                            )}
-                            aria-label="Select availability end date"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                            {availabilityEndDate ? (
-                              format(availabilityEndDate, "PPP")
-                            ) : (
-                              <span>Pick an end date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={availabilityEndDate}
-                            onSelect={setAvailabilityEndDate}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                    <div className="grid gap-1">
+                      <span className="text-sm text-gray-500">Email</span>
+                      <p className="font-medium text-gray-900">{profile.email || "—"}</p>
                     </div>
-                  </div>
+                    <div className="grid gap-1">
+                      <span className="text-sm text-gray-500">Phone</span>
+                      <p className="font-medium text-gray-900">{profile.phone || "—"}</p>
+                    </div>
+                    <div className="grid gap-1">
+                      <span className="text-sm text-gray-500">Date of Birth</span>
+                      <p className="font-medium text-gray-900">
+                        {profile.date_of_birth ? format(new Date(profile.date_of_birth), "PPP") : "—"}
+                      </p>
+                    </div>
+                    <div className="grid gap-1 md:col-span-2">
+                      <span className="text-sm text-gray-500">Address</span>
+                      <p className="font-medium text-gray-900">{profile.address || "—"}</p>
+                    </div>
+                    <div className="grid gap-1 md:col-span-2">
+                      <span className="text-sm text-gray-500">Current location</span>
+                      <p className="font-medium text-gray-900">{locationDisplay}</p>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
 
-            <div className="border p-4 rounded-lg shadow-md">
-              {/* Experience */}
-              <div className="grid gap-2">
-                <Label
-                  htmlFor="experience"
-                  className="text-base font-medium text-gray-800"
-                >
-                  Work experience (summary)
-                </Label>
-                <Textarea
-                  id="experience"
-                  placeholder="Tell us about your previous experience..."
-                  value={profile.experience || ""}
-                  onChange={(e) =>
-                    handleInputChange("experience", e.target.value)
-                  }
-                  rows={4}
-                  className="border-gray-300 focus:ring-blue-500"
-                  aria-label="Previous volunteer experience"
-                />
-              </div>
-
-              {/* Origin */}
-              <p className="text-base font-medium text-gray-800 my-2">
-                Nationality
-              </p>
-              <LocationSelects
-                label=""
-                country={profile.origin_country || ""}
-                state={profile.origin_state || ""}
-                lga={profile.origin_lga || ""}
-                onChangeCountry={(value) => {
-                  handleInputChange("origin_country", value);
-                  handleInputChange("origin_state", "");
-                  handleInputChange("origin_lga", "");
-                }}
-                onChangeState={(value) => {
-                  handleInputChange("origin_state", value);
-                  handleInputChange("origin_lga", "");
-                }}
-                onChangeLga={(value) => handleInputChange("origin_lga", value)}
-                required
-                aria-label="Select country of origin"
-              />
-
-              {/* Volunteer Preferences */}
-              <div className="grid gap-2">
-                <Label className="text-base font-medium text-gray-800 my-2">
-                  Volunteer Location Preferences
-                </Label>
-                <LocationSelector
-                  ref={locationSelectorRef}
-                  onSelectionChange={handleLocationChange}
-                />
-                {selectedLocationsDisplay}
-                <p className="text-sm text-gray-500 bg-slate-200 p-2 rounded w-fit">
-                  Select your preferred countries, states, and LGAs for
-                  volunteering.
-                </p>
-              </div>
-            </div>
-            <Button
-              type="submit"
-              className="w-full bg-gradient-to-r action-btn transition-all"
-              disabled={submitting}
-              aria-label="Save profile changes"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving Changes...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-
-            {message && (
-              <p
-                className={`text-center text-sm ${
-                  message.isError ? "text-red-500" : "text-green-500"
-                }`}
-                aria-live="assertive"
+            {/* Anonymous preference — inside Manage your personal */}
+            <div className="pt-4 border-t border-gray-200">
+              <Label className="text-sm font-medium text-gray-800 block mb-2">
+                Show my profile anonymously
+              </Label>
+              <RadioGroup
+                value={isAnonymous ? "yes" : "no"}
+                onValueChange={(value) =>
+                  setProfile((prev) =>
+                    prev ? { ...prev, anonymous: value === "yes" } : null
+                  )
+                }
+                className="flex flex-wrap gap-4"
+                aria-label="Anonymous profile"
+                disabled={!isEditMode}
               >
-                {message.text}
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="no" id="anonymous-no" />
+                  <Label htmlFor="anonymous-no" className="text-gray-700 cursor-pointer">
+                    No — show my name and photo
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="yes" id="anonymous-yes" />
+                  <Label htmlFor="anonymous-yes" className="text-gray-700 cursor-pointer">
+                    Yes — keep me anonymous
+                  </Label>
+                </div>
+              </RadioGroup>
+              <p className="text-xs text-gray-500 mt-1">
+                When anonymous, your identity is hidden in public volunteer listings.
               </p>
+            </div>
+          </section>
+
+          {/* Section: Skills & Availability */}
+          <section className="rounded-xl border border-gray-200 bg-gray-50/50 p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Skills & availability
+            </h3>
+            {isEditMode ? (
+              <>
+                <div className="grid gap-2">
+                  <Label className="text-sm font-medium text-gray-800">Skills & interests</Label>
+                  <CheckboxReactHookFormMultiple
+                    items={expertiseData}
+                    onChange={handleSkillsChange}
+                    initialValues={profile.skills || []}
+                    aria-label="Select skills and interests"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-sm font-medium text-gray-800">Availability</Label>
+                  <RadioGroup
+                    value={availabilityType}
+                    onValueChange={(value: "full-time" | "specific-period") => {
+                      setAvailabilityType(value);
+                      if (value === "full-time") {
+                        setAvailabilityStartDate(undefined);
+                        setAvailabilityEndDate(undefined);
+                      }
+                    }}
+                    className="flex items-center flex-wrap gap-4"
+                    aria-label="Select availability type"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="full-time" id="availability-full-time-profile" />
+                      <Label htmlFor="availability-full-time-profile" className="text-gray-700">Full-time</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="specific-period" id="availability-specific-period-profile" />
+                      <Label htmlFor="availability-specific-period-profile" className="text-gray-700">Specific period</Label>
+                    </div>
+                  </RadioGroup>
+                  {availabilityType === "specific-period" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                      <div className="grid gap-2">
+                        <Label className="text-sm font-medium text-gray-800">Start date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn("w-full justify-start text-left font-normal", !availabilityStartDate && "text-gray-500")}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {availabilityStartDate ? format(availabilityStartDate, "PPP") : "Pick start date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar mode="single" selected={availabilityStartDate} onSelect={setAvailabilityStartDate} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-sm font-medium text-gray-800">End date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn("w-full justify-start text-left font-normal", !availabilityEndDate && "text-gray-500")}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {availabilityEndDate ? format(availabilityEndDate, "PPP") : "Pick end date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar mode="single" selected={availabilityEndDate} onSelect={setAvailabilityEndDate} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid gap-1">
+                  <span className="text-sm text-gray-500">Skills</span>
+                  <p className="text-gray-900">
+                    {profile.skills?.length ? profile.skills.map(getLabel).join(", ") : "—"}
+                  </p>
+                </div>
+                <div className="grid gap-1">
+                  <span className="text-sm text-gray-500">Availability</span>
+                  <p className="text-gray-900">
+                    {availabilityType === "full-time"
+                      ? "Full-time"
+                      : availabilityStartDate && availabilityEndDate
+                        ? `${format(availabilityStartDate, "PPP")} – ${format(availabilityEndDate, "PPP")}`
+                        : "—"}
+                  </p>
+                </div>
+              </>
             )}
-          </div>
+          </section>
+
+          {/* Section: Experience & location preferences */}
+          <section className="rounded-xl border border-gray-200 bg-gray-50/50 p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Experience & location preferences
+            </h3>
+            {isEditMode ? (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="experience" className="text-sm font-medium text-gray-800">Work experience (summary)</Label>
+                  <Textarea
+                    id="experience"
+                    placeholder="Tell us about your previous experience..."
+                    value={profile.experience || ""}
+                    onChange={(e) => handleInputChange("experience", e.target.value)}
+                    rows={4}
+                    className="border-gray-300 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-sm font-medium text-gray-800">Nationality</Label>
+                  <LocationSelects
+                    label=""
+                    country={profile.origin_country || ""}
+                    state={profile.origin_state || ""}
+                    lga={profile.origin_lga || ""}
+                    onChangeCountry={(value) => {
+                      handleInputChange("origin_country", value);
+                      handleInputChange("origin_state", "");
+                      handleInputChange("origin_lga", "");
+                    }}
+                    onChangeState={(value) => {
+                      handleInputChange("origin_state", value);
+                      handleInputChange("origin_lga", "");
+                    }}
+                    onChangeLga={(value) => handleInputChange("origin_lga", value)}
+                    required
+                    aria-label="Select country of origin"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-sm font-medium text-gray-800">Volunteer location preferences</Label>
+                  <LocationSelector
+                    ref={locationSelectorRef}
+                    initialSelected={{
+                      selectedCountries: profile.volunteer_countries || [],
+                      selectedStates: profile.volunteer_states || [],
+                      selectedLgas: profile.volunteer_lgas || [],
+                    }}
+                    onSelectionChange={handleLocationChange}
+                  />
+                  {selectedLocationsDisplay}
+                  <p className="text-xs text-gray-500">
+                    Select preferred countries, states, and LGAs for volunteering.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid gap-1">
+                  <span className="text-sm text-gray-500">Experience</span>
+                  <p className="text-gray-900 whitespace-pre-wrap">{profile.experience || "—"}</p>
+                </div>
+                <div className="grid gap-1">
+                  <span className="text-sm text-gray-500">Nationality</span>
+                  <p className="text-gray-900">
+                    {[profile.origin_country, profile.origin_state, profile.origin_lga].filter(Boolean).join(", ") || "—"}
+                  </p>
+                </div>
+                <div className="grid gap-1">
+                  <span className="text-sm text-gray-500">Volunteer locations</span>
+                  {selectedLocationsDisplay}
+                </div>
+              </>
+            )}
+          </section>
+
+          {isEditMode && (
+            <div className="flex flex-col gap-2">
+              <Button
+                type="submit"
+                className="w-full sm:w-auto sm:min-w-[200px] bg-gradient-to-r action-btn transition-all"
+                disabled={submitting}
+                aria-label="Save profile changes"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
+              {message && (
+                <p
+                  className={cn(
+                    "text-sm",
+                    message.isError ? "text-red-600" : "text-green-600"
+                  )}
+                  aria-live="assertive"
+                >
+                  {message.text}
+                </p>
+              )}
+            </div>
+          )}
         </form>
       </CardContent>
     </Card>

@@ -1,22 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Loader2,
-  CheckCircle,
+  CheckCircle2,
   XCircle,
   AlertCircle,
   LogIn,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getUserRole } from "@/lib/utils";
+import { routes } from "@/lib/routes";
+import { signOutUser, persistUserSnapshot } from "@/lib/utils";
+
+const CONFIRM_TOKEN_KEY = "diasporabase_confirm_token";
+const REDIRECT_DELAY_SEC = 3;
 
 type Status = "loading" | "success" | "invalid" | "expired" | "used" | "error";
-type UserRole = "agency" | "volunteer";
+type UserRole = "super_admin" | "admin" | "agency" | "volunteer" | null;
+
+const getRedirectPath = (role: UserRole, taxId?: string | null): string => {
+  if (!role) return routes.login;
+  const r = role.toLowerCase();
+  if (r === "super_admin") return routes.superAdminDashboard;
+  if (r === "admin") return routes.adminDashboard;
+  if (r === "agency") {
+    if (!taxId || taxId.trim() === "") return routes.agencyOnboarding;
+    return routes.agencyDashboard;
+  }
+  if (r === "volunteer") return routes.volunteerDashboard;
+  return routes.login;
+};
 
 export default function ConfirmEmailPage() {
   const searchParams = useSearchParams();
@@ -27,18 +45,76 @@ export default function ConfirmEmailPage() {
   const [message, setMessage] = useState("");
   const [tokenUserId, setTokenUserId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [showLoginButton, setShowLoginButton] = useState(false);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [userLoggedIn, setUserLoggedIn] = useState<boolean>(false);
+  const [userRole, setUserRole] = useState<UserRole>(null);
+  const [userTaxId, setUserTaxId] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const hasVerifiedRef = useRef(false);
+
+  const handleRedirect = useCallback(
+    (role: UserRole, taxId?: string | null) => {
+      const path = getRedirectPath(role, taxId);
+      sessionStorage.removeItem(CONFIRM_TOKEN_KEY);
+      router.push(path);
+    },
+    [router]
+  );
+
+  const handleGoToLogin = useCallback(() => {
+    sessionStorage.removeItem(CONFIRM_TOKEN_KEY);
+    router.push(routes.login);
+  }, [router]);
+
+  // Countdown for auto-redirect
+  useEffect(() => {
+    if (status !== "success" || currentUserId !== tokenUserId) return;
+
+    setCountdown(REDIRECT_DELAY_SEC);
+    const id = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(id);
+          return prev;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    const timeout = setTimeout(() => {
+      handleRedirect(userRole, userTaxId);
+    }, REDIRECT_DELAY_SEC * 1000);
+
+    return () => {
+      clearInterval(id);
+      clearTimeout(timeout);
+    };
+  }, [
+    status,
+    currentUserId,
+    tokenUserId,
+    userRole,
+    userTaxId,
+    handleRedirect,
+  ]);
 
   useEffect(() => {
-    const token = searchParams.get("token");
+    if (hasVerifiedRef.current) return;
+
+    let token: string | null = searchParams.get("token");
+
+    if (token) {
+      sessionStorage.setItem(CONFIRM_TOKEN_KEY, token);
+      window.history.replaceState({}, "", routes.confirmation);
+    } else {
+      token = sessionStorage.getItem(CONFIRM_TOKEN_KEY);
+    }
+
     if (!token) {
       setStatus("invalid");
-      setMessage("No confirmation token provided.");
+      setMessage("No confirmation token was provided.");
       return;
     }
 
+    hasVerifiedRef.current = true;
     verifyToken(token);
   }, [searchParams]);
 
@@ -53,44 +129,37 @@ export default function ConfirmEmailPage() {
         setStatus("error");
         setMessage("Something went wrong. Please try again later.");
         toast.error("Verification failed.");
+        sessionStorage.removeItem(CONFIRM_TOKEN_KEY);
         return;
       }
 
-      console.log("RPC Data:", data);
-
       if (!data?.valid) {
         const msg = data?.message || "invalid_token";
+        sessionStorage.removeItem(CONFIRM_TOKEN_KEY);
 
         if (msg === "link_expired") {
           setStatus("expired");
           setMessage("This confirmation link has expired.");
         } else if (msg === "already_used") {
           setStatus("used");
-          setMessage("This confirmation has been completed.");
+          setMessage("This confirmation has already been completed.");
         } else {
           setStatus("invalid");
-          setMessage("Invalid or unknown confirmation link.");
+          setMessage("This link is invalid or could not be recognized.");
         }
-
-        // toast.error("Email confirmation failed.");
         return;
       }
 
-      // SUCCESS: Email confirmed successfully
       const confirmedUserId = data.user_id;
       setTokenUserId(confirmedUserId);
-
       setStatus("success");
-      setMessage("Email confirmed successfully!");
+      setMessage("Your email has been verified successfully.");
       toast.success("Your email is now verified.");
 
-      // Check current session
       const { data: sessionData } = await supabase.auth.getSession();
 
       if (!sessionData.session) {
-        // No one logged in → show login button
         setCurrentUserId(null);
-        setShowLoginButton(true);
         return;
       }
 
@@ -98,187 +167,214 @@ export default function ConfirmEmailPage() {
       setCurrentUserId(currentId);
 
       if (currentId === confirmedUserId) {
-        // Correct user is logged in → redirect to dashboard
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, tax_id, is_active, full_name, email, phone")
           .eq("id", currentId)
           .single();
 
-        let redirectPath = "/dashboard";
-        setUserRole(profile?.role?.toLowerCase() as UserRole);
-        const role = profile?.role?.toLowerCase();
-        if (role === "agency") redirectPath = "/onboarding";
-        else if (role === "volunteer") redirectPath = "/dashboard/volunteer";
+        const role = (profile?.role?.toLowerCase() || null) as UserRole;
+        setUserRole(role);
+        setUserTaxId(profile?.tax_id ?? null);
 
-        // toast.success("Welcome back! Redirecting to your dashboard...");
-        setTimeout(() => router.push(redirectPath), 3000);
+        // Persist same snapshot as login so sidebar has user data on dashboard
+        if (profile && role) {
+          const user = sessionData.session.user;
+          const safeUser = {
+            id: currentId,
+            email: profile.email ?? user?.email ?? null,
+            role,
+            full_name: profile.full_name ?? null,
+            phone: profile.phone ?? null,
+            tax_id: profile.tax_id ?? null,
+            is_active: profile.is_active ?? null,
+          };
+          persistUserSnapshot(safeUser);
+        }
       } else {
-        // Wrong user logged in → silently sign out
-        await supabase.auth.signOut();
+        const result = await signOutUser();
+        if (!result.success) {
+          console.error("Error clearing session after token mismatch:", result.error);
+        }
         setCurrentUserId(null);
-        setShowLoginButton(true);
-        // No toast or message about logout — user doesn't need to know
       }
     } catch (err: any) {
       console.error("Unexpected error:", err);
       setStatus("error");
-      setMessage("An unexpected error occurred.");
-      // toast.error("Could not verify email.");
+      setMessage("An unexpected error occurred. Please try again.");
+      sessionStorage.removeItem(CONFIRM_TOKEN_KEY);
     }
   };
+
+  const iconSize = "h-20 w-20";
+  const iconInnerSize = "h-10 w-10";
 
   const getIcon = () => {
     switch (status) {
       case "loading":
-        return <Loader2 className="h-16 w-16 animate-spin text-primary" />;
+        return (
+          <div
+            className={`${iconSize} mx-auto flex items-center justify-center rounded-full bg-[#0ea5e9]/10 ring-4 ring-[#0ea5e9]/20`}
+          >
+            <Loader2
+              className={`${iconInnerSize} animate-spin text-[#0ea5e9]`}
+              strokeWidth={2}
+            />
+          </div>
+        );
       case "success":
-        return <CheckCircle className="h-16 w-16 text-green-600" />;
+        return (
+          <div
+            className={`${iconSize} mx-auto flex items-center justify-center rounded-full bg-[#0ea5e9]/10 ring-4 ring-[#0ea5e9]/20`}
+          >
+            <CheckCircle2
+              className={`${iconInnerSize} text-[#0ea5e9]`}
+              strokeWidth={2.25}
+            />
+          </div>
+        );
       case "invalid":
-        return <XCircle className="h-16 w-16 text-red-600" />;
-      case "expired":
-        return <XCircle className="h-16 w-16 text-yellow-600" />;
-      case "used":
-        return <AlertCircle className="h-16 w-16 text-yellow-600" />;
       case "error":
-        return <XCircle className="h-16 w-16 text-red-600" />;
+        return (
+          <div
+            className={`${iconSize} mx-auto flex items-center justify-center rounded-full bg-red-100 ring-4 ring-red-100 dark:bg-red-950/30 dark:ring-red-950/50`}
+          >
+            <XCircle
+              className={`${iconInnerSize} text-red-600 dark:text-red-400`}
+              strokeWidth={2}
+            />
+          </div>
+        );
+      case "expired":
+      case "used":
+        return (
+          <div
+            className={`${iconSize} mx-auto flex items-center justify-center rounded-full bg-amber-100 ring-4 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-950/50`}
+          >
+            <AlertCircle
+              className={`${iconInnerSize} text-amber-600 dark:text-amber-400`}
+              strokeWidth={2}
+            />
+          </div>
+        );
       default:
         return null;
-    }
-  };
-  const handleRedirect = (role: string | null) => {
-    console.log("Redirecting based on role:", role);
-    if (role === "agency") {
-      router.push("/onboarding");
-    } else if (role === "volunteer") {
-      router.push("/dashboard/volunteer");
-    } else {
-      router.push("/login");
     }
   };
 
   const getTitle = () => {
     if (status === "success") {
-      if (currentUserId && currentUserId === tokenUserId)
-        return "Welcome Back!";
-      return "Email Verified Successfully!";
+      if (currentUserId && currentUserId === tokenUserId) return "Welcome back!";
+      return "Email verified";
     }
-    if (status === "used") return "Already Confirmed";
-    if (status === "expired") return "Link Expired";
-    if (status === "invalid") return "Invalid Link";
-    if (status === "error") return "Verification Failed";
-    return "Confirming Your Email";
+    if (status === "used") return "Already confirmed";
+    if (status === "expired") return "Link expired";
+    if (status === "invalid") return "Invalid link";
+    if (status === "error") return "Verification failed";
+    return "Confirming your email";
   };
 
-  const getContent = () => {
-    if (status === "loading") {
-      return <p className="text-lg">Verifying your email address...</p>;
-    }
-
-    return (
-      <>
-        <div className="text-center space-y-4">
-          <p className="text-xl font-semibold">{getTitle()}</p>
-          <p className="text-muted-foreground max-w-sm mx-auto">{message}</p>
-        </div>
-
-        {/* Auto-redirect only when correct user is logged in */}
-        {status === "success" &&
-          currentUserId &&
-          currentUserId === tokenUserId && (
-            <>
-              <p className="text-sm text-muted-foreground mt-4">
-                Redirecting you to your dashboard in 3 seconds...
-              </p>
-              {/* <Button
-                onClick={() => handleRedirect(userRole)}
-                className="mt-6 action-btn"
-              >
-                Click to proceed.
-              </Button> */}
-            </>
-          )}
-
-        {status === "success" && currentUserId !== tokenUserId && (
-          <>
-            <p className="text-sm text-muted-foreground mt-4">
-              Log in to access your account.
-            </p>
-            <Button
-              onClick={() => router.push("/login")}
-              className="w-full action-btn"
-              size="lg"
-            >
-              <LogIn className="mr-2 h-4 w-4" />
-              Log In Now
-            </Button>
-          </>
-        )}
-
-        {/* Show login button when needed (not logged in OR silently logged out) */}
-        {status === "used" && showLoginButton && (
-          <div className="space-y-4 mt-6 w-full max-w-xs">
-            <p className="text-sm text-muted-foreground">
-              Log in to access your account.
-            </p>
-            <Button
-              onClick={() => router.push("/login")}
-              className="w-full action-btn"
-              size="lg"
-            >
-              <LogIn className="mr-2 h-4 w-4" />
-              Log In Now
-            </Button>
-          </div>
-        )}
-
-        {/* Invalid / Expired / Used */}
-        {(status === "invalid" ||
-          status === "expired" ||
-          status === "used") && (
-          <div className="space-y-4 mt-6 w-full max-w-xs">
-            {status === "expired" && (
-              <p className="text-sm text-muted-foreground">
-                You can request a new link from the login page.
-              </p>
-            )}
-            <Button
-              onClick={() => router.push("/login")}
-              className="w-full action-btn"
-              size="lg"
-            >
-              <LogIn className="mr-2 h-4 w-4" />
-              Go to Login
-            </Button>
-          </div>
-        )}
-
-        {/* Error */}
-        {status === "error" && (
-          <Button
-            onClick={() => router.push("/login")}
-            variant="outline"
-            className="mt-6 action-btn"
-          >
-            Back to Login
-          </Button>
-        )}
-      </>
-    );
-  };
+  const primaryBtnClass =
+    "w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white font-medium";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">
-            Email Confirmation
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center space-y-8 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50/80 via-white to-indigo-50/50 p-4 sm:p-6">
+      <Card className="w-full max-w-md overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xl">
+        <CardContent className="p-6 sm:p-8">
+          <div
+            key={status}
+            className="flex flex-col items-center space-y-6 text-center animate-in fade-in-50 duration-300"
+          >
             {getIcon()}
-            {getContent()}
+
+            <div className="space-y-2">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                {getTitle()}
+              </h1>
+              <p className="text-sm text-muted-foreground sm:text-base leading-relaxed">
+                {status === "loading"
+                  ? "Verifying your email address..."
+                  : message}
+              </p>
+            </div>
+
+            {/* Success + logged in: redirect countdown + continue now */}
+            {status === "success" && currentUserId === tokenUserId && (
+                <div className="w-full space-y-4">
+                  {countdown !== null && (
+                    <p className="text-sm text-muted-foreground">
+                      Redirecting in{" "}
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#0ea5e9]/10 font-semibold text-[#0ea5e9] tabular-nums">
+                        {countdown}
+                      </span>{" "}
+                      {countdown === 1 ? "second" : "seconds"}…
+                    </p>
+                  )}
+                  <Button
+                    onClick={() => handleRedirect(userRole, userTaxId)}
+                    className={primaryBtnClass}
+                    size="lg"
+                  >
+                    Continue now
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+            {/* Success + not logged in: Login */}
+            {status === "success" && currentUserId !== tokenUserId && (
+              <Button
+                onClick={handleGoToLogin}
+                className={primaryBtnClass}
+                size="lg"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign in to your account
+              </Button>
+            )}
+
+            {/* Invalid / Expired / Used */}
+            {(status === "invalid" || status === "expired" || status === "used") && (
+              <div className="w-full space-y-4">
+                {status === "expired" && (
+                  <p className="text-sm text-muted-foreground">
+                    You can request a new confirmation link from the{" "}
+                    <a
+                      href={routes.login}
+                      className="font-medium text-[#0ea5e9] hover:underline"
+                    >
+                      login page
+                    </a>
+                    .
+                  </p>
+                )}
+                {status === "invalid" && (
+                  <p className="text-sm text-muted-foreground">
+                    Please try logging in or register again from the login page.
+                  </p>
+                )}
+                <Button
+                  onClick={handleGoToLogin}
+                  className={primaryBtnClass}
+                  size="lg"
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Go to login
+                </Button>
+              </div>
+            )}
+
+            {/* Error */}
+            {status === "error" && (
+              <Button
+                onClick={handleGoToLogin}
+                className={primaryBtnClass}
+                size="lg"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Go to login
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

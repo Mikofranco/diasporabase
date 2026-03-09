@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
 import NavBar from "@/components/navbar";
 import Footer from "@/parts/landingPage/footer";
 import {
@@ -17,185 +18,190 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"; // ← shadcn dialog
-import { Input } from "@/components/ui/input"; // for email field
-import { Label } from "@/components/ui/label";
-import {
-  Quote,
-  Mail,
-  Users,
-  BookOpen,
-  MessageCircle,
-  Heart,
-} from "lucide-react";
+} from "@/components/ui/dialog";
+import { Quote, Mail, Users, BookOpen, Heart } from "lucide-react";
+import { routes } from "@/lib/routes";
 
-const SuccessStoriesPage = () => {
-  const stories = [
-    {
-      name: "Sarah Johnson",
-      role: "CEO, TechStart Inc.",
-      company: "TechStart",
-      quote:
-        "The platform connected us with passionate volunteers who helped launch our community program in just 3 months. We've impacted over 5,000 lives already!",
-      avatar: "/avatars/sarah.jpg",
-      fallback: "SJ",
-    },
-    // ... other entries ...
-  ];
+const STORIES = [
+  {
+    id: "sarah",
+    name: "Sarah Johnson",
+    role: "CEO, TechStart Inc.",
+    company: "TechStart",
+    quote:
+      "The platform connected us with passionate volunteers who helped launch our community program in just 3 months. We've impacted over 5,000 lives already!",
+    avatar: "/avatars/sarah.jpg",
+    fallback: "SJ",
+  },
+] as const;
 
+export default function SuccessStoriesPage() {
   return (
-    <>
+    <div className="flex flex-col min-h-[100dvh] bg-gray-50 dark:bg-gray-900">
       <NavBar />
 
-      <main className="min-h-screen bg-background  my-10">
-        {/* Hero Section - unchanged */}
-        <section className="container mx-auto px-4 py-16 md:py-24 text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
+      <section className="relative py-16 md:py-24 overflow-hidden bg-gradient-to-br from-cyan-500/10 via-white to-blue-500/10 dark:from-cyan-500/5 dark:via-gray-900 dark:to-blue-500/5">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="container mx-auto px-4 text-center"
+        >
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 mb-4">
+            <Quote className="h-7 w-7" aria-hidden />
+          </div>
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
             Real Impact, Real Stories
           </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
             Discover how organizations and volunteers are creating meaningful
             change together through our platform.
           </p>
-        </section>
+        </motion.div>
+      </section>
 
-        {/* Success Stories Grid - unchanged */}
-        <section className="container mx-auto px-4 pb-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {stories.map((story) => (
-              <Card
-                key={story.name}
-                className="hover:shadow-lg transition-shadow duration-300 bg-card border-border flex flex-col h-full"
-              >
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={story.avatar} alt={story.name} />
-                      <AvatarFallback>{story.fallback}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-lg">{story.name}</CardTitle>
-                      <CardDescription>
-                        {story.role} at {story.company}
-                      </CardDescription>
-                    </div>
+      <main className="flex-1 container mx-auto px-4 pb-16 md:pb-24 -mt-6 relative z-10">
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto"
+        >
+          {STORIES.map((story) => (
+            <Card
+              key={story.id}
+              className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full overflow-hidden"
+            >
+              <CardHeader>
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-12 w-12 rounded-xl">
+                    <AvatarImage src={story.avatar} alt={story.name} />
+                    <AvatarFallback className="rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+                      {story.fallback}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle className="text-lg text-gray-900 dark:text-white">
+                      {story.name}
+                    </CardTitle>
+                    <CardDescription className="text-gray-500 dark:text-gray-400">
+                      {story.role} at {story.company}
+                    </CardDescription>
                   </div>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  <Quote className="h-8 w-8 text-primary/20 mb-4" />
-                  <p className="text-muted-foreground italic leading-relaxed">
-                    "{story.quote}"
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <Quote className="h-8 w-8 text-cyan-500/20 dark:text-cyan-400/20 mb-3" aria-hidden />
+                <p className="text-gray-600 dark:text-gray-300 italic leading-relaxed">
+                  &ldquo;{story.quote}&rdquo;
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto"
+        >
+          <Card className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 flex flex-col h-full overflow-hidden">
+            <CardContent className="p-8 flex flex-col flex-1 text-center">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 mx-auto mb-4">
+                <Heart className="h-7 w-7" aria-hidden />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Share Your Success Story
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 flex-1">
+                Inspire others by sharing how you&apos;ve made an impact.
+              </p>
+              <Button asChild className="rounded-xl action-btn w-full">
+                <Link href={routes.contact}>Tell Your Story</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 flex flex-col h-full overflow-hidden">
+            <CardContent className="p-8 flex flex-col flex-1 text-center">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 mx-auto mb-4">
+                <Users className="h-7 w-7" aria-hidden />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Join Our Community
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 flex-1">
+                Connect with like-minded change makers and stay inspired.
+              </p>
+              <Button asChild variant="outline" className="rounded-xl w-full border-2">
+                <Link href={routes.registerVolunteer}>Join Now</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 flex flex-col h-full overflow-hidden">
+            <CardContent className="p-8 flex flex-col flex-1 text-center">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 mx-auto mb-4">
+                <BookOpen className="h-7 w-7" aria-hidden />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Start Creating Projects
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 flex-1">
+                Post opportunities and find volunteers for your institution.
+              </p>
+              <Button asChild variant="outline" className="rounded-xl w-full border-2">
+                <Link href={routes.registerAgency}>Start Now</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-16 text-center rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 p-8 md:p-12 max-w-2xl mx-auto shadow-sm"
+        >
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 mx-auto mb-4">
+            <Mail className="h-7 w-7" aria-hidden />
           </div>
-        </section>
-
-        {/* Call to Action Sections – now with equal height & bottom-aligned buttons */}
-        <section className="bg-muted/50 py-16">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {/* Each card now uses flex-col + h-full + flex-1/mt-auto pattern */}
-
-              <Card className="text-center p-8 bg-amber-50 flex flex-col h-full">
-                <Heart className="h-12 w-12 text-primary mx-auto mb-4 fill-red-400 text-red-500" />
-                <h3 className="text-2xl font-bold mb-3">
-                  Share Your Success Story
-                </h3>
-                <p className="text-muted-foreground mb-6 flex-1">
-                  Inspire others by sharing how you've made an impact.
-                </p>
-                <CardFooter className="mt-auto justify-center pt-0">
-                  <Button asChild className="action-btn">
-                    <a href="/contact">Tell Your Story</a>
-                  </Button>
-                </CardFooter>
-              </Card>
-
-              <Card className="text-center p-8 bg-teal-50 flex flex-col h-full">
-                <Users className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-2xl font-bold mb-3">Join Our Community</h3>
-                <p className="text-muted-foreground mb-6 flex-1">
-                  Connect with like-minded change makers and stay inspired.
-                </p>
-                <CardFooter className="mt-auto justify-center pt-0">
-                  <Button variant="outline" asChild>
-                    <a href="/register-volunteer">Join Now</a>
-                  </Button>
-                </CardFooter>
-              </Card>
-
-              <Card className="text-center p-8 bg-lime-50 flex flex-col h-full">
-                <BookOpen className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-2xl font-bold mb-3">
-                  Start Creating Projects
-                </h3>
-                <p className="text-muted-foreground mb-6 flex-1">
-                  Dive deeper into impact stories on our blog.
-                </p>
-                <CardFooter className="mt-auto justify-center pt-0">
-                  <Button variant="outline" asChild>
-                    <a href="/register-agency">Start Now</a>
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* Newsletter CTA – now opens Dialog */}
-        <section className="container mx-auto px-4 py-16 text-center">
-          <Mail className="h-12 w-12 mx-auto mb-6 text-[#0EA5E9]" />
-          <h2 className="text-3xl font-bold mb-4">Stay Inspired</h2>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Stay Inspired
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
             Subscribe to receive new success stories, impact updates, and
             opportunities to make a difference.
           </p>
-
-
           <Dialog>
             <DialogTrigger asChild>
-              <Button size="lg" className="action-btn">
+              <Button size="lg" className="rounded-xl action-btn">
                 Subscribe to Newsletter
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] rounded-2xl">
               <DialogHeader>
-                <DialogTitle className="text-diaspora-blue mb-2">Subscribe to Our Newsletter</DialogTitle>
-                <DialogDescription>
+                <DialogTitle className="text-gray-900 dark:text-white">
+                  Subscribe to Our Newsletter
+                </DialogTitle>
+                <DialogDescription className="text-gray-500 dark:text-gray-400">
                   Get the latest success stories, updates, and volunteer
                   opportunities delivered to your inbox.
                 </DialogDescription>
               </DialogHeader>
-              {/* <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" className="action-btn">Subscribe</Button>
-              </DialogFooter> */}
-
-              <h3 className="text-3xl font-bold text-center text-diaspora-blue p-4">Coming soon</h3>
+              <p className="text-center text-lg font-semibold text-cyan-600 dark:text-cyan-400 py-4">
+                Coming soon
+              </p>
             </DialogContent>
           </Dialog>
-        </section>
+        </motion.section>
       </main>
 
       <Footer />
-    </>
+    </div>
   );
-};
-
-export default SuccessStoriesPage;
+}

@@ -1,7 +1,9 @@
 "use client";
 import { createClient } from "@/lib/supabase/client";
 import { formatLocation, getUserId } from "@/lib/utils";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { routes } from "@/lib/routes";
 import {
   Card,
   CardHeader,
@@ -9,14 +11,43 @@ import {
   CardContent,
   CardDescription,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { MapPin, User, Briefcase, Calendar, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  MapPin,
+  User,
+  Briefcase,
+  Calendar,
+  Users,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { startLoading, stopLoading } from "@/lib/loading";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
+import {
+  getProjectManagerRequestsForVolunteer,
+  acceptProjectManagerRequest,
+  rejectProjectManagerRequest,
+} from "@/services/projects";
 
 const supabase = createClient();
 
@@ -25,25 +56,36 @@ interface Request {
   project_id: string;
   project_title: string;
   organization_name: string;
+  project_status?: string | null;
   description: string;
   location: string;
   start_date: string;
   end_date: string;
   status: string;
-  request_type: "volunteer" | "agency";
+  request_type: "volunteer" | "agency" | "pm_role";
   volunteer_name?: string;
   profile_picture?: string;
   organization_profile_picture?: string;
 }
 
 const VolunteerRequests: React.FC = () => {
+  const router = useRouter();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"all" | "volunteer" | "agency">(
-    "all"
-  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [requestStatusFilter, setRequestStatusFilter] = useState<
+    "" | "pending" | "accepted" | "rejected"
+  >("");
+  const [projectStatusFilter, setProjectStatusFilter] = useState<
+    "" | "active" | "pending" | "completed" | "cancelled"
+  >("");
+  const [sourceFilter, setSourceFilter] = useState<
+    "all" | "from_me" | "from_organization"
+  >("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -69,6 +111,7 @@ const VolunteerRequests: React.FC = () => {
 
         let volunteerData: any[] = [];
         let agencyData: any[] = [];
+        let pmRequestsAsRequests: Request[] = [];
 
         if (
           userProfile.role === "admin" ||
@@ -79,15 +122,16 @@ const VolunteerRequests: React.FC = () => {
           ).select(`
               id, 
               project_id, 
-              volunteer_id, 
+              volunteer_id,
               status, 
               projects(
-                title, 
-                organization_name, 
-                description, 
-                location, 
-                start_date, 
+                title,
+                organization_name,
+                description,
+                location,
+                start_date,
                 end_date,
+                status,
                 organization:profiles!organization_id (profile_picture)
               ), 
               profiles!volunteer_id (full_name, profile_picture)
@@ -103,15 +147,16 @@ const VolunteerRequests: React.FC = () => {
           ).select(`
               id, 
               project_id, 
-              volunteer_id, 
+              volunteer_id,
               status, 
               projects(
-                title, 
-                organization_name, 
-                description, 
-                location, 
-                start_date, 
+                title,
+                organization_name,
+                description,
+                location,
+                start_date,
                 end_date,
+                status,
                 organization:profiles!organization_id (profile_picture)
               ), 
               profiles!volunteer_id (full_name, profile_picture)
@@ -121,7 +166,7 @@ const VolunteerRequests: React.FC = () => {
               "Error fetching agency requests: " + aError.message
             );
           agencyData = aData;
-        } else {
+        } else if (userProfile.role === "volunteer") {
           // Volunteers see only their requests
           const { data: vData, error: vError } = await supabase
             .from("volunteer_requests")
@@ -131,12 +176,13 @@ const VolunteerRequests: React.FC = () => {
               project_id, 
               status, 
               projects(
-                title, 
-                organization_name, 
-                description, 
-                location, 
-                start_date, 
+                title,
+                organization_name,
+                description,
+                location,
+                start_date,
                 end_date,
+                status,
                 organization:profiles!organization_id (profile_picture)
               )
             `
@@ -156,12 +202,13 @@ const VolunteerRequests: React.FC = () => {
               project_id, 
               status, 
               projects(
-                title, 
-                organization_name, 
-                description, 
-                location, 
-                start_date, 
+                title,
+                organization_name,
+                description,
+                location,
+                start_date,
                 end_date,
+                status,
                 organization:profiles!organization_id (profile_picture)
               )
             `
@@ -172,6 +219,30 @@ const VolunteerRequests: React.FC = () => {
               "Error fetching agency requests: " + aError.message
             );
           agencyData = aData;
+
+          try {
+            const { data: pmRequestsData } = await getProjectManagerRequestsForVolunteer(userId);
+            pmRequestsAsRequests = (pmRequestsData ?? []).map((item: any) => {
+              const proj = item.projects || {};
+              return {
+                id: item.id,
+                project_id: item.project_id,
+                project_title: proj.title ?? "",
+                project_status: proj.status,
+                organization_name: proj.organization_name ?? "",
+                description: proj.description ?? "",
+                location: formatLocation(proj.location),
+                start_date: proj.start_date ?? "",
+                end_date: proj.end_date ?? "",
+                status: item.status,
+                request_type: "pm_role" as const,
+              };
+            });
+          } catch {
+            pmRequestsAsRequests = [];
+          }
+          agencyData = agencyData ?? [];
+          volunteerData = volunteerData ?? [];
         }
 
         // Combine requests
@@ -180,6 +251,7 @@ const VolunteerRequests: React.FC = () => {
             id: item.id,
             project_id: item.project_id,
             project_title: item.projects.title,
+            project_status: item.projects.status,
             organization_name: item.projects.organization_name,
             description: item.projects.description,
             location: formatLocation(item.projects.location),
@@ -196,6 +268,7 @@ const VolunteerRequests: React.FC = () => {
             id: item.id,
             project_id: item.project_id,
             project_title: item.projects.title,
+            project_status: item.projects.status,
             organization_name: item.projects.organization_name,
             description: item.projects.description,
             location: formatLocation(item.projects.location),
@@ -208,6 +281,7 @@ const VolunteerRequests: React.FC = () => {
             organization_profile_picture:
               item.projects.organization?.profile_picture,
           })) || []),
+          ...pmRequestsAsRequests,
         ];
 
         setRequests(combinedRequests);
@@ -226,13 +300,22 @@ const VolunteerRequests: React.FC = () => {
   const handleAcceptRequest = async (
     requestId: string,
     projectId: string,
-    requestType: "volunteer" | "agency"
+    requestType: "volunteer" | "agency" | "pm_role"
   ) => {
     try {
       startLoading();
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
       if (!userId) throw new Error("Please log in to accept requests.");
+
+      if (requestType === "pm_role") {
+        await acceptProjectManagerRequest(requestId, userId);
+        setRequests((prev) =>
+          prev.map((r) => (r.id === requestId ? { ...r, status: "accepted" } : r))
+        );
+        toast.success("You are now a Project Manager for this project.");
+        return;
+      }
 
       // Check if volunteer is already assigned
       const { data: existingAssignment, error: assignmentError } =
@@ -320,13 +403,22 @@ const VolunteerRequests: React.FC = () => {
 
   const handleRejectRequest = async (
     requestId: string,
-    requestType: "volunteer" | "agency"
+    requestType: "volunteer" | "agency" | "pm_role"
   ) => {
     try {
       startLoading();
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
       if (!userId) throw new Error("Please log in to reject requests.");
+
+      if (requestType === "pm_role") {
+        await rejectProjectManagerRequest(requestId, userId);
+        setRequests((prev) =>
+          prev.map((r) => (r.id === requestId ? { ...r, status: "rejected" } : r))
+        );
+        toast.success("Project Manager role request rejected.");
+        return;
+      }
 
       const table =
         requestType === "volunteer" ? "volunteer_requests" : "agency_requests";
@@ -359,173 +451,146 @@ const VolunteerRequests: React.FC = () => {
     switch (status) {
       case "pending":
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
             Pending
           </Badge>
         );
       case "accepted":
         return (
-          <Badge variant="default" className="bg-green-100 text-green-800">
+          <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
             Accepted
           </Badge>
         );
       case "rejected":
         return (
-          <Badge variant="destructive" className="bg-red-100 text-red-800">
+          <Badge variant="destructive" className="bg-red-100 text-red-800 hover:bg-red-200">
             Rejected
           </Badge>
         );
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
-  };``
+  };
 
-  const getRequestTypeLabel = (type: "volunteer" | "agency") => {
+  const getProjectStatusBadge = (status?: string | null) => {
+    if (!status) {
+      return <Badge variant="outline">Unknown</Badge>;
+    }
+    const { label, className } = getProjectStatusStyle(status);
+    return (
+      <Badge variant="outline" className={className}>
+        {label}
+      </Badge>
+    );
+  };
+
+  const getRequestTypeLabel = (type: "volunteer" | "agency" | "pm_role") => {
+    if (type === "pm_role") return "Project Manager role";
     return type === "volunteer" ? "Volunteer-Initiated" : "Agency-Initiated";
   };
 
-  const renderRequestCard = (request: Request, index: number) => (
-    <Card
-      key={`${request.request_type}-${request.id}`}
-      className={`transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-l-4 hover:bg-gray-50 ${
-        request.request_type === "volunteer"
-          ? "border-blue-500 bg-blue-50/50"
-          : "border-green-500 bg-green-50/50"
-      }`}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base md:text-lg font-semibold flex items-center gap-2">
-            {request.request_type === "volunteer" ? (
-              <User className="h-4 w-4" />
-            ) : (
-              <Briefcase className="h-4 w-4" />
-            )}
-            {request.project_title}
-          </CardTitle>
-          {getStatusBadge(request.status)}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Agency/Org Info */}
-        <div className="flex items-start gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage
-              src={request.organization_profile_picture}
-              alt={request.organization_name}
-            />
-            <AvatarFallback className="bg-muted">
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
-            </AvatarFallback>
-          </Avatar>
-          <div className="space-y-1">
-            <h4 className="font-medium">{request.organization_name}</h4>
-            <p className="text-sm text-muted-foreground">Organization</p>
-          </div>
-        </div>
+  const handleRowClick = (request: Request) => {
+    if (userRole === "admin") {
+      router.push(routes.adminViewProject(request.project_id));
+      return;
+    }
 
-        {/* Volunteer Info for Admins */}
-        {userRole === "admin" || userRole === "super_admin" ? (
-          <div className="flex items-start gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage
-                src={request.profile_picture}
-                alt={request.volunteer_name}
-              />
-              <AvatarFallback className="bg-muted">
-                <User className="h-4 w-4 text-muted-foreground" />
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-1">
-              <h4 className="font-medium">{request.volunteer_name || "N/A"}</h4>
-              <p className="text-sm text-muted-foreground">Volunteer</p>
-            </div>
-          </div>
-        ) : null}
+    if (userRole === "super_admin") {
+      router.push(routes.superAdminViewProject(request.project_id));
+      return;
+    }
 
-        {/* Description */}
-        <CardDescription className="text-sm bg-gray-50 rounded-md border p-2">
-          {request.description}
-        </CardDescription>
+    router.push(
+      `${routes.volunteerViewProject(request.project_id)}?from=requests`
+    );
+  };
 
-        {/* Meta Info */}
-        <div className="grid grid-cols-3 gap-2 text-sm">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 fill-blue-300" />
-            <span className="text-muted-foreground">{request.location}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0 fill-blue-300" />
-            <span className="text-muted-foreground">
-              {new Date(request.start_date).toLocaleDateString()} –{" "}
-              {new Date(request.end_date).toLocaleDateString()}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground flex-shrink-0 fill-blue-300" />
-            <span className="text-muted-foreground capitalize">
-              {getRequestTypeLabel(request.request_type)}
-            </span>
-          </div>
-        </div>
+  const filteredRequests = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
 
-        {/* Actions */}
-        {request.status === "pending" && request.request_type === "agency" && (
-          <div className="flex gap-2 pt-4 border-t">
-            <Button
-              size="sm"
-              className="bg-green-600 hover:bg-green-700 w-fit"
-              onClick={() =>
-                handleAcceptRequest(
-                  request.id,
-                  request.project_id,
-                  request.request_type
-                )
-              }
-            >
-              Accept
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              className="w-fit"
-              onClick={() =>
-                handleRejectRequest(request.id, request.request_type)
-              }
-            >
-              Reject
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+    return requests.filter((request) => {
+      if (term) {
+        const haystack = `${request.project_title} ${request.organization_name}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+
+      if (requestStatusFilter && request.status !== requestStatusFilter) {
+        return false;
+      }
+
+      if (
+        projectStatusFilter &&
+        (request.project_status || "").toLowerCase() !==
+          projectStatusFilter.toLowerCase()
+      ) {
+        return false;
+      }
+
+      if (sourceFilter === "from_me" && request.request_type !== "volunteer") {
+        return false;
+      }
+
+      if (
+        sourceFilter === "from_organization" &&
+        request.request_type !== "agency" &&
+        request.request_type !== "pm_role"
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [requests, searchQuery, requestStatusFilter, projectStatusFilter, sourceFilter]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, requestStatusFilter, projectStatusFilter, sourceFilter, pageSize]);
+
+  const totalPages =
+    filteredRequests.length === 0
+      ? 1
+      : Math.ceil(filteredRequests.length / pageSize);
+
+  const paginatedRequests = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredRequests.slice(start, end);
+  }, [filteredRequests, currentPage, pageSize]);
+
+  const startIndex = (currentPage - 1) * pageSize;
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-48 bg-muted rounded-md animate-pulse" />
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i} className="p-6 animate-pulse">
-              <div className="space-y-3">
-                <div className="h-4 bg-muted rounded w-3/4" />
-                <div className="flex items-center space-x-4">
-                  <div className="h-10 w-10 bg-muted rounded-full" />
-                  <div className="space-y-2">
-                    <div className="h-3 bg-muted rounded w-32" />
-                    <div className="h-2 bg-muted rounded w-48" />
-                  </div>
-                </div>
-                <div className="h-20 bg-muted rounded" />
-                <div className="flex space-x-2">
-                  <div className="h-4 bg-muted rounded w-16" />
-                  <div className="h-4 bg-muted rounded w-16" />
-                </div>
-              </div>
-            </Card>
-          ))}
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-6 w-16" />
         </div>
+
+        <Card className="border border-gray-200 shadow-sm">
+          <CardContent className="pt-4 space-y-4">
+            <div className="grid gap-4 md:grid-cols-4">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-gray-200 shadow-sm">
+          <CardContent className="pt-4">
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full" />
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex gap-4">
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -545,30 +610,15 @@ const VolunteerRequests: React.FC = () => {
     );
   }
 
-  const volunteerRequests = requests.filter(
-    (r) => r.request_type === "volunteer"
-  );
-  const agencyRequests = requests.filter((r) => r.request_type === "agency");
-
-  const getFilteredRequests = () => {
-    switch (activeTab) {
-      case "all":
-        return requests;
-      case "volunteer":
-        return volunteerRequests;
-      case "agency":
-        return agencyRequests;
-      default:
-        return requests;
-    }
-  };
-
-  const filteredRequests = getFilteredRequests();
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">My Requests</h1>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">My Requests</h1>
+          <p className="text-sm text-muted-foreground">
+            View and manage your project requests and invitations.
+          </p>
+        </div>
         <Badge variant="outline" className="text-sm">
           {requests.length} total
         </Badge>
@@ -583,81 +633,341 @@ const VolunteerRequests: React.FC = () => {
             <p className="text-muted-foreground text-base sm:text-xs mb-4">
               Get started by applying to a project or waiting for invitations.
             </p>
-            <Button variant="outline">Browse Projects</Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push(routes.volunteerFindOpportunity)}
+            >
+              Browse Projects
+            </Button>
           </CardContent>
         </Card>
       ) : (
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) =>
-            setActiveTab(value as "all" | "volunteer" | "agency")
-          }
-          className="w-full text-base sm:text-xs"
-        >
-          <TabsList className="grid w-full grid-cols-3 h-10 bg-white rounded-t-lg border-b">
-            <TabsTrigger
-              value="all"
-              className="justify-center gap-2 data-[state=active]:bg-sky-500 data-[state=active]:text-white hover:bg-gray-100 rounded-md h-8 text-sm w-40 p-4"
-            >
-              All ({requests.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="volunteer"
-              className="justify-center gap-2 data-[state=active]:bg-sky-500 data-[state=active]:text-white hover:bg-gray-100 rounded-md h-8 text-sm w-40 p-4"
-            >
-              <User className="h-3 w-3" /> From Me ({volunteerRequests.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="agency"
-              className="justify-center gap-2 data-[state=active]:bg-sky-500 data-[state=active]:text-white hover:bg-gray-100 rounded-md h-8 text-sm w-40 p-4"
-            >
-              <Briefcase className="h-3 w-3" /> From Organizations (
-              {agencyRequests.length})
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent
-            value="all"
-            className="mt-0 bg-white rounded-b-lg p-4 space-y-4"
-          >
-            {filteredRequests.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No requests match this filter.
+        <>
+          <Card className="border border-gray-200 bg-white shadow-sm">
+            <CardContent className="pt-4 space-y-4">
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="flex flex-col space-y-1.5">
+                  <span className="text-xs font-medium text-gray-600">
+                    Search
+                  </span>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      placeholder="Project title or organization..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-9 rounded-lg border border-gray-200 bg-white pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col space-y-1.5">
+                  <span className="text-xs font-medium text-gray-600">
+                    Request status
+                  </span>
+                  <Select
+                    value={requestStatusFilter || "all"}
+                    onValueChange={(value) =>
+                      setRequestStatusFilter(
+                        value === "all"
+                          ? ""
+                          : (value as "pending" | "accepted" | "rejected")
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-9 rounded-lg border border-gray-200 bg-white">
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="accepted">Accepted</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col space-y-1.5">
+                  <span className="text-xs font-medium text-gray-600">
+                    Project status
+                  </span>
+                  <Select
+                    value={projectStatusFilter || "all"}
+                    onValueChange={(value) =>
+                      setProjectStatusFilter(
+                        value === "all"
+                          ? ""
+                          : (value as
+                              | "active"
+                              | "pending"
+                              | "completed"
+                              | "cancelled")
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-9 rounded-lg border border-gray-200 bg-white">
+                      <SelectValue placeholder="All project statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All project statuses</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col space-y-1.5">
+                  <span className="text-xs font-medium text-gray-600">
+                    From
+                  </span>
+                  <Select
+                    value={sourceFilter}
+                    onValueChange={(value) =>
+                      setSourceFilter(
+                        value as "all" | "from_me" | "from_organization"
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-9 rounded-lg border border-gray-200 bg-white">
+                      <SelectValue placeholder="Source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="from_me">From me</SelectItem>
+                      <SelectItem value="from_organization">
+                        From organizations
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500">
+                Showing {filteredRequests.length} of {requests.length} requests
               </p>
-            ) : (
-              filteredRequests.map((request, index) =>
-                renderRequestCard(request, index)
-              )
-            )}
-          </TabsContent>
-          <TabsContent
-            value="volunteer"
-            className="mt-0 bg-white rounded-b-lg p-4 space-y-4"
-          >
-            {volunteerRequests.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No requests from you yet.
-              </p>
-            ) : (
-              volunteerRequests.map((request, index) =>
-                renderRequestCard(request, index)
-              )
-            )}
-          </TabsContent>
-          <TabsContent
-            value="agency"
-            className="mt-0 bg-white rounded-b-lg p-4 space-y-4"
-          >
-            {agencyRequests.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No invitations from organizations yet.
-              </p>
-            ) : (
-              agencyRequests.map((request, index) =>
-                renderRequestCard(request, index)
-              )
-            )}
-          </TabsContent>
-        </Tabs>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-gray-200 bg-white shadow-sm">
+            <CardContent className="pt-4">
+              {filteredRequests.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  No requests match these filters.
+                </p>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Project</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Organization
+                        </TableHead>
+                        {(userRole === "admin" || userRole === "super_admin") && (
+                          <TableHead className="hidden lg:table-cell">
+                            Volunteer
+                          </TableHead>
+                        )}
+                        <TableHead className="hidden sm:table-cell">
+                          From
+                        </TableHead>
+                        <TableHead>Request status</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Project status
+                        </TableHead>
+                        <TableHead className="hidden lg:table-cell">
+                          Duration
+                        </TableHead>
+                        <TableHead className="hidden xl:table-cell">
+                          Location
+                        </TableHead>
+                        <TableHead className="w-[140px] text-right">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedRequests.map((request) => (
+                        <TableRow
+                          key={`${request.request_type}-${request.id}`}
+                          className="cursor-pointer"
+                          onClick={() => handleRowClick(request)}
+                        >
+                          <TableCell className="max-w-[220px]">
+                            <div className="flex flex-col">
+                              <span className="font-medium truncate">
+                                {request.project_title}
+                              </span>
+                              <span className="text-xs text-muted-foreground md:hidden">
+                                {request.organization_name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {request.organization_name}
+                          </TableCell>
+                          {(userRole === "admin" ||
+                            userRole === "super_admin") && (
+                            <TableCell className="hidden lg:table-cell">
+                              {request.volunteer_name || "N/A"}
+                            </TableCell>
+                          )}
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              {request.request_type === "volunteer" ? (
+                                <User className="h-3 w-3" />
+                              ) : (
+                                <Briefcase className="h-3 w-3" />
+                              )}
+                              <span>{getRequestTypeLabel(request.request_type)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(request.status)}</TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {getProjectStatusBadge(request.project_status)}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                            {new Date(request.start_date).toLocaleDateString()}{" "}
+                            – {new Date(request.end_date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+                            {request.location}
+                          </TableCell>
+                          <TableCell
+                            className="w-[140px] text-right"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {request.status === "pending" &&
+                            (request.request_type === "agency" ||
+                              request.request_type === "pm_role") ? (
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-3 bg-green-600 hover:bg-green-700"
+                                  onClick={() =>
+                                    handleAcceptRequest(
+                                      request.id,
+                                      request.project_id,
+                                      request.request_type
+                                    )
+                                  }
+                                >
+                                  Accept
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="h-8 px-3"
+                                  onClick={() =>
+                                    handleRejectRequest(
+                                      request.id,
+                                      request.request_type
+                                    )
+                                  }
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 px-3"
+                              >
+                                View
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  {totalPages > 1 && (
+                    <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+                      <div>
+                        Showing{" "}
+                        <span className="font-medium">
+                          {filteredRequests.length === 0
+                            ? 0
+                            : startIndex + 1}
+                          -
+                          {Math.min(
+                            startIndex + pageSize,
+                            filteredRequests.length
+                          )}
+                        </span>{" "}
+                        of{" "}
+                        <span className="font-medium">
+                          {filteredRequests.length}
+                        </span>{" "}
+                        requests
+                      </div>
+                      <div className="flex items-center justify-between gap-3 md:justify-end">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">Per page</span>
+                          <Select
+                            value={String(pageSize)}
+                            onValueChange={(value) =>
+                              setPageSize(Number(value))
+                            }
+                          >
+                            <SelectTrigger className="h-8 w-[80px] rounded-lg border-gray-200">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[5, 10, 20].map((option) => (
+                                <SelectItem
+                                  key={option}
+                                  value={String(option)}
+                                >
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-lg"
+                            onClick={() =>
+                              setCurrentPage((prev) => Math.max(1, prev - 1))
+                            }
+                            disabled={currentPage === 1}
+                          >
+                            <ChevronLeft className="mr-1 h-4 w-4" />
+                            Previous
+                          </Button>
+                          <span className="px-2 text-xs">
+                            Page {currentPage} of {totalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-lg"
+                            onClick={() =>
+                              setCurrentPage((prev) =>
+                                Math.min(totalPages, prev + 1)
+                              )
+                            }
+                            disabled={currentPage === totalPages}
+                          >
+                            Next
+                            <ChevronRight className="ml-1 h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

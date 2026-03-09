@@ -31,6 +31,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
+import { routes } from "@/lib/routes";
 
 interface Project {
   id: string;
@@ -216,7 +217,7 @@ const fetchProjects = async (userId: string) => {
   };
 
   const handleRouteToViewProject = () => {
-    router.push("/dashboard/volunteer/find-opportunity");
+    router.push(routes.volunteerFindOpportunity);
   };
 
   const handleViewVolunteers = () => {
@@ -227,7 +228,7 @@ const fetchProjects = async (userId: string) => {
   };
 
   const handleRouteToSelectedProject=(projectId:string)=>{
-    router.push(`/dashboard/volunteer/projects/${projectId}`)
+    router.push(routes.volunteerViewProject(projectId));
   }
 
   if (loading) {

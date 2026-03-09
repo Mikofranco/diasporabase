@@ -1,117 +1,140 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "./lib/supabase/client";
+import { createMiddlewareClient } from "./lib/supabase/middleware";
+import { routes } from "./lib/routes";
+
+/** Dashboard path prefixes that require an authenticated session */
+const DASHBOARD_PREFIXES = [
+  "/super-admin/",
+  "/admin/",
+  "/agency/",
+  "/volunteer/",
+];
+
+function isDashboardRoute(path: string): boolean {
+  return DASHBOARD_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createClient();
+  const { supabase, response } = await createMiddlewareClient(req);
 
+  // Use getUser() to validate the session (getSession() can return stale data)
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    console.log("No session found, user is not authenticated.");
-  } else {
-    console.log("Session found:", session);
-  }
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const path = req.nextUrl.pathname;
 
   // Allow public routes
   if (
-    path === "/" ||
-    path === "/projects" ||
-    path.startsWith("/auth/callback")
+    path === routes.home ||
+    path === routes.generalProjectsView ||
+    path.startsWith("/auth/") ||
+    path.startsWith("/api/")
   ) {
-    return res;
+    return response;
   }
 
-  // Define protected paths and their allowed roles
-  const protectedPaths = {
-    // "/dashboard/admin": ["admin"],
-    // "/dashboard/volunteer": ["volunteer"],
-    // "/dashboard/agency": ["agency"],
-  };
+  // Allow other public pages (login, register, confirm, etc.)
+  const publicPaths = [
+    routes.login,
+    routes.registerAgency,
+    routes.registerVolunteer,
+    routes.forgotPassword,
+    routes.confirmation,
+    routes.confirmEmail,
+    "/confirm",
+    "/confirm-email",
+    "/reset-password",
+    "/forgot-password",
+    "/register-super-admin",
+    "/approval-pending",
+    "/onboarding",
+    "/opportunities",
+    "/post-projects",
+    "/about-us",
+    "/contact",
+    "/help",
+    "/learn-more",
+    "/privacy",
+    "/terms",
+    "/cookies",
+    "/report",
+    "/accessibility",
+    "/safety",
+    "/success-stories",
+  ];
+  const isPublicPath =
+    publicPaths.includes(path) ||
+    path.startsWith("/projects") ||
+    path.startsWith("/auth/");
 
-  // Check if the path is a protected dashboard route
-  const isProtectedDashboardRoute = Object.keys(protectedPaths).some((prefix) =>
-    path.startsWith(prefix)
-  );
+  if (isPublicPath && !isDashboardRoute(path)) {
+    return response;
+  }
 
-  // If no session, redirect to login for protected routes
-  if (!session && isProtectedDashboardRoute) {
+  // Require session for dashboard routes
+  if (isDashboardRoute(path) && !user) {
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    redirectUrl.pathname = routes.login;
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If no session, allow access to non-protected routes
-  if (!session) {
-    return res;
+  if (!user) {
+    return response;
   }
 
-  // Fetch user role
-  let userRole = null;
+  // Fetch user role for redirects
+  let userRole: string | null = null;
   try {
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", session.user.id)
+      .eq("id", user.id)
       .single();
 
     if (profileError || !profileData?.role) {
-      console.error(
-        "Profile fetch error in middleware:",
-        profileError?.message
-      );
       const redirectUrl = req.nextUrl.clone();
-      redirectUrl.pathname = "/login";
-      return NextResponse.redirect(redirectUrl); // Redirect to login if profile fetch fails
+      redirectUrl.pathname = routes.login;
+      return NextResponse.redirect(redirectUrl);
     }
     userRole = profileData.role;
-  } catch (error) {
-    console.error("Middleware profile fetch error:", error);
+  } catch {
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    redirectUrl.pathname = routes.login;
     return NextResponse.redirect(redirectUrl);
   }
+
+  const roleToPath: Record<string, string> = {
+    super_admin: "super-admin",
+    admin: "admin",
+    agency: "agency",
+    volunteer: "volunteer",
+  };
+  const rolePath = roleToPath[userRole] || userRole;
 
   // If logged in and accessing auth pages, redirect to their dashboard
   if (
-    path === "/login" ||
-    path === "/register-agency" ||
-    path === "/register-volunteer"
+    path === routes.login ||
+    path === routes.registerAgency ||
+    path === routes.registerVolunteer
   ) {
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = `/dashboard/${userRole}`;
+    redirectUrl.pathname = `/${rolePath}/dashboard`;
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Handle generic /dashboard redirect
-  if (path === "/dashboard") {
+  if (path === routes.dashboard) {
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = `/dashboard/${userRole}`;
+    redirectUrl.pathname = `/${rolePath}/dashboard`;
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Check role-based access for protected routes
-  for (const prefix in protectedPaths) {
-    if (path.startsWith(prefix)) {
-      //@ts-ignore
-      if (!protectedPaths[prefix].includes(userRole)) {
-        const redirectUrl = req.nextUrl.clone();
-        redirectUrl.pathname = `/dashboard/${userRole}`;
-        return NextResponse.redirect(redirectUrl);
-      }
-    }
-  }
-
-  return res;
+  return response;
 }
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

@@ -10,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { formatLocation } from "@/lib/utils";
+import { routes } from "@/lib/routes";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 
 const supabase = createClient();
 
@@ -28,11 +30,13 @@ interface Project {
   lga?: string;
 }
 
-interface ProjectsListProps {
+export interface ProjectsListProps {
   agencyId: string;
+  /** When provided (e.g. from admin/super-admin), project cards link to this URL instead of agency dashboard. */
+  getProjectViewUrl?: (projectId: string) => string;
 }
 
-export default function ProjectsList({ agencyId }: ProjectsListProps) {
+export default function ProjectsList({ agencyId, getProjectViewUrl }: ProjectsListProps) {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,18 +97,19 @@ export default function ProjectsList({ agencyId }: ProjectsListProps) {
         <CardContent className="py-12 text-center text-muted-foreground">
           <Briefcase className="mx-auto h-12 w-12 text-gray-300 mb-4" />
           <p className="text-lg font-medium">No Projects Yet</p>
-          <p className="mt-2 text-sm">
+          {/* <p className="mt-2 text-sm">
             Create your first project to get started.
-          </p>
+          </p> */}
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="mt-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Projects</h2>
-
+    <div className={getProjectViewUrl ? "" : "mt-8"}>
+      {!getProjectViewUrl && (
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Projects</h2>
+      )}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {projects.map((project) => {
           const progress = Math.min(
@@ -112,10 +117,14 @@ export default function ProjectsList({ agencyId }: ProjectsListProps) {
             Math.round((project.volunteers_registered / project.volunteers_needed) * 100)
           );
 
+          const viewUrl = getProjectViewUrl
+            ? getProjectViewUrl(project.id)
+            : routes.agencyViewProject(project.id);
+
           return (
             <Link
               key={project.id}
-              href={`/dashboard/agency/projects/${project.id}`}
+              href={viewUrl}
               className="group block"
             >
               <Card className="h-full transition-all hover:shadow-md hover:border-primary/20">
@@ -176,18 +185,12 @@ export default function ProjectsList({ agencyId }: ProjectsListProps) {
   );
 }
 
-
-function StatusBadge({ status }: { status: Project["status"] }) {
-  const config = {
-    active: { label: "Active", class: "bg-green-100 text-green-800 border-green-300" },
-    completed: { label: "Completed", class: "bg-blue-100 text-blue-800 border-blue-300" },
-    pending: { label: "Pending", class: "bg-amber-100 text-amber-800 border-amber-300" },
-    cancelled: { label: "Cancelled", class: "bg-red-100 text-red-800 border-red-300" },
-  }[status];
+function StatusBadge({ status }: { status: string }) {
+  const statusConfig = getProjectStatusStyle(status);
 
   return (
-    <Badge variant="outline" className={`font-medium ${config.class}`}>
-      {config.label}
+    <Badge variant="outline" className={`font-medium ${statusConfig.className}`}>
+      {statusConfig.label}
     </Badge>
   );
 }

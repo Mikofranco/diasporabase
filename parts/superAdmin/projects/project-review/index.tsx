@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
+import { routes } from "@/lib/routes";
+import { DashboardLoader } from "@/components/ui/dashboard-loader";
 
 const supabase = createClient();
 
@@ -57,13 +59,13 @@ const ProjectReviewPage: React.FC = () => {
         .eq("id", projectId);
       if (error) throw error;
       toast.success(`Project ${status === "active" ? "approved" : "rejected"} successfully`);
-      router.push("/dashboard/notifications");
+      router.push(routes.superAdminNotifications);
     } catch (err: any) {
       toast.error(`Error updating project: ${err.message}`);
     }
   };
 
-  if (loading) return <p className="text-sm text-gray-600 dark:text-gray-400">Loading...</p>;
+  if (loading) return <DashboardLoader label="Loading" />;
   if (!project) return <p className="text-sm text-gray-600 dark:text-gray-400">Project not found</p>;
 
   return (

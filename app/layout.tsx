@@ -1,19 +1,13 @@
 // app/layout.tsx
-import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
 import LoadingBar from "@/components/loading-bar";
 import GlobalLoading from "@/components/GlobalLoading";
 import { ModalSetup } from "@/components/ui/modal";
 import AuthListenerProvider from "@/provider/auth-provider";
+import SelectSignUpType from "@/components/modals/select-signup-type";
 
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  display: "swap",
-  variable: "--font-poppins",
-});
 
 export const metadata: Metadata = {
   title: {
@@ -72,16 +66,7 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
     creator: "@DiasporaBaseHQ", // Add your Twitter handle if available
   },
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
-    apple: "/apple-touch-icon.png",
-  },
   manifest: "/site.webmanifest",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
-  ],
   robots: {
     index: true,
     follow: true,
@@ -93,6 +78,13 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+  ],
 };
 
 export default function RootLayout({
@@ -124,14 +116,15 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${poppins.className} antialiased`}>
+      <body>
         {/* <GlobalLoading /> */}
         <LoadingBar />
         <ModalSetup />
+        <SelectSignUpType />
         {/* <AuthListenerProvider>{children}</AuthListenerProvider> */}
         {children}
 
-        {/* <Toaster position="top-right" richColors duration={6000} closeButton /> */}
+        <Toaster position="bottom-right" richColors duration={6000} closeButton />
       </body>
     </html>
   );

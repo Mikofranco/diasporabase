@@ -1,23 +1,41 @@
 "use client";
 
+import { motion } from "framer-motion";
 import NavBar from "@/components/navbar";
 import Footer from "@/parts/landingPage/footer";
+import { Scale } from "lucide-react";
 
 export default function TermsOfService() {
   return (
-    <>
+    <div className="flex flex-col min-h-[100dvh] bg-gray-50 dark:bg-gray-900">
       <NavBar />
-      <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
-          <div className="px-8 py-12 md:px-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-center text-gray-900 mb-4">
-              Terms of Service
-            </h1>
-            <p className="text-center text-gray-600 mb-12">
-              Last updated: December 20, 2025
-            </p>
-
-            <section className="prose prose-lg max-w-none text-gray-700 space-y-10">
+      <section className="relative py-16 md:py-20 overflow-hidden bg-gradient-to-br from-cyan-500/10 via-white to-blue-500/10 dark:from-cyan-500/5 dark:via-gray-900 dark:to-blue-500/5">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="container mx-auto px-4 text-center"
+        >
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 mb-4">
+            <Scale className="h-7 w-7" aria-hidden />
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3">
+            Terms of Service
+          </h1>
+          <p className="text-lg text-gray-500 dark:text-gray-400">
+            Last updated: December 20, 2025
+          </p>
+        </motion.div>
+      </section>
+      <main className="flex-1 py-12 px-4 sm:px-6 lg:px-8 pb-16 md:pb-24">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="max-w-4xl mx-auto bg-white dark:bg-gray-800/50 shadow-lg rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden -mt-6 relative z-10"
+        >
+          <div className="px-6 py-10 md:px-12 md:py-14">
+            <section className="prose prose-lg max-w-none text-gray-700 dark:text-gray-300 space-y-10 prose-headings:text-gray-900 dark:prose-headings:text-white">
               <p>
                 These Terms govern your use of DiasporaBase. By creating an account or using the platform, you agree to these Terms.
               </p>
@@ -184,9 +202,9 @@ export default function TermsOfService() {
               </div>
             </section>
           </div>
-        </div>
+        </motion.div>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

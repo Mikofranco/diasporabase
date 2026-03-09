@@ -38,14 +38,22 @@ import { MilestonesTab } from "./milestones";
 import { DeliverablesTab } from "./deliverables";
 import { Deliverable, Milestone, Project } from "@/lib/types";
 import { TeamTab } from "./team-tab";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
+import { getProjectVolunteers } from "@/services/projects";
 
 const supabase = createClient();
+
+export type ProjectVolunteerItem = {
+  volunteer_id: string;
+  profiles: { full_name: string; profile_picture?: string | null; email?: string } | null;
+};
 
 export default function ProjectManagementScreen() {
   const { id: projectId } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
+  const [projectVolunteers, setProjectVolunteers] = useState<ProjectVolunteerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,7 +127,7 @@ export default function ProjectManagementScreen() {
             start_date, end_date, status,
             volunteers_registered, volunteers_needed,
             category, country, state, lga, closing_remarks,
-            project_manager_id,required_skills
+            project_manager_id, project_manager_2_id, required_skills
           `
           )
           .eq("id", projectId)
@@ -128,10 +136,12 @@ export default function ProjectManagementScreen() {
         if (projectError) throw projectError;
         if (!projectData) throw new Error("Project not found");
 
-        // Authorization check
-        if (projectData.project_manager_id !== userId) {
+        const isPm =
+          projectData.project_manager_id === userId ||
+          projectData.project_manager_2_id === userId;
+        if (!isPm) {
           throw new Error(
-            "You are not the assigned project manager for this project"
+            "You are not an assigned project manager for this project"
           );
         }
 
@@ -144,15 +154,18 @@ export default function ProjectManagementScreen() {
           .eq("project_id", projectId)
           .order("due_date", { ascending: true });
 
-        // Fetch deliverables
+        // Fetch deliverables (including assigned_to for PM assign flow)
         const { data: deliverableData } = await supabase
           .from("deliverables")
-          .select("id, title, description, due_date, status, milestone_id")
+          .select("id, title, description, due_date, status, milestone_id, assigned_to")
           .eq("project_id", projectId)
           .order("due_date", { ascending: true });
 
         setMilestones(milestoneData || []);
         setDeliverables(deliverableData || []);
+
+        const { volunteers: volunteerList } = await getProjectVolunteers(projectId);
+        setProjectVolunteers((volunteerList ?? []) as ProjectVolunteerItem[]);
       } catch (err: any) {
         const message = err.message || "Failed to load project data";
         setError(message);
@@ -211,8 +224,8 @@ export default function ProjectManagementScreen() {
             <Building2 className="h-4 w-4" />
             <span>{project.organization_name}</span>
           </div>{/* @ts-ignore */}
-          <Badge className={getStatusColor(project.status)}>
-            {project.status}
+          <Badge className={getProjectStatusStyle(project.status).className}>
+            {getProjectStatusStyle(project.status).label}
           </Badge>
           <span className="text-sm">• You are the Project Manager</span>
         </div>
@@ -306,6 +319,7 @@ export default function ProjectManagementScreen() {
             setDeliverables={setDeliverables}
             milestones={milestones}
             projectId={projectId}
+            projectVolunteers={projectVolunteers}
             getStatusColor={getStatusColor}
           />
         </TabsContent>

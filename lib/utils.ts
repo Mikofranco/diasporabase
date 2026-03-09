@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Database } from "./database/types";
 import { Country, State, City } from 'country-state-city';
 import { africanLocations } from "@/data/african-locations";
+import { routes } from "./routes";
 
 export type LocationData = {
   country?: string | null;  // e.g., "NG" (ISO code) or full name "Nigeria"
@@ -20,8 +21,83 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Reusable client-side sign-out helper.
+ * - Signs out via Supabase
+ * - Clears local/session storage
+ * - Returns a boolean success flag and any error message
+ *
+ * Routing is left to the caller (so components can decide push/replace),
+ * but all sign-out flows share the same core behavior.
+ */
+export async function signOutUser(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (err) {
+      console.error("Error clearing storage after sign out", err);
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message ?? "Unexpected error while signing out",
+    };
+  }
+}
+
+/**
+ * User snapshot shape stored in localStorage for dashboard/sidebar use.
+ * Must match what the sidebar and other dashboard code expect.
+ */
+export type UserSnapshot = {
+  id: string;
+  email: string | null;
+  role: string;
+  full_name: string | null;
+  phone: string | null;
+  tax_id: string | null;
+  is_active: boolean | null;
+};
+
+/**
+ * Persist user snapshot to localStorage so the sidebar and dashboard
+ * have role, fullName, userId without calling the profile API.
+ * Use after login (email/password, OAuth, or email verification).
+ */
+export function persistUserSnapshot(snapshot: UserSnapshot): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("diasporabase_user", JSON.stringify(snapshot));
+    localStorage.setItem("diaspobase_role", snapshot.role);
+    localStorage.setItem("diaspobase_fullName", snapshot.full_name ?? "");
+    localStorage.setItem("diaspobase_userId", snapshot.id);
+  } catch {
+    // Swallow storage errors; do not block login
+  }
+}
+
 export async function getUserId() {
   try {
+    // Prefer the cached user id from localStorage when running in the browser.
+    if (typeof window !== "undefined") {
+      try {
+        const cachedId = localStorage.getItem("diaspobase_userId");
+        if (cachedId) {
+          return { data: cachedId, error: null };
+        }
+      } catch {
+        // Ignore storage errors and fall back to Supabase
+      }
+    }
+
     // Get the current session
     const {
       data: { user },
@@ -107,25 +183,25 @@ export async function handleEmailConfirmationRedirect() {
     if (profile && profile.role) {
       switch (profile.role) {
         case "admin":
-          window.location.href = "/dashboard/admin";
+          window.location.href = routes.adminDashboard;
           break;
         case "super_admin":
-          window.location.href = "/dashboard/super_admin";
+          window.location.href = routes.superAdminDashboard;
           break;
         case "volunteer":
-          window.location.href = "/dashboard/volunteer";
+          window.location.href = routes.volunteerDashboard;
           break;
         case "agency":
-          window.location.href = "/onboarding/agency";
+          window.location.href = routes.agencyOnboarding as string;
           break;
         default:
-          window.location.href = "/dashboard";
+          window.location.href = routes.login;
       }
     } else {
-      window.location.href = "/dashboard";
+      window.location.href = routes.login;
     }
   } else {
-    window.location.href = "/login";
+    window.location.href = routes.login;
   }
 }
 
@@ -137,7 +213,7 @@ interface Item {
   subChildren?: Item[];
 }
 
-interface Skillset {
+export interface SkillSet {
   id: string;
   label: string;
   parent_id: string | null;
@@ -155,16 +231,16 @@ export async function getSkillsets(): Promise<Item[]> {
     }
 
     // Transform flat skillsets into hierarchical structure
-    const topLevel = data.filter((s: Skillset) => s.parent_id === null);
-    const transformedItems: Item[] = topLevel.map((top: Skillset) => {
+    const topLevel = data.filter((s: SkillSet) => s.parent_id === null);
+    const transformedItems: Item[] = topLevel.map((top: SkillSet) => {
       const children = data
-        .filter((s: Skillset) => s.parent_id === top.id)
-        .map((child: Skillset) => ({
+        .filter((s: SkillSet) => s.parent_id === top.id)
+        .map((child: SkillSet) => ({
           id: child.id,
           label: child.label,
           subChildren: data
-            .filter((s: Skillset) => s.parent_id === child.id)
-            .map((subChild: Skillset) => ({
+            .filter((s: SkillSet) => s.parent_id === child.id)
+            .map((subChild: SkillSet) => ({
               id: subChild.id,
               label: subChild.label,
             })),
@@ -183,6 +259,37 @@ export async function getSkillsets(): Promise<Item[]> {
   }
 }
 
+/** Flatten hierarchical skillsets into id → label for display. */
+function flattenSkillItems(items: Item[]): Map<string, string> {
+  const map = new Map<string, string>();
+  function add(node: { id: string; label: string; children?: Item[] }) {
+    map.set(node.id, node.label);
+    node.children?.forEach((child) => {
+      map.set(child.id, child.label);
+      child.subChildren?.forEach((s: { id: string; label: string }) => map.set(s.id, s.label));
+    });
+  }
+  items.forEach(add);
+  return map;
+}
+
+/** Fetch skillsets and return a flat map of skill id → display label. */
+export async function getSkillLabelsMap(): Promise<Map<string, string>> {
+  const items = await getSkillsets();
+  return flattenSkillItems(items);
+}
+
+/**
+ * Get the display label for a skill id. Use for all user-facing skill text.
+ * @param id - Skill id (e.g. "arts_design")
+ * @param labelsMap - Map from getSkillLabelsMap(); if null, falls back to formatting id (e.g. "Arts design")
+ */
+export function getSkillLabel(id: string, labelsMap: Map<string, string> | null): string {
+  if (!id) return "";
+  const label = labelsMap?.get(id);
+  if (label) return label;
+  return id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export async function getUnreadNotificationCount(): Promise<{
   data: number | null;

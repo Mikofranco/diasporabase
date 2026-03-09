@@ -1,8 +1,12 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { getUserId, getUserLocation } from "@/lib/utils";
-import React, { useState, useEffect } from "react";
+import {
+  getSkillsets as getSkillSets,
+  getUserId,
+  getUserLocation,
+} from "@/lib/utils";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -22,7 +26,15 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { MapPin, User, Globe, Phone, Mail, Building, Loader2 } from "lucide-react";
+import {
+  MapPin,
+  User,
+  Globe,
+  Phone,
+  Mail,
+  Building,
+  Loader2,
+} from "lucide-react";
 import {
   Form,
   FormField,
@@ -44,6 +56,14 @@ import * as z from "zod";
 import Image from "next/image";
 import { CategoryCheckBox } from "@/components/ui/select-caegories";
 import CategorySelect from "@/components/category-select";
+import SingleImageUploader, {
+  SingleImageUploaderRef,
+} from "@/components/single-image_uploader";
+import MultipleImageUploader, {
+  MultipleImageUploaderRef,
+} from "@/components/multi-image-uploader";
+import { SkillSet } from "@/lib/types";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -56,13 +76,7 @@ const organizationTypes = [
   "Other",
 ];
 
-const focusAreaOptions = [
-  { id: "education", label: "Education" },
-  { id: "healthcare", label: "Healthcare" },
-  { id: "environment", label: "Environment" },
-  { id: "technology", label: "Technology" },
-  { id: "social_services", label: "Social Services" },
-];
+const focusAreaOptions: SkillSet[] = [];
 
 const generalSchema = z.object({
   organization_name: z.string().min(1, "Organization name is required.").trim(),
@@ -75,6 +89,21 @@ const generalSchema = z.object({
     errorMap: () => ({ message: "Please select a valid organization type." }),
   }),
   tax_id: z.string().min(1, "Tax ID is required.").trim(),
+  website: z
+    .string()
+    .refine(
+      (value) => {
+        return /^(?:(https?:\/\/)(www\.)?)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(
+          value,
+        );
+      },
+      {
+        message:
+          "Invalid URL. Must be a valid URL with http://, https://, or start with www.",
+      },
+    )
+    .nullable(),
+  cac_number: z.string().min(1, "CAC number is required.").trim(),
 });
 
 const contactSchema = z.object({
@@ -85,15 +114,6 @@ const contactSchema = z.object({
     .email("Invalid email address.")
     .min(1, "Email is required."),
   contact_person_phone: z.string().min(1, "Phone number is required.").trim(),
-  website: z
-  .string()
-  .refine(
-    (value) => {
-      return /^(?:(https?:\/\/)(www\.)?)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(value);
-    },
-    { message: "Invalid URL. Must be a valid URL with http://, https://, or start with www." }
-  )
-  .nullable(),
 });
 
 const operationalSchema = z.object({
@@ -107,6 +127,7 @@ const operationalSchema = z.object({
 
 const pictureSchema = z.object({
   profile_picture: z.string().url("Invalid URL.").nullable(),
+  documents: z.array(z.string().url("Invalid URL.")).nullable(),
 });
 
 const formSchema = z.object({
@@ -135,6 +156,7 @@ interface Profile {
   environment_cities: string[] | null;
   environment_states: string[] | null;
   profile_picture: string | null;
+  documents: string[] | null;
 }
 
 const AgencyOnboarding: React.FC = () => {
@@ -144,9 +166,17 @@ const AgencyOnboarding: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState<boolean>(false);
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
-    null
+    null,
   );
+  const singleRef = useRef<SingleImageUploaderRef>(null);
+  const multipleRef = useRef<MultipleImageUploaderRef>(null);
   const router = useRouter();
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
+  const [profileImageError, setProfileImageError] = useState<string | null>(null);
+  const [hasProfileImageSelected, setHasProfileImageSelected] = useState(false);
+  const [documentsSelectedCount, setDocumentsSelectedCount] = useState(0);
+  const [organizationEmail, setOrganizationEmail] = useState<string>("");
+  const [organizationPhone, setOrganizationPhone] = useState<string>("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -160,12 +190,14 @@ const AgencyOnboarding: React.FC = () => {
       contact_person_email: "",
       contact_person_phone: "",
       website: null,
-      organization_type: organizationTypes[0], 
+      organization_type: organizationTypes[0],
       tax_id: "",
       focus_areas: [],
       environment_cities: [],
       environment_states: [],
       profile_picture: null,
+      cac_number: "",
+      documents: [],
     },
   });
 
@@ -179,6 +211,11 @@ const AgencyOnboarding: React.FC = () => {
         if (userIdError) throw new Error(userIdError);
         if (!userId) throw new Error("Please log in to complete onboarding.");
 
+        const skillSets = await getSkillSets();
+        if(focusAreaOptions.length === 0)  focusAreaOptions.push(
+          ...skillSets.map((skill) => ({ id: skill.id, label: skill.label })),
+        );
+        
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select(
@@ -201,7 +238,7 @@ const AgencyOnboarding: React.FC = () => {
             environment_cities,
             environment_states,
             profile_picture
-          `
+          `,
           )
           .eq("id", userId)
           .eq("role", "agency")
@@ -211,6 +248,10 @@ const AgencyOnboarding: React.FC = () => {
           throw new Error("Error fetching profile: " + profileError.message);
         if (!profileData)
           throw new Error("Profile not found or you are not an agency.");
+
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        setOrganizationEmail(profileData.email || authUser?.email || "");
+        setOrganizationPhone((authUser?.user_metadata?.phone as string) || "");
 
         setProfile(profileData);
         form.reset({
@@ -230,6 +271,7 @@ const AgencyOnboarding: React.FC = () => {
           environment_cities: profileData.environment_cities || [],
           environment_states: profileData.environment_states || [],
           profile_picture: profileData.profile_picture || null,
+          documents: profileData.documents || [],
         });
 
         // Fetch and set location
@@ -251,7 +293,7 @@ const AgencyOnboarding: React.FC = () => {
                     environment_cities: updatedCities,
                     environment_states: updatedStates,
                   }
-                : profileData
+                : profileData,
             );
             console.log("Location fetched and set:", {
               environment_cities: updatedCities,
@@ -270,7 +312,7 @@ const AgencyOnboarding: React.FC = () => {
           profileData.focus_areas.length > 0 &&
           profileData.address
         ) {
-          router.push("/dashboard/agency");
+          router.push(routes.agencyDashboard);
         }
       } catch (err: any) {
         setError(err.message);
@@ -284,7 +326,7 @@ const AgencyOnboarding: React.FC = () => {
   }, [form, router]);
 
   const handleProfilePictureChange = (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     if (e.target.files && e.target.files[0]) {
       setProfilePictureFile(e.target.files[0]);
@@ -300,6 +342,7 @@ const AgencyOnboarding: React.FC = () => {
         "description",
         "organization_type",
         "tax_id",
+        "cac_number",
       ]);
       if (!isValid) {
         console.log("Step 1 validation errors:", form.formState.errors);
@@ -315,14 +358,25 @@ const AgencyOnboarding: React.FC = () => {
     } else if (step === 3) {
       isValid = await form.trigger(["address", "focus_areas"]);
     } else if (step === 4) {
+      setDocumentsError(null);
+      setProfileImageError(null);
+      if (!hasProfileImageSelected) {
+        setProfileImageError("Please upload a business logo (profile picture).");
+        return;
+      }
+      if (documentsSelectedCount < 1) {
+        setDocumentsError("Please upload at least one supporting document.");
+        return;
+      }
       isValid = await form.trigger(["profile_picture"]);
+      isValid = (await form.trigger(["documents"])) && isValid;
     }
 
     if (isValid && step < 4) {
       setStep(step + 1);
     } else if (isValid && step === 4) {
       form.handleSubmit(handleSubmit)();
-    } else {
+    } else if (step !== 4) {
       toast.error("Please fill out all required fields correctly.");
     }
   };
@@ -333,30 +387,42 @@ const AgencyOnboarding: React.FC = () => {
 
   const handleSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsCompleting(true);
+
     try {
       const { data: userId, error: userIdError } = await getUserId();
       if (userIdError) throw new Error(userIdError);
       if (!userId) throw new Error("Please log in to complete onboarding.");
 
-      let profilePictureUrl = data.profile_picture;
-      if (profilePictureFile) {
-        const fileExt = profilePictureFile.name.split(".").pop();
-        const fileName = `${userId}_${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("profile-pictures")
-          .upload(fileName, profilePictureFile, { upsert: true });
+      // let profilePictureUrl = data.profile_picture;
+      // if (profilePictureFile) {
+      //   const fileExt = profilePictureFile.name.split(".").pop();
+      //   const fileName = `${userId}_${Date.now()}.${fileExt}`;
+      //   const { error: uploadError } = await supabase.storage
+      //     .from("profile-pictures")
+      //     .upload(fileName, profilePictureFile, { upsert: true });
 
-        if (uploadError)
-          throw new Error(
-            "Error uploading profile picture: " + uploadError.message
-          );
+      //   if (uploadError)
+      //     throw new Error(
+      //       "Error uploading profile picture: " + uploadError.message,
+      //     );
 
-        const { data: publicUrlData } = supabase.storage
-          .from("profile-pictures")
-          .getPublicUrl(fileName);
-        profilePictureUrl = publicUrlData.publicUrl;
+      //   const { data: publicUrlData } = supabase.storage
+      //     .from("profile-pictures")
+      //     .getPublicUrl(fileName);
+      //   profilePictureUrl = publicUrlData.publicUrl;
+      // }
+
+      const picture_singleUrl = await singleRef.current?.upload();
+
+      // Upload multiple images
+      const multipleUrls = await multipleRef.current?.upload();
+      if (multipleUrls && multipleUrls.length > 0) {
+        console.log("Multiple documents uploaded:", multipleUrls);
+      } else {
+        setDocumentsError(
+          "No documents uploaded. Please upload at least one document.",
+        );
       }
-
       const { error: updateError } = await supabase
         .from("profiles")
         .update({
@@ -374,7 +440,12 @@ const AgencyOnboarding: React.FC = () => {
           focus_areas: data.focus_areas,
           environment_cities: data.environment_cities,
           environment_states: data.environment_states,
-          profile_picture: profilePictureUrl,
+          profile_picture: picture_singleUrl,
+          cac_number: data.cac_number,
+          documents:
+            multipleUrls && multipleUrls.length > 0
+              ? multipleUrls
+              : profile?.documents || null,
         })
         .eq("id", userId)
         .eq("role", "agency");
@@ -402,16 +473,19 @@ const AgencyOnboarding: React.FC = () => {
               focus_areas: data.focus_areas,
               environment_cities: data.environment_cities,
               environment_states: data.environment_states,
-              profile_picture: profilePictureUrl,
+              profile_picture: picture_singleUrl,
+              cac_number: data.cac_number,
+              documents:
+                multipleUrls && multipleUrls.length > 0
+                  ? multipleUrls
+                  : prev.documents,
             }
-          : null
+          : null,
       );
-      // toast.success("Onboarding completed successfully!");
-      router.push("/dashboard/agency");
+      router.push(routes.approvalPending);
     } catch (err: any) {
       setIsCompleting(false);
       setError(err.message);
-      // toast.error(err.message);
     }
   };
 
@@ -425,16 +499,17 @@ const AgencyOnboarding: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-8 space-y-8 max-w-4xl min-h-screen bg-gradient-to-b from-blue-950 to-blue-900">
-        <Skeleton className="h-12 w-1/3 rounded-lg" />
-        <Card className="shadow-xl border-0">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl min-h-0">
+        <Skeleton className="h-8 w-48 rounded-lg mb-6" />
+        <Card className="shadow-xl border-0 rounded-2xl overflow-hidden">
           <CardHeader>
-            <Skeleton className="h-8 w-1/2 rounded-lg" />
+            <Skeleton className="h-7 w-2/3 rounded-lg" />
+            <Skeleton className="h-4 w-full rounded-lg mt-2" />
           </CardHeader>
           <CardContent className="space-y-6">
-            <Skeleton className="h-10 w-full rounded-lg" />
-            <Skeleton className="h-20 w-full rounded-lg" />
-            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-20 w-full rounded-xl" />
+            <Skeleton className="h-10 w-full rounded-xl" />
           </CardContent>
         </Card>
       </div>
@@ -443,9 +518,11 @@ const AgencyOnboarding: React.FC = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto p-8 max-w-4xl min-h-screen bg-gradient-to-b from-blue-950 to-blue-900">
-        <Card className="border-red-200 bg-red-50 shadow-md">
-          <CardContent className="pt-6 text-red-600">{error}</CardContent>
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl min-h-screen">
+        <Card className="border-red-200 bg-red-50/80 shadow-lg rounded-2xl">
+          <CardContent className="pt-6 pb-6 text-red-700 font-medium">
+            {error}
+          </CardContent>
         </Card>
       </div>
     );
@@ -453,9 +530,9 @@ const AgencyOnboarding: React.FC = () => {
 
   if (!profile) {
     return (
-      <div className="container mx-auto p-8 max-w-4xl min-h-screen bg-gradient-to-b from-blue-950 to-blue-900">
-        <Card className="shadow-md">
-          <CardContent className="pt-6 text-gray-600">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl min-h-screen">
+        <Card className="shadow-lg rounded-2xl">
+          <CardContent className="pt-6 pb-6 text-gray-600">
             Profile not found.
           </CardContent>
         </Card>
@@ -463,37 +540,65 @@ const AgencyOnboarding: React.FC = () => {
     );
   }
 
+  const stepTitles = [
+    "General Information",
+    "Contact Details",
+    "Operational Details",
+    "Upload Documents",
+  ];
+  const stepDescriptions = [
+    "Tell us about your organization.",
+    "Provide contact information for your organization.",
+    "Specify your operational scope and focus areas.",
+    "Upload a profile picture and important documents for your organization.",
+  ];
+
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-8 space-y-8 max-w-4xl min-h-screen bg-gradient-to-b from-blue-950 to-blue-900">
-        <h1 className="text-3xl font-bold text-white">Agency Onboarding</h1>
-        <Progress value={(step / 4) * 100} className="h-2 bg-blue-200" />
-        <p className="text-sm text-blue-200">Step {step} of 4</p>
+      <div className="container mx-auto px-4 sm:px-6 pt-4 pb-6 sm:pt-6 sm:pb-8 max-w-4xl">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Agency Onboarding
+          </h1>
+          <p className="mt-1 text-sm text-blue-200/90">
+            Step {step} of 4
+          </p>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/25">
+            <Progress
+              value={(step / 4) * 100}
+              className="h-full bg-transparent transition-all duration-500 ease-out"
+              indicatorClassName="bg-[#0ea5e9]"
+            />
+          </div>
+          <div className="mt-1.5 flex justify-between text-xs font-medium text-white drop-shadow-sm">
+            <span>General</span>
+            <span>Contact</span>
+            <span>Operations</span>
+            <span>Documents</span>
+          </div>
+        </div>
 
-        <Card className="shadow-xl border-0 bg-white">
-          <CardHeader>
-            <CardTitle className="text-2xl text-gray-900">
-              {step === 1 && "General Information"}
-              {step === 2 && "Contact Details"}
-              {step === 3 && "Operational Details"}
-              {step === 4 && "Profile Picture"}
-            </CardTitle>
-            <CardDescription className="text-gray-600">
-              {step === 1 && "Tell us about your organization."}
-              {step === 2 &&
-                "Provide contact information for your organization."}
-              {step === 3 && "Specify your operational scope and focus areas."}
-              {step === 4 && "Upload a profile picture for your organization."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
+        <div className="flex flex-col max-h-[calc(95vh-18rem)] min-h-0">
+          <Card className="shadow-xl border-0 bg-white rounded-2xl overflow-hidden flex-1 min-h-0 flex flex-col">
+            <CardHeader className="pb-4 sm:pb-6 shrink-0">
+              <CardTitle className="text-xl sm:text-2xl text-gray-900 font-semibold">
+                {stepTitles[step - 1]}
+              </CardTitle>
+              <CardDescription className="text-gray-600 text-sm sm:text-base mt-1">
+                {stepDescriptions[step - 1]}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8 flex-1 min-h-0 overflow-y-auto scrollbar-hide p-6 pt-0">
             <Form {...form}>
               <form
                 onSubmit={form.handleSubmit(handleSubmit)}
                 className="space-y-8"
               >
-                {step === 1 && (
-                  <div className="grid gap-6 sm:grid-cols-2">
+                {/* Step 1: always in DOM for form state; use grid so layout is correct */}
+                <div
+                  className="grid gap-x-6 gap-y-8 sm:grid-cols-2"
+                  style={{ display: step === 1 ? "grid" : "none" }}
+                >
                     <FormField
                       control={form.control}
                       name="organization_name"
@@ -507,7 +612,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter organization name"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -526,13 +631,34 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter display name"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
                         </FormItem>
                       )}
                     />
+                    <div className="space-y-2">
+                      <label className="text-gray-700 font-medium text-sm">
+                        Organization Email{" "}
+                        <Mail className="inline h-4 w-4 text-gray-500 ml-1" />
+                      </label>
+                      <Input
+                        value={organizationEmail}
+                        readOnly
+                        className="border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-gray-700 font-medium text-sm">
+                        Organization Phone {" "}
+                        <Phone className="inline h-4 w-4 text-gray-500 ml-1" />
+                      </label>
+                      <Input
+                        value={organizationPhone}
+                        className="border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed rounded-lg"
+                      />
+                    </div>
                     <FormField
                       control={form.control}
                       name="organization_type"
@@ -546,7 +672,7 @@ const AgencyOnboarding: React.FC = () => {
                               onValueChange={field.onChange}
                               value={field.value}
                             >
-                              <SelectTrigger className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg">
+                              <SelectTrigger className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg">
                                 <SelectValue placeholder="Select organization type" />
                               </SelectTrigger>
                               <SelectContent>
@@ -574,115 +700,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter tax ID"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem className="sm:col-span-2">
-                          <FormLabel className="text-gray-700 font-medium">
-                            Description
-                          </FormLabel>
-                          <FormControl>
-                            <textarea
-                              {...field}
-                              value={field.value ?? ""}
-                              onChange={(e) =>
-                                field.onChange(e.target.value || null)
-                              }
-                              placeholder="Enter organization description"
-                              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y transition-shadow duration-200 hover:shadow-sm"
-                              rows={6}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-
-                {step === 2 && (
-                  <div className="grid gap-6 sm:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="first_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">
-                            First Name{" "}
-                            <User className="inline h-4 w-4 text-gray-500 ml-1" />
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Enter first name"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="surname"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">
-                            Surname
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Enter surname"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="contact_person_email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">
-                            Contact Email{" "}
-                            <Mail className="inline h-4 w-4 text-gray-500 ml-1" />
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Enter contact email"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="contact_person_phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-700 font-medium">
-                            Contact Phone{" "}
-                            <Phone className="inline h-4 w-4 text-gray-500 ml-1" />
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Enter contact phone"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -706,18 +724,153 @@ const AgencyOnboarding: React.FC = () => {
                                 field.onChange(e.target.value || null)
                               }
                               placeholder="Enter website URL"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
                         </FormItem>
                       )}
                     />
-                  </div>
-                )}
+                    <FormField
+                      control={form.control}
+                      name="cac_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            CAC Number{" "}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) =>
+                                field.onChange(e.target.value || null)
+                              }
+                              placeholder="Enter CAC number"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500 text-sm" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem className="sm:col-span-2">
+                          <FormLabel className="text-gray-700 font-medium">
+                            Description
+                          </FormLabel>
+                          <FormControl>
+                            <textarea
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) =>
+                                field.onChange(e.target.value || null)
+                              }
+                              placeholder="Enter organization description"
+                              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y transition-shadow duration-200 hover:shadow-sm"
+                              rows={6}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500 text-sm" />
+                        </FormItem>
+                      )}
+                    />
+                </div>
 
-                {step === 3 && (
-                  <div className="grid gap-6 sm:grid-cols-2">
+                {/* Step 2 */}
+                <div
+                  className="grid gap-x-6 gap-y-8 sm:grid-cols-2"
+                  style={{ display: step === 2 ? "grid" : "none" }}
+                >
+                    <FormField
+                      control={form.control}
+                      name="first_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            First Name{" "}
+                            <User className="inline h-4 w-4 text-gray-500 ml-1" />
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter first name"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500 text-sm" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="surname"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            Surname
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter surname"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500 text-sm" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contact_person_email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            Contact Person Email{" "}
+                            <Mail className="inline h-4 w-4 text-gray-500 ml-1" />
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter contact person email"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500 text-sm" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contact_person_phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            Contact Person Phone{" "}
+                            <Phone className="inline h-4 w-4 text-gray-500 ml-1" />
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter contact person phone"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500 text-sm" />
+                        </FormItem>
+                      )}
+                    />
+                </div>
+
+                {/* Step 3 */}
+                <div
+                  className="grid gap-x-6 gap-y-8 sm:grid-cols-2"
+                  style={{ display: step === 3 ? "grid" : "none" }}
+                >
                     <FormField
                       control={form.control}
                       name="address"
@@ -731,7 +884,7 @@ const AgencyOnboarding: React.FC = () => {
                             <Input
                               {...field}
                               placeholder="Enter address"
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-sm" />
@@ -746,7 +899,7 @@ const AgencyOnboarding: React.FC = () => {
                       <FormControl>
                         <Input
                           value={locationDisplay}
-                          // disabled
+                          disabled
                           className="border-gray-300 bg-gray-100 rounded-lg"
                           placeholder="Location not available"
                         />
@@ -771,12 +924,14 @@ const AgencyOnboarding: React.FC = () => {
                         </FormItem>
                       )}
                     />
-                  </div>
-                )}
+                </div>
 
-                {step === 4 && (
-                  <div className="grid gap-6">
-                    <FormField
+                {/* Step 4: kept in DOM so image/doc selection persists when navigating back */}
+                <div
+                  className="grid gap-6 gap-y-7"
+                  style={{ display: step === 4 ? "grid" : "none" }}
+                >
+                    {/* <FormField
                       control={form.control}
                       name="profile_picture"
                       render={({ field }) => (
@@ -789,7 +944,7 @@ const AgencyOnboarding: React.FC = () => {
                               type="file"
                               accept="image/*"
                               onChange={handleProfilePictureChange}
-                              className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg transition-shadow duration-200 hover:shadow-sm"
+                              className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg transition-shadow duration-200 hover:shadow-sm"
                             />
                           </FormControl>
                           {profile.profile_picture && (
@@ -806,17 +961,58 @@ const AgencyOnboarding: React.FC = () => {
                           <FormMessage className="text-red-500 text-sm" />
                         </FormItem>
                       )}
-                    />
-                  </div>
-                )}
+                    /> */}
+                    <div className="space-y-2">
+                      <h3 className="text-gray-800 font-semibold">
+                        Profile Picture (Business Logo)
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Upload a clear logo or photo of your organization. Your selection is saved as you move between steps.
+                      </p>
+                      <SingleImageUploader
+                        ref={singleRef}
+                        title=""
+                        onFileSelected={(file) => {
+                          setHasProfileImageSelected(!!file);
+                          if (file) setProfileImageError(null);
+                        }}
+                      />
+                      {profileImageError && (
+                        <p className="text-red-500 text-sm">{profileImageError}</p>
+                      )}
+                    </div>
 
-                <div className="flex gap-4">
+                    <div className="space-y-2">
+                      <h3 className="text-gray-800 font-semibold">
+                        Supporting Documents
+                        <span className="text-red-500 text-sm ml-1 font-normal">
+                          (at least one recommended)
+                        </span>
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Upload CAC certificate, registration documents, or other relevant files (PDF, JPG, PNG). Selections are kept when you go back to previous steps.
+                      </p>
+                      <MultipleImageUploader
+                        ref={multipleRef}
+                        title=""
+                        onFilesChange={(files) => {
+                          setDocumentsSelectedCount(files?.length ?? 0);
+                          if ((files?.length ?? 0) > 0) setDocumentsError(null);
+                        }}
+                      />
+                      {documentsError && (
+                        <p className="text-red-500 text-sm">{documentsError}</p>
+                      )}
+                    </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
                   {step > 1 && (
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handlePrevious}
-                      className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg py-2"
+                      className="min-w-[100px] border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl py-2.5 transition-colors"
                     >
                       Previous
                     </Button>
@@ -826,13 +1022,15 @@ const AgencyOnboarding: React.FC = () => {
                       <Button
                         type="button"
                         onClick={handleNext}
-                        className="w-full action-btn text-white font-semibold rounded-lg transition-colors duration-200 py-2"
-                        disabled={loading}
+                        className="flex-1 action-btn text-white font-semibold rounded-xl py-2.5 transition-all duration-200 hover:opacity-95 disabled:opacity-70 disabled:pointer-events-none"
+                        disabled={loading || isCompleting}
                       >
-                       {isCompleting || loading ? (
+                        {isCompleting || loading ? (
                           <>
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            {step === 4 ? "Completing..." : "Processing..."}
+                            <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                            <span className="ml-2">
+                              {step === 4 ? "Completing..." : "Processing..."}
+                            </span>
                           </>
                         ) : step === 4 ? (
                           "Complete Onboarding"
@@ -852,6 +1050,7 @@ const AgencyOnboarding: React.FC = () => {
             </Form>
           </CardContent>
         </Card>
+        </div>
       </div>
     </TooltipProvider>
   );

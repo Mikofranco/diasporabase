@@ -1,191 +1,197 @@
-// app/dashboard/agency/projects/page.tsx
 "use client";
+
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Calendar, Plus, Users } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CreateProjectForm from "../create-project";
-import { Badge } from "@/components/ui/badge";
+import { routes } from "@/lib/routes";
+import { ProjectCard, type AgencyProject } from "./ProjectCard";
+import {
+  LoadingSkeleton,
+  EmptyState,
+  ErrorState,
+} from "./ProjectListStates";
+import { ProjectsFilters } from "./ProjectsFilters";
+import { PaginationBar } from "./PaginationBar";
+import {
+  DEFAULT_FILTERS,
+  DEFAULT_PAGE_SIZE,
+  type ProjectFilters,
+} from "./filters";
 
 const supabase = createClient();
 
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  organization_id: string;
-  organization_name: string;
-  location: string;
-  start_date: string;
-  end_date: string;
-  volunteers_needed: number;
-  volunteers_registered: number;
-  status: string;
-  category: string;
-  created_at: string;
-}
-
-const OrganizationsProjects: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+export default function OrganizationsProjects() {
+  const [projects, setProjects] = useState<AgencyProject[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [filters, setFilters] = useState<ProjectFilters>(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<ProjectFilters>(DEFAULT_FILTERS);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const router = useRouter();
 
+  const fetchProjects = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: userId, error: userIdError } = await getUserId();
+      if (userIdError) throw new Error(userIdError);
+      if (!userId) throw new Error("Please log in to view projects.");
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .select("id, role, organization_name")
+        .eq("id", userId)
+        .single();
+
+      if (profileError)
+        throw new Error("Error fetching profile: " + profileError.message);
+
+      const f = appliedFilters;
+      let query = supabase
+        .from("projects")
+        .select("*", { count: "exact" })
+        .eq("organization_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (f.status) query = query.eq("status", f.status);
+      if (f.category) query = query.eq("category", f.category);
+      if (f.title.trim()) query = query.ilike("title", `%${f.title.trim()}%`);
+      if (f.startDate) query = query.gte("start_date", f.startDate);
+      if (f.endDate) query = query.lte("end_date", f.endDate);
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data: projectsData, error: projectsError, count } = await query.range(from, to);
+
+      if (projectsError)
+        throw new Error("Error fetching projects: " + projectsError.message);
+
+      setProjects(projectsData ?? []);
+      setTotalCount(count ?? 0);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }, [appliedFilters, page, pageSize]);
+
   useEffect(() => {
-    const fetchProjects = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const { data: userId, error: userIdError } = await getUserId();
-        if (userIdError) throw new Error(userIdError);
-        if (!userId) throw new Error("Please log in to view projects.");
-
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("id, role, organization_name")
-          .eq("id", userId)
-          .single();
-
-        if (profileError)
-          throw new Error("Error fetching profile: " + profileError.message);
-        if (profile.role !== "organization" && profile.role !== "agency") {
-          throw new Error("Only organizations or agencies can view projects.");
-        }
-
-        const { data: projectsData, error: projectsError } = await supabase
-          .from("projects")
-          .select("*")
-          .eq("organization_id", userId)
-          .order("created_at", { ascending: false });
-
-        if (projectsError)
-          throw new Error("Error fetching projects: " + projectsError.message);
-        setProjects(projectsData || []);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProjects();
-  }, []);
+  }, [fetchProjects]);
 
-  const handleCreateProjectClick = () => {
-    setShowCreateForm(true);
+  const handleApplyFilters = () => {
+    setAppliedFilters(filters);
+    setPage(1);
   };
 
-  const handleFormClose = () => {
+  const handleClearFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
+    setPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+  };
+
+  const handleCreateProjectClick = () => setShowCreateForm(true);
+  const handleFormClose = () => setShowCreateForm(false);
+
+  const handleProjectCreated = (newProject: AgencyProject) => {
+    setProjects((prev) => [newProject, ...prev]);
+    setTotalCount((c) => c + 1);
     setShowCreateForm(false);
   };
 
-  const handleProjectCreated = (newProject: Project) => {
-    setProjects([newProject, ...projects]);
-    setShowCreateForm(false);
+  const handleProjectSelect = (project: AgencyProject) => {
+    router.push(routes.agencyViewProject(project.id));
   };
 
-  const handleProjectSelect = (project: Project) => {
-    router.push(`/dashboard/agency/projects/${project.id}`);
-  };
+  const showFilters = true;
+  const showPagination = !loading && !error && totalCount > 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div
+      className={`container mx-auto p-6 space-y-6 ${
+        showCreateForm ? "blur-sm" : ""
+      }`}
+    >
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">My Organization's Projects</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          My Organization&apos;s Projects
+        </h1>
         <Button
-        onClick={handleCreateProjectClick}
-        variant={"outline"}
-      >
-        {" "}
-        <Plus className="mr-2 h-4 w-4" />
-        Create Project
-      </Button>
-
+          onClick={handleCreateProjectClick}
+          variant="outline"
+          className="rounded-xl"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Create Project
+        </Button>
       </div>
 
       {showCreateForm && (
         <CreateProjectForm
-          onClose={handleFormClose} //@ts-ignore
+          onClose={handleFormClose}
           onProjectCreated={handleProjectCreated}
         />
       )}
 
-      {loading && <p className="text-gray-500">Loading projects...</p>}
-      {error && (
-        <p className="text-red-500 bg-red-50 p-4 rounded-md border border-red-200">
-          {error}
-        </p>
+      {showFilters && (
+        <ProjectsFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          onApply={handleApplyFilters}
+          onClear={handleClearFilters}
+          resultCount={projects.length}
+          totalCount={totalCount}
+        />
       )}
+
+      {loading && <LoadingSkeleton />}
+
+      {!loading && error && (
+        <ErrorState message={error} onRetry={fetchProjects} />
+      )}
+
       {!loading && !error && projects.length === 0 && (
-        <p className="text-gray-600 py-8 text-center">
-          No projects found. Create one to get started!
-        </p>
+        <EmptyState onCreateClick={handleCreateProjectClick} />
       )}
 
       {!loading && !error && projects.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
-          {projects.map((project) => (
-            <Card
-              key={project.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow flex flex-col border"
-            >
-              <CardHeader>
-                <CardTitle className="text-lg">{project.title}</CardTitle>
-                <CardDescription>{project.organization_name}</CardDescription>
-              </CardHeader>
-
-              <CardContent className="flex-1 space-y-4">
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {project.description}
-                </p>
-
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      {new Date(project.start_date).toLocaleDateString()} -{" "}
-                      {new Date(project.end_date).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>
-                      {project.volunteers_registered}/{project.volunteers_needed}{" "}
-                      volunteers
-                    </span>
-                  </div>
-                  <div>
-                    <Badge variant="secondary">{project.category}</Badge>
-                  </div>
-                </div>
-              </CardContent>
-
-              <CardFooter className="mt-auto pt-2">
-                <Button
-                  className="w-full bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
-                  onClick={() => handleProjectSelect(project)}
-                >
-                  View Details
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+            {projects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onViewDetails={handleProjectSelect}
+              />
+            ))}
+          </div>
+          {showPagination && (
+            <PaginationBar
+              page={page}
+              pageSize={pageSize}
+              totalCount={totalCount}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          )}
+        </>
       )}
     </div>
   );
-};
-
-export default OrganizationsProjects;
+}

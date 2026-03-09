@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Calendar, Users, Search, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { routes } from "@/lib/routes";
 
 export default function OpportunityPage() {
   // Mock data - replace with real data fetching later
@@ -210,7 +211,7 @@ export default function OpportunityPage() {
                 className="bg-transparent text-white border-white hover:bg-white hover:text-blue-600"
                 asChild
               >
-                <Link href="/login">Sign In</Link>
+                <Link href={routes.login}>Sign In</Link>
               </Button>
             </div>
           </div>

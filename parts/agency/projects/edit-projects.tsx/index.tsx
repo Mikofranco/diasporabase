@@ -53,7 +53,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { CheckboxReactHookFormMultiple } from "@/components/renderedItems";
 import { expertiseData } from "@/data/expertise";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 import { Badge } from "@/components/ui/badge";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -102,6 +104,7 @@ interface Project {
 }
 
 const EditProject: React.FC = () => {
+  const { getLabel } = useSkillLabels();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -235,7 +238,7 @@ const EditProject: React.FC = () => {
         throw new Error("Error updating project: " + updateError.message);
 
       toast.success("Project updated successfully!");
-      router.push(`/dashboard/agency/projects/${project.id}`);
+      router.push(routes.agencyViewProject(project.id));
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -272,7 +275,7 @@ const EditProject: React.FC = () => {
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
               onClick={() =>
-                router.push(`/dashboard/agency/projects/${projectId}`)
+                router.push(routes.agencyViewProject(projectId as string))
               }
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -300,7 +303,7 @@ const EditProject: React.FC = () => {
             <Button
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => router.push("/dashboard/agency")}
+              onClick={() => router.push(routes.agencyDashboard)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Dashboard
@@ -321,7 +324,7 @@ const EditProject: React.FC = () => {
           <Button
             variant="outline"
             onClick={() =>
-              router.push(`/dashboard/agency/projects/${project.id}`)
+              router.push(routes.agencyViewProject(project.id))
             }
             className="border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors duration-200 rounded-lg"
           >
@@ -585,8 +588,7 @@ const EditProject: React.FC = () => {
                                 key={skill}
                                 className="bg-blue-600 text-white rounded-md"
                               >
-                                {skill.charAt(0).toUpperCase() +
-                                  skill.slice(1).replace("_", " ")}
+                                {getLabel(skill)}
                                 <button
                                   className="ml-2 text-white hover:text-red-200"
                                   onClick={() =>
@@ -594,7 +596,7 @@ const EditProject: React.FC = () => {
                                       field.value.filter((s) => s !== skill)
                                     )
                                   }
-                                  aria-label={`Remove ${skill} skill`}
+                                  aria-label={`Remove ${getLabel(skill)} skill`}
                                 >
                                   &times;
                                 </button>
@@ -657,7 +659,7 @@ const EditProject: React.FC = () => {
                     type="button"
                     variant="outline"
                     onClick={() =>
-                      router.push(`/dashboard/agency/projects/${project.id}`)
+                      router.push(routes.agencyViewProject(project.id))
                     }
                     className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 text-lg py-6 rounded-lg"
                   >
@@ -761,8 +763,7 @@ const EditProject: React.FC = () => {
                         key={skill}
                         className="bg-blue-600 text-white rounded-md"
                       >
-                        {skill.charAt(0).toUpperCase() +
-                          skill.slice(1).replace("_", " ")}
+                        {getLabel(skill)}
                         <button
                           className="ml-2 text-white hover:text-red-200"
                           onClick={() =>
@@ -772,7 +773,7 @@ const EditProject: React.FC = () => {
                                 .filter((s) => s !== skill)
                             )
                           }
-                          aria-label={`Remove ${skill} skill`}
+                          aria-label={`Remove ${getLabel(skill)} skill`}
                         >
                           &times;
                         </button>

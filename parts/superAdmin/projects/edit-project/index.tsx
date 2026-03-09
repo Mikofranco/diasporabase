@@ -12,6 +12,7 @@ import { CheckboxReactHookFormMultiple } from '@/components/renderedItems';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { expertiseData } from '@/data/expertise';
+import { routes } from '@/lib/routes';
 
 interface Project {
   id: string;
@@ -52,7 +53,7 @@ const EditProject: React.FC = () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          router.push('/login');
+          router.push(routes.login);
           return;
         }
 
@@ -148,7 +149,7 @@ const EditProject: React.FC = () => {
       }
 
       toast.success('Project updated successfully!');
-      router.push(`/dashboard/admin/projects/${projectId}`);
+      router.push(routes.agencyViewProject(projectId as string));
     } catch (err) {
       toast.error('Error updating project: ' + (err as Error).message);
     }

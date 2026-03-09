@@ -429,14 +429,14 @@ export function CommentsModal({ deliverableId, volunteers, projectId }: Comments
                       onClick={() => tagVolunteer(vol)}
                       onMouseDown={(e) => e.preventDefault()}
                     >
-                      <Avatar className="h-11 w-11 shrink-0">
+                      <Avatar className="h-5 w-5 shrink-0">
                         <AvatarFallback className="text-base">
                           {getInitials(vol.full_name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 text-xs">
                         <p className="font-medium truncate">{vol.full_name}</p>
-                        <p className="text-sm text-muted-foreground truncate">{vol.email}</p>
+                        <p className="text-xs text-muted-foreground truncate">{vol.email}</p>
                       </div>
                     </button>
                   ))

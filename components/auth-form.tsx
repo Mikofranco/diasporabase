@@ -15,9 +15,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { SignInWithGoogle } from "./loginWithGoogle";
+import { routes } from "@/lib/routes";
+import { persistUserSnapshot } from "@/lib/utils";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -26,6 +28,7 @@ export default function LoginForm() {
   const [message, setMessage] = useState<{
     text: string;
     isError: boolean;
+    unconfirmedEmail?: string;
   } | null>(null);
   const [showPassword, setShowPassword] = useState(false); // NEW: toggle state
   const router = useRouter();
@@ -36,17 +39,23 @@ export default function LoginForm() {
   const isValidPassword = (password: string) => password.length >= 8;
 
   useEffect(() => {
-    //@ts-ignore
+    // Centralized post-login routing based on Supabase session + profile.
+    // This handles both email/password and OAuth (Google) sign-ins.
+    // @ts-ignore - Supabase typing for onAuthStateChange is more specific
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event:any, session:any) => {
+      (event: any, session: any) => {
         if (event === "SIGNED_IN" && session?.user) {
+          const user = session.user as any;
+          const metadata = user.user_metadata || {};
+
+          // Fetch profile once to get authoritative role + agency fields
           supabase
             .from("profiles")
-            .select("role")
-            .eq("id", session.user.id)
+            .select("role, tax_id, is_active, full_name, email, phone")
+            .eq("id", user.id)
             .single()
-            //@ts-ignore
-            .then(({ data: profile, error: profileError }) => {
+            .then((result: { data: any; error: any }) => {
+              const { data: profile, error: profileError } = result;
               if (profileError || !profile?.role) {
                 setMessage({
                   text: "Profile not found. Please contact support.",
@@ -55,10 +64,55 @@ export default function LoginForm() {
                 setLoading(false);
                 return;
               }
-              // toast.success("Logged in successfully!");
-              localStorage.setItem("diaspobase_role", profile.role);
-              localStorage.setItem("diaspobase_userId", session.user.id);
-              router.replace(`/dashboard/${profile.role}`);
+
+              const role =
+                profile.role || (metadata.role as string | undefined);
+
+              if (!role) {
+                setMessage({
+                  text: "Profile role missing. Please contact support.",
+                  isError: true,
+                });
+                setLoading(false);
+                return;
+              }
+
+              // Build a safe user snapshot for reuse on dashboards (no tokens).
+              const safeUser = {
+                id: user.id as string,
+                email: profile.email ?? (user.email as string | null) ?? null,
+                role,
+                full_name:
+                  profile.full_name ?? (metadata.full_name as string | null) ??
+                  null,
+                phone:
+                  profile.phone ?? (metadata.phone as string | null) ?? null,
+                tax_id: profile.tax_id ?? null,
+                is_active: profile.is_active ?? null,
+              };
+
+              persistUserSnapshot(safeUser);
+
+              // Route to the correct dashboard, including agency gating.
+              if (role === "super_admin") {
+                router.replace(routes.superAdminDashboard);
+              } else if (role === "admin") {
+                router.replace(routes.adminDashboard);
+              } else if (role === "agency") {
+                if (!profile.tax_id) {
+                  router.replace(routes.agencyOnboarding);
+                  return;
+                }
+                if (!profile.is_active) {
+                  router.replace(routes.approvalPending);
+                  return;
+                }
+                router.replace(routes.agencyDashboard);
+              } else if (role === "volunteer") {
+                router.replace(routes.volunteerDashboard);
+              } else {
+                router.replace(routes.login);
+              }
             });
         }
       },
@@ -99,8 +153,14 @@ export default function LoginForm() {
     );
 
     if (signInError) {
-      // toast.error(signInError.message);
-      setMessage({ text: signInError.message, isError: true });
+      const isUnconfirmed =
+        signInError.message?.toLowerCase().includes("email not confirmed") ||
+        signInError.message?.toLowerCase().includes("email_not_confirmed");
+      setMessage({
+        text: signInError.message,
+        isError: true,
+        ...(isUnconfirmed ? { unconfirmedEmail: email } : {}),
+      });
       setLoading(false);
       return;
     }
@@ -109,7 +169,7 @@ export default function LoginForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-2xl">Login</CardTitle>
+        <CardTitle className="text-2xl">Sign in</CardTitle>
         <CardDescription>
           Enter your credentials to access your dashboard.
         </CardDescription>
@@ -157,10 +217,13 @@ export default function LoginForm() {
               </button>
             </div>
           </div>
-          <Link href="/forgot-password" className="text-sm text-right hover:text-diaspora-darkBlue">
+          <Link
+            href="/forgot-password"
+            className="text-sm text-right hover:text-diaspora-darkBlue"
+          >
             Forgot password ?
           </Link>{" "}
-          <SignInWithGoogle/>
+          <SignInWithGoogle />
           <Button
             type="submit"
             className="w-full bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
@@ -172,24 +235,36 @@ export default function LoginForm() {
                 Loading...
               </>
             ) : (
-              "Login"
+              "Sign in"
             )}
           </Button>
           {message && (
-            <p
-              className={`text-center text-sm ${message.isError ? "text-red-500" : "text-green-500"}`}
-              aria-live="assertive"
-            >
-              {message.text}
-            </p>
+            <div className="space-y-2" aria-live="assertive">
+              <p
+                className={`text-center text-sm ${message.isError ? "text-red-500" : "text-green-500"}`}
+              >
+                {message.text}
+              </p>
+              {message.unconfirmedEmail && (
+                <div className="flex flex-col items-center gap-2">
+                  <Link
+                    href={`${routes.confirmEmail}?email=${encodeURIComponent(message.unconfirmedEmail)}`}
+                    className="inline-flex items-center gap-2 rounded-md border border-[#0ea5e9] bg-[#0ea5e9]/5 px-3 py-2 text-sm font-medium text-[#0ea5e9] hover:bg-[#0ea5e9]/10"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Resend confirmation email
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
           <div className="mt-4 text-xs text-center">
             Don&apos;t have an account? <br />
-            <Link href="/register-volunteer" className="underline">
+            <Link href={routes.registerVolunteer} className="underline">
               Register as Volunteer
             </Link>{" "}
             or{" "}
-            <Link href="/register-agency" className="underline">
+            <Link href={routes.registerAgency} className="underline">
               Register as Agency
             </Link>
           </div>

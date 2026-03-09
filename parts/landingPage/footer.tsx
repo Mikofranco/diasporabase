@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
+import { routes } from "@/lib/routes";
 
 const Footer = () => {
   const footerLinks = {
@@ -9,19 +10,19 @@ const Footer = () => {
       // { label: "Find Opportunities", href: "/opportunities" },
       // { label: "Post Projects", href: "/post-projects" },
       // { label: "Join Community", href: "/community" },
-      { label: "Success Stories", href: "/success-stories" },
+      { label: "Success Stories", href: routes.successStories },
     ],
     Support: [
-      { label: "Help Center", href: "/help" },
-      { label: "Contact Us", href: "/contact" },
-      { label: "Safety Guidelines", href: "/safety" },
-      { label: "Report Issue", href: "/report" },
+      { label: "Help Center", href: routes.help },
+      { label: "Contact Us", href: routes.contact },
+      { label: "Safety Guidelines", href: routes.safetyAndGuidelines },
+      { label: "Report Issue", href: routes.report },
     ],
     Legal: [
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Service", href: "/terms" },
-      { label: "Cookie Policy", href: "/cookies" },
-      { label: "Accessibility", href: "/accessibility" },
+      { label: "Privacy Policy", href: routes.privacy },
+      { label: "Terms of Service", href: routes.terms },
+      { label: "Cookie Policy", href: routes.cookies },
+      { label: "Accessibility", href: routes.accessibility },
     ],
   };
 
@@ -63,7 +64,7 @@ const Footer = () => {
       className="bg-[#1E293B] text-white py-16 min-h-[350px] relative overflow-hidden footer"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.05),transparent)]" />
-      <div className="mx-auto px-4 sm:px-6 lg:px-8 relative z-10 p-8">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 relative z-10 p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           <motion.div //@ts-ignore
             variants={itemVariants}

@@ -38,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getProjectManagers } from "@/services/projects";
 import { createAgencyRequest } from "@/services/requests";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 const supabase = createClient();
 
@@ -55,15 +56,18 @@ interface AssignProjectManagerProps {
   projectId: string;
   currentManagerId?: string | null;
   onManagerAssigned?: () => void;
+  disabled?: boolean;
 }
 
 export default function AssignProjectManager({
   projectId,
   currentManagerId,
   onManagerAssigned,
+  disabled = false,
 }: AssignProjectManagerProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const { getLabel } = useSkillLabels();
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -158,6 +162,7 @@ export default function AssignProjectManager({
               ? "border-orange-500 text-orange-700 hover:bg-orange-50"
               : "bg-emerald-600 hover:bg-emerald-700"
             }
+            disabled={disabled}
           >
             <UserCheck className="mr-2 h-4 w-4" />
             {currentManagerId ? "Change Manager" : "Assign Manager"}
@@ -302,7 +307,7 @@ export default function AssignProjectManager({
                               .slice(0, 4)
                               .map(skill => (
                                 <Badge key={skill} variant="secondary" className="text-xs">
-                                  {skill.replace(/_/g, " ")}
+                                  {getLabel(skill)}
                                 </Badge>
                               ))}
                           </div>

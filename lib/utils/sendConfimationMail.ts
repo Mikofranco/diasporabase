@@ -1,6 +1,7 @@
 // utils/sendConfirmationEmailWithBrevo.ts
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import { routes } from "../routes";
+import { sendMailServer } from "@/services/mail/send-mail-server";
 
 // Your full HTML template (cleaned, dynamic)
 const CONFIRMATION_TEMPLATE = (name: string, url: string) => `<!DOCTYPE html>
@@ -62,7 +63,7 @@ export async function sendConfirmationEmailWithBrevo(
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   const supabase = createClient();
   const origin = typeof window !== "undefined" ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL || "";
-  const finalRedirect = redirectTo || `${origin}/onboarding`;
+  const finalRedirect = redirectTo || `${origin}${routes.onboarding}`;
 
   try {
     // 1. Get confirmation URL from Supabase
@@ -77,20 +78,15 @@ export async function sendConfirmationEmailWithBrevo(
     const confirmationUrl = (data as any)?.confirmation_url;
     if (!confirmationUrl) throw new Error("No confirmation URL from Supabase");
 
-    // 2. Send via your Brevo API route
-    const response = await fetch("/api/send-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: email,
-        subject: "Confirm Your DiasporaBase Account",
-        html: CONFIRMATION_TEMPLATE(fullName.split(" ")[0], confirmationUrl),
-      }),
+    // 2. Send via server action (uses INTERNAL_API_SECRET)
+    const result = await sendMailServer({
+      to: email,
+      subject: "Confirm Your DiasporaBase Account",
+      html: CONFIRMATION_TEMPLATE(fullName.split(" ")[0], confirmationUrl),
     });
 
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || "Failed to send via Brevo");
+    if (!result.success) {
+      throw new Error(result.error || "Failed to send email");
     }
 
     return { success: true, url: confirmationUrl };

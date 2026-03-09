@@ -1,5 +1,7 @@
 // lib/email/templates/volunteerApplicationStatusHtml.ts
 
+import { routes } from "../routes";
+
 type ApplicationStatus = "accepted" | "declined";
 
 export const volunteerApplicationStatusHtml = (
@@ -23,7 +25,7 @@ export const volunteerApplicationStatusHtml = (
   const safeOrgName = escapeHtml(organizationName);
   const safeProjectTitle = projectTitle ? escapeHtml(projectTitle) : "the project";
 
-  const projectUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://diasporabase.com"}/dashboard/volunteer/projects/${projectId}`;
+  const projectUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://diasporabase.com"}${routes.volunteerViewProject(projectId)}`;
 
   const isAccepted = status === "accepted";
 

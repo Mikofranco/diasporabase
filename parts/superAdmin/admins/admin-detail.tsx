@@ -2,6 +2,7 @@
 import { supabase } from "@/lib/supabase/client";
 import { redirect, useParams } from "next/navigation";
 import AdminDetailsClient from "./adminDetailClient";
+import { routes } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ export default async function AdminDetailsPage() {
     const {id} = useParams()
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) redirect(routes.login);
 
   // Optional: Check if current user is super_admin
   const { data: profile } = await supabase
@@ -19,7 +20,7 @@ export default async function AdminDetailsPage() {
     .single();
 
   if (profile?.role !== "super_admin") {
-    redirect("/dashboard");
+    redirect(routes.superAdminDashboard);
   }
 
   // Fetch the target admin

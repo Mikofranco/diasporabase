@@ -112,10 +112,25 @@ const config: Config = {
             height: "0",
           },
         },
+        "loader-ring": {
+          "0%": { transform: "rotate(0deg)", opacity: "1" },
+          "100%": { transform: "rotate(360deg)", opacity: "1" },
+        },
+        "loader-dot": {
+          "0%, 80%, 100%": { opacity: "0.4", transform: "scale(0.8)" },
+          "40%": { opacity: "1", transform: "scale(1)" },
+        },
+        "loader-fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "loader-ring": "loader-ring 1s linear infinite",
+        "loader-dot": "loader-dot 1.2s ease-in-out infinite both",
+        "loader-fade-in": "loader-fade-in 0.3s ease-out",
       },
     },
   },

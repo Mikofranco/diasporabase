@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { useSendMail } from "../mail";
+import { routes } from "@/lib/routes";
 
 export async function createVolunteerRequest({
   projectId,
@@ -95,7 +96,7 @@ export async function createAgencyRequest({
   }
 
   // Send invitation email to volunteer
-  const volunteerDashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/volunteer/requests`;
+  const volunteerDashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}${routes.volunteerRequests}`;
 
   const html = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f9fafb;">
@@ -166,15 +167,29 @@ export async function checkIfVolunteerHasRequested({
     .select("id")
     .eq("project_id", projectId)
     .eq("volunteer_id", volunteerId)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
+  if (error) {
     console.error("Error checking volunteer request:", error);
     throw error;
   }
-  console.log("volunteer id ", volunteerId, "data", !!data);
 
   return { hasRequested: !!data };
+}
+
+/** Batch fetch volunteer IDs who have applied to this project (volunteer_requests). */
+export async function getVolunteersWhoRequested(projectId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("volunteer_requests")
+    .select("volunteer_id")
+    .eq("project_id", projectId);
+
+  if (error) {
+    console.error("Error fetching volunteer requests:", error);
+    return new Set();
+  }
+
+  return new Set((data ?? []).map((r: { volunteer_id: string }) => r.volunteer_id));
 }
 
 export async function checkIfAgencyHasRequested({

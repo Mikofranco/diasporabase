@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getUserId } from "@/lib/utils";
+import { getUserId, signOutUser } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -25,15 +25,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import {
-  User,
-  Lock,
-  Mail,
-  Bell,
-  LogOut,
-  ArrowLeft,
-  Trash2,
-} from "lucide-react";
+import { Lock, Bell, LogOut, ArrowLeft, Trash2 } from "lucide-react";
 import {
   Form,
   FormField,
@@ -45,6 +37,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -55,15 +48,6 @@ interface Profile {
   role: string;
   notification_preferences: { email_notifications: boolean };
 }
-
-// Zod schemas for forms
-const profileSchema = z.object({
-  full_name: z
-    .string()
-    .min(2, "Name must be at least 2 characters")
-    .max(100, "Name cannot exceed 100 characters"),
-  email: z.string().email("Invalid email address"),
-});
 
 const passwordSchema = z
   .object({
@@ -86,12 +70,6 @@ const VolunteerSettings: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  // Profile form
-  const profileForm = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: { full_name: "", email: "" },
-  });
 
   // Password form
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -126,10 +104,6 @@ const VolunteerSettings: React.FC = () => {
         }
 
         setProfile(profileData);
-        profileForm.reset({
-          full_name: profileData.full_name,
-          email: profileData.email,
-        });
       } catch (err: any) {
         setError(err.message);
         toast.error(err.message);
@@ -139,28 +113,7 @@ const VolunteerSettings: React.FC = () => {
     };
 
     fetchProfile();
-  }, [profileForm]);
-
-  const handleProfileUpdate = async (data: z.infer<typeof profileSchema>) => {
-    if (!profile) {
-      toast.error("Please log in to update profile.");
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ full_name: data.full_name, email: data.email })
-        .eq("id", profile.id);
-
-      if (error) throw new Error("Error updating profile: " + error.message);
-
-      setProfile({ ...profile, full_name: data.full_name, email: data.email });
-      toast.success("Profile updated successfully!");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-  };
+  }, []);
 
   const handlePasswordChange = async (data: z.infer<typeof passwordSchema>) => {
     try {
@@ -193,7 +146,7 @@ const VolunteerSettings: React.FC = () => {
 
       if (error)
         throw new Error(
-          "Error updating notification preferences: " + error.message
+          "Error updating notification preferences: " + error.message,
         );
 
       setProfile({
@@ -220,20 +173,12 @@ const VolunteerSettings: React.FC = () => {
 
       if (error) throw new Error("Error deleting account: " + error.message);
 
-      await supabase.auth.signOut();
+      const result = await signOutUser();
       toast.success("Account deleted successfully.");
-      router.push("/login");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw new Error("Error signing out: " + error.message);
-      toast.success("Signed out successfully.");
-      router.push("/login");
+      if (!result.success) {
+        console.error("Error during post-delete sign out:", result.error);
+      }
+      router.push(routes.login);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -242,14 +187,29 @@ const VolunteerSettings: React.FC = () => {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 space-y-6 max-w-4xl">
-        <Skeleton className="h-10 w-1/2 rounded-lg" />
-        <Card className="shadow-lg">
-          <CardContent className="space-y-6 pt-6">
-            <Skeleton className="h-8 w-1/3 rounded-lg" />
-            <Skeleton className="h-10 w-full rounded-lg" />
-            <Skeleton className="h-10 w-full rounded-lg" />
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40 rounded-lg" />
+            <Skeleton className="h-4 w-64 rounded-lg" />
+          </div>
+          <Skeleton className="h-9 w-32 rounded-lg" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[...Array(3)].map((_, idx) => (
+            <Card key={idx} className="shadow-sm border rounded-xl">
+              <CardHeader className="space-y-2 border-b border-gray-100">
+                <Skeleton className="h-5 w-32 rounded-lg" />
+                <Skeleton className="h-4 w-40 rounded-lg" />
+              </CardHeader>
+              <CardContent className="pt-4 space-y-3">
+                <Skeleton className="h-4 w-full rounded-lg" />
+                <Skeleton className="h-4 w-3/4 rounded-lg" />
+                <Skeleton className="h-10 w-28 rounded-lg" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -257,7 +217,7 @@ const VolunteerSettings: React.FC = () => {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card className="shadow-lg border-red-300 bg-red-50">
+        <Card className="shadow-lg border-red-200 bg-red-50 rounded-xl">
           <CardHeader>
             <CardTitle className="text-xl text-red-700">Error</CardTitle>
           </CardHeader>
@@ -266,7 +226,7 @@ const VolunteerSettings: React.FC = () => {
             <Button
               variant="outline"
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              onClick={() => router.push("/dashboard/volunteer")}
+              onClick={() => router.push(routes.volunteerDashboard)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Dashboard
@@ -278,100 +238,27 @@ const VolunteerSettings: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6 ">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
-          Settings
-        </h1>
+    <div className="container mx-auto px-4 py-8 space-y-6 max-w-4xl">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+            Settings
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage your password, notifications, and account access.
+          </p>
+        </div>
         <Button
           variant="outline"
           className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          onClick={() => router.push("/dashboard/volunteer")}
+          onClick={() => router.push(routes.volunteerDashboard)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
+          Back to dashboard
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-lg border-0 bg-white rounded-xl">
-          <CardHeader className="border-b border-gray-200">
-            <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
-              <User className="h-5 w-5 mr-2 text-gray-500" />
-              Profile Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <Form {...profileForm}>
-              <form
-                onSubmit={profileForm.handleSubmit(handleProfileUpdate)}
-                className="space-y-6"
-              >
-                <FormField
-                  control={profileForm.control}
-                  name="full_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-600">
-                        Full Name
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter your full name"
-                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
-                          aria-describedby="full-name-description"
-                        />
-                      </FormControl>
-                      <p
-                        id="full-name-description"
-                        className="text-sm text-gray-500 mt-1"
-                      >
-                        Your name as it will appear in your profile.
-                      </p>
-                      <FormMessage className="text-red-500 text-sm" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={profileForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-600">
-                        Email
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="email"
-                          placeholder="Enter your email"
-                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg h-12"
-                          aria-describedby="email-description"
-                        />
-                      </FormControl>
-                      <p
-                        id="email-description"
-                        className="text-sm text-gray-500 mt-1"
-                      >
-                        Your contact email for notifications and updates.
-                      </p>
-                      <FormMessage className="text-red-500 text-sm" />
-                    </FormItem>
-                  )}
-                />
-                <Button
-                  type="submit"
-                  className=" action-btn text-lg py-6 rounded-lg transition-colors duration-200"
-                  disabled={profileForm.formState.isSubmitting}
-                >
-                  Save Profile
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg border-0 bg-white rounded-xl">
+        <Card className="shadow-sm border bg-white rounded-xl">
           <CardHeader className="border-b border-gray-200">
             <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
               <Lock className="h-5 w-5 mr-2 text-gray-500" />
@@ -482,32 +369,28 @@ const VolunteerSettings: React.FC = () => {
         </Card>
 
         <Card className="shadow-lg border-0 bg-white rounded-xl">
-          <CardHeader className="border-b border-gray-200">
+          <CardHeader className="border-b border-gray-200 space-y-1">
             <CardTitle className="text-2xl font-semibold text-gray-900 flex items-center">
               <Trash2 className="h-5 w-5 mr-2 text-gray-500" />
               Account Management
             </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Permanently delete your volunteer account and all associated data.
+            </p>
           </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            <div>
-              <Button
-                onClick={handleSignOut}
-                className="bg-gray-600 hover:bg-gray-700 text-white text-lg py-6 rounded-lg transition-colors duration-200"
-              >
-                <LogOut className="h-5 w-5 mr-2" />
-                Sign Out
-              </Button>
-            </div>
-            {/* <div>
-              <Button
-                variant="destructive"
-                className="w-full text-lg py-6 rounded-lg"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-5 w-5 mr-2" />
-                Delete Account
-              </Button>
-            </div> */}
+          <CardContent className="pt-6 space-y-4">
+            <p className="text-sm text-gray-600 leading-relaxed">
+              This action cannot be undone. You will lose access to your volunteer
+              history, requests, and any ongoing projects linked to this account.
+            </p>
+            <Button
+              variant="destructive"
+              className="w-full text-sm md:text-base py-3 rounded-lg flex items-center justify-center gap-2"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete account
+            </Button>
           </CardContent>
         </Card>
 

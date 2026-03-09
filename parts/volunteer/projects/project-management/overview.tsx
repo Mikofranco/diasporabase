@@ -14,6 +14,7 @@ import { formatLocation } from "@/lib/utils";
 import { CheckCircle2, Flag, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useSkillLabels } from "@/hooks/useSkillLabels";
 
 interface OverviewTabProps {
   project: Project;
@@ -22,6 +23,7 @@ interface OverviewTabProps {
 export function OverviewTab({ project }: OverviewTabProps) {
   const router = useRouter();
   const [showAllSkills, setShowAllSkills] = useState(false);
+  const { getLabel } = useSkillLabels();
 
   return (
     <>
@@ -55,7 +57,7 @@ export function OverviewTab({ project }: OverviewTabProps) {
                     variant="secondary"
                     className="py-1.5 px-3 text-sm font-medium"
                   >
-                    {skill}
+                    {getLabel(skill)}
                   </Badge>
                 ))}
             </div>

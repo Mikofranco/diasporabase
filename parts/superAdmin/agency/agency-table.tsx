@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -8,273 +8,303 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Building2, UserCheck, UserX } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { routes } from "@/lib/routes";
+import { cn } from "@/lib/utils";
+import { AgencyFilters } from "./AgencyFilters";
+import { AgencyPaginationBar } from "./PaginationBar";
+import { AgencyLoadingSkeleton, AgencyTableSkeleton } from "./AgencyLoadingSkeleton";
+import {
+  DEFAULT_AGENCY_FILTERS,
+  DEFAULT_AGENCY_PAGE_SIZE,
+  type AgencyFilters as AgencyFiltersType,
+} from "./filters";
 
-// Initialize Supabase client
 const supabase = createClient();
 
-// Define TypeScript interface for agency profile
 interface AgencyProfile {
   id: string;
   organization_name: string | null;
   contact_person_email: string | null;
   website: string | null;
   focus_areas: string[] | null;
-  role: 'agency';
+  role: "agency";
   is_active: boolean;
 }
 
 const AgencyList: React.FC = () => {
-  const [agencies, setAgencies] = useState<AgencyProfile[]>([]);
-  const [filteredAgencies, setFilteredAgencies] = useState<AgencyProfile[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [page, setPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const pageSize = 10;
-  const [user, setUser] = useState<any>(null); 
   const router = useRouter();
-  const [userRole, setUserRole] = useState<string | null>(null)
+  const [agencies, setAgencies] = useState<AgencyProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [filters, setFilters] = useState<AgencyFiltersType>(DEFAULT_AGENCY_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<AgencyFiltersType>(DEFAULT_AGENCY_FILTERS);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_AGENCY_PAGE_SIZE);
 
-  // Check user authentication and role
-  useEffect(() => {
-    const fetchUser = async () => {
+  const fetchAgencies = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login');
+        router.push(routes.login);
         return;
       }
 
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
         .single();
 
-      if (error || !['admin', 'super_admin'].includes(profile.role)) {
-        router.push('/unauthorized');
+      if (profileError || !["admin", "super_admin"].includes(profile?.role)) {
+        router.push("/unauthorized");
+        setLoading(false);
         return;
       }
-      setUserRole(profile.role)
-      setUser(user);
-    };
 
-    fetchUser();
-  }, [router]);
+      setUserRole(profile.role);
 
-  // Fetch agencies
-  useEffect(() => {
-    const fetchAgencies = async () => {
-      setLoading(true);
-      setError(null);
-
-      const query = supabase
-        .from('profiles')
-        .select('id, organization_name, contact_person_email, website, focus_areas, role, is_active', {
-          count: 'exact',
+      const f = appliedFilters;
+      let query = supabase
+        .from("profiles")
+        .select("id, organization_name, contact_person_email, website, focus_areas, role, is_active", {
+          count: "exact",
         })
-        .eq('role', 'agency')
-        .range((page - 1) * pageSize, page * pageSize - 1);
+        .eq("role", "agency")
+        .order("organization_name", { ascending: true });
 
-      const { data, error, count } = await query;
-
-      if (error) {
-        setError('Failed to fetch agencies');
-        console.error(error);
-        toast.error('Failed to fetch agencies');
-      } else {
-        setAgencies(data as AgencyProfile[]);
-        setTotalPages(Math.ceil((count || 0) / pageSize));
+      if (f.status === "active") query = query.eq("is_active", true);
+      if (f.status === "inactive") query = query.eq("is_active", false);
+      if (f.search?.trim()) {
+        const term = `%${f.search.trim()}%`;
+        query = query.or(`organization_name.ilike.${term},contact_person_email.ilike.${term}`);
       }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error: fetchError, count } = await query.range(from, to);
+
+      if (fetchError) throw fetchError;
+      setAgencies((data as AgencyProfile[]) ?? []);
+      setTotalCount(count ?? 0);
+    } catch (err) {
+      setError("Failed to fetch agencies");
+      toast.error("Failed to fetch agencies");
+      console.error(err);
+    } finally {
       setLoading(false);
-    };
-
-    if (user) {
-      fetchAgencies();
     }
+  }, [appliedFilters, page, pageSize, router]);
 
-    // Real-time subscription
-    const subscription = supabase
-      .channel('profiles')
+  useEffect(() => {
+    fetchAgencies();
+  }, [fetchAgencies]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("profiles_agency")
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'profiles', filter: 'role=eq.agency' },
-        () => fetchAgencies(),
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles", filter: "role=eq.agency" },
+        () => fetchAgencies()
       )
       .subscribe();
-
     return () => {
-      supabase.removeChannel(subscription);
+      supabase.removeChannel(channel);
     };
-  }, [page, user]);
+  }, [fetchAgencies]);
 
-  // Filter agencies by search query
-  useEffect(() => {
-    const filtered = agencies.filter(
-      (agency) =>
-        (agency.organization_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (agency.contact_person_email || '').toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-    setFilteredAgencies(filtered);
-  }, [agencies, searchQuery]);
-
-  // Handle row click to navigate to agency profile
-  const handleRowClick = (agencyId: string) => {
-    router.replace(`/dashboard/${userRole}/agencies/${agencyId}`);
+  const handleApplyFilters = () => {
+    setAppliedFilters(filters);
+    setPage(1);
   };
 
-  if (!user) return null;
+  const handleClearFilters = () => {
+    setFilters(DEFAULT_AGENCY_FILTERS);
+    setAppliedFilters(DEFAULT_AGENCY_FILTERS);
+    setPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+  };
+
+  const handleRowClick = (agencyId: string) => {
+    const base = userRole === "super_admin" ? "super-admin" : userRole;
+    router.push(`/${base}/agencies/${agencyId}`);
+  };
+
+  const showPagination = !loading && totalCount > 0;
+
+  if (loading && agencies.length === 0) {
+    return <AgencyLoadingSkeleton />;
+  }
 
   return (
-    <div className="container mx-auto p-6 border rounded-lg shadow-sm bg-white">
-      <h1 className="text-3xl font-bold mb-6">Agency List</h1>
-
-      {/* Search */}
-      <div className="mb-6">
-        <label htmlFor="search" className="text-sm font-medium mb-1 block">
-          Search Agencies
-        </label>
-        <Input
-          id="search"
-          placeholder="Search by organization name or email..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full max-w-md"
-        />
+    <div className="container mx-auto p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Manage Agencies</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          View and manage agency profiles, filter by status, and open details
+        </p>
       </div>
 
-      {/* Error Message */}
+      <AgencyFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        onApply={handleApplyFilters}
+        onClear={handleClearFilters}
+        resultCount={agencies.length}
+        totalCount={totalCount}
+      />
+
       {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </div>
       )}
 
-      {/* Loading State */}
-      {loading ? (
-        <div className="flex justify-center items-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      ) : filteredAgencies.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-gray-500">No agencies found.</p>
-          <Button
-            variant="link"
-            onClick={() => setSearchQuery('')}
-            className="mt-2"
-          >
-            Clear Search
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className='bg-gray-50'>
-                <TableRow>
-                  <TableHead>Organization Name</TableHead>
-                  <TableHead>Contact Email</TableHead>
-                  <TableHead>Website</TableHead>
-                  <TableHead>Focus Areas</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAgencies.map((agency) => (
-                  <TableRow
-                    key={agency.id}
-                    onClick={() => handleRowClick(agency.id)}
-                    className="cursor-pointer hover:bg-gray-100"
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        handleRowClick(agency.id);
-                      }
-                    }}
-                  >
-                    <TableCell>{agency.organization_name || 'N/A'}</TableCell>
-                    <TableCell>{agency.contact_person_email || 'N/A'}</TableCell>
-                    <TableCell>
-                      {agency.website ? (
-                        <a
-                          href={agency.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {agency.website}
-                        </a>
-                      ) : (
-                        'N/A'
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {agency.focus_areas?.join(', ') || 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      {agency.is_active ? (
-                        <Badge variant="default" className="bg-green-100 text-green-800">
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge variant="default" className="bg-red-100 text-red-800">
-                          Inactive
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      <Card className="shadow-sm border border-gray-200 overflow-hidden">
+        <CardHeader className="border-b bg-gray-50/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-diaspora-blue" />
+              Agencies List
+            </CardTitle>
+            {totalCount > 0 && (
+              <span className="text-sm text-gray-500">
+                {totalCount} agenc{totalCount !== 1 ? "ies" : "y"} total
+              </span>
+            )}
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Pagination className="mt-6">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setPage((prev) => Math.max(prev - 1, 1))}//@ts-ignore
-                    disabled={page === 1}
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <AgencyTableSkeleton />
+          ) : agencies.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+              <Building2 className="h-12 w-12 text-gray-300 mb-3" />
+              <p className="text-muted-foreground font-medium">No agencies found</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                {appliedFilters.search || appliedFilters.status !== "all"
+                  ? "Try adjusting your filters or clear them to see all agencies."
+                  : "There are no agencies on the platform yet."}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-100/80 border-b hover:bg-gray-100/80">
+                      <TableHead className="font-semibold text-gray-700">Organization Name</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Contact Email</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Website</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Focus Areas</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {agencies.map((agency) => (
+                      <TableRow
+                        key={agency.id}
+                        className="cursor-pointer hover:bg-gray-50/80 transition-colors border-b last:border-0"
+                        onClick={() => handleRowClick(agency.id)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleRowClick(agency.id);
+                          }
+                        }}
+                      >
+                        <TableCell className="font-medium text-gray-900">
+                          {agency.organization_name || "—"}
+                        </TableCell>
+                        <TableCell className="text-gray-600">
+                          {agency.contact_person_email || "—"}
+                        </TableCell>
+                        <TableCell>
+                          {agency.website ? (
+                            <a
+                              href={agency.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-diaspora-blue hover:underline truncate max-w-[180px] inline-block"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {agency.website}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-[200px]">
+                            {agency.focus_areas?.length ? (
+                              <span className="text-sm text-gray-600 line-clamp-2">
+                                {agency.focus_areas.join(", ")}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={cn(
+                              "gap-1",
+                              agency.is_active
+                                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                                : "bg-red-100 text-red-800 border-red-200"
+                            )}
+                          >
+                            {agency.is_active ? (
+                              <UserCheck className="h-3.5 w-3.5" />
+                            ) : (
+                              <UserX className="h-3.5 w-3.5" />
+                            )}
+                            {agency.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {showPagination && (
+                <div className="border-t px-4 sm:px-6">
+                  <AgencyPaginationBar
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
                   />
-                </PaginationItem>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <PaginationItem key={p}>
-                    <PaginationLink
-                      onClick={() => setPage(p)}
-                      isActive={p === page}
-                    >
-                      {p}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}//@ts-ignore
-                    disabled={page === totalPages}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -4,10 +4,11 @@ import React, { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SmallCard, { SmallCardProps } from "./small-card";
 import RecentActivity from "./recent-activity";
-import MatchingProjects from "./matching-projects";
+import RecommendedProjects from "./recommended-projects";
 import { getFirstWordShort, getUserId } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { routes } from "@/lib/routes";
 
 const supabase = createClient();
 
@@ -28,7 +29,6 @@ const VolunteerDashBoard = () => {
   const [completedProjectsCount, setCompletedProjectsCount] = useState<number>(0);
   const [attachedProjectsCount, setAttachedProjectsCount] = useState<number>(0);
   const [isChecking, setIsChecking] = useState<boolean>(true);
-  const [onboardingRequired, setOnboardingRequired] = useState<boolean>(false);
   const router = useRouter();
 
   /* --------------------------------------------------------------- */
@@ -69,7 +69,7 @@ const VolunteerDashBoard = () => {
         const { data: userId, error: uidErr } = await getUserId();
         if (uidErr || !userId) {
           toast.error("Please log in to continue.");
-          router.push("/login");
+          router.push(routes.login);
           return;
         }
 
@@ -84,14 +84,8 @@ const VolunteerDashBoard = () => {
           return;
         }
 
-        const skills = profile.skills ?? [];
-        if (!skills.length) {
-          setOnboardingRequired(true);
-          setIsChecking(false);
-          return; // stop loading the dashboard
-        }
-
-        // ---- profile is complete → load dashboard ----
+        // Onboarding reminder (when skills empty) is shown by layout
+        // ---- load dashboard ----
         setUserInformation({
           name: profile.full_name ?? "",
           email: profile.email ?? "",
@@ -138,35 +132,7 @@ const VolunteerDashBoard = () => {
   // }
 
   return (
-    <>
-      {/* ---------- NON-DISMISSIBLE ONBOARDING MODAL ---------- */}
-      {onboardingRequired && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl animate-in fade-in duration-300">
-            <div className="mb-5 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                <svg className="h-9 w-9 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">Complete Your Profile</h2>
-              <p className="mt-2 text-gray-600">
-                Please add your skills to unlock personalized project matches.
-              </p>
-            </div>
-
-            <button
-              onClick={() => router.push("/onboarding/volunteer")}
-              className="w-full rounded-lg action-btn py-3 font-medium text-white shadow-sm transition-colors "
-            >
-              Complete Onboarding
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ---------- DASHBOARD (blurred while modal is open) ---------- */}
-      <div className={`container mx-auto p-2 ${onboardingRequired ? "pointer-events-none blur-sm" : ""} `}>
+    <div className="container mx-auto p-2">
         <div className="mb-6 text-center sm:mb-8">
           <h1 className="mb-2 text-xl font-bold sm:text-2xl">
             Welcome Back{" "}
@@ -187,10 +153,9 @@ const VolunteerDashBoard = () => {
           </div>
 
           <RecentActivity />
-          <MatchingProjects />
+          <RecommendedProjects />
         </div>
-      </div>
-    </>
+    </div>
   );
 };
 

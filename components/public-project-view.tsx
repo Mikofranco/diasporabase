@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   Card,
@@ -10,12 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Star, MessageCircle, Users, Calendar } from "lucide-react";
+import { Users, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { routes } from "@/lib/routes";
 
 interface Project {
   id: string;
@@ -31,145 +30,276 @@ interface Project {
   category: string;
 }
 
-interface Rating {
-  id: string;
-  rating: number;
-  comment: string;
-  user_name: string;
-  created_at: string;
+type StatusFilter =
+  | "all"
+  | "Pending"
+  | "Active"
+  | "Rejected"
+  | "Cancelled"
+  | "Completed";
+
+interface Filters {
+  query: string;
+  organization: string;
+  location: string;
+  status: StatusFilter;
+  category: string;
+  skill: string;
+  minRating: number;
+  startDate?: string;
+  endDate?: string;
 }
+
+interface RatingMeta {
+  average: number;
+  count: number;
+}
+
+const PAGE_SIZE = 9;
+
+const DEFAULT_FILTERS: Filters = {
+  query: "",
+  organization: "",
+  location: "",
+  status: "all",
+  category: "",
+  skill: "",
+  minRating: 0,
+  startDate: undefined,
+  endDate: undefined,
+};
 
 export default function PublicProjectView() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [ratings, setRatings] = useState<Rating[]>([]);
-  const [newRating, setNewRating] = useState(0);
-  const [newComment, setNewComment] = useState("");
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [filterDraft, setFilterDraft] = useState<Filters>(DEFAULT_FILTERS);
+  const [ratingsMeta, setRatingsMeta] = useState<Record<string, RatingMeta>>(
+    {}
+  );
 
+  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    // Reset to first page whenever filters change
+    fetchProjects(1, { append: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
 
-  const fetchProjects = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .or("status.eq.active,status.eq.completed")
-      .order("created_at", { ascending: false });
+  const fetchProjects = async (
+    pageNumber: number,
+    options: { append: boolean }
+  ) => {
+    const { append } = options;
+    const from = (pageNumber - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    if (pageNumber === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
+    let query = supabase.from("projects").select("*", { count: "exact" });
+
+    // Text search across title, description, organization, and skills
+    if (filters.query.trim()) {
+      const term = `%${filters.query.trim()}%`;
+      query = query.or(
+        `title.ilike.${term},description.ilike.${term},organization_name.ilike.${term}`
+      );
+    }
+
+    if (filters.organization.trim()) {
+      const orgTerm = `%${filters.organization.trim()}%`;
+      query = query.ilike("organization_name", orgTerm);
+    }
+
+    if (filters.location.trim()) {
+      const locTerm = `%${filters.location.trim()}%`;
+      query = query.ilike("location", locTerm);
+    }
+
+    if (filters.status !== "all") {
+      query = query.eq("status", filters.status);
+    }
+
+    if (filters.category.trim()) {
+      query = query.ilike("category", `%${filters.category.trim()}%`);
+    }
+
+    if (filters.skill.trim()) {
+      // Assumes a "skills" text field/array exists; falls back gracefully if not
+      query = query.ilike("skills", `%${filters.skill.trim()}%`);
+    }
+
+    if (filters.startDate) {
+      query = query.gte("start_date", filters.startDate);
+    }
+
+    if (filters.endDate) {
+      query = query.lte("end_date", filters.endDate);
+    }
+
+    query = query.order("created_at", { ascending: false }).range(from, to);
+
+    const { data, error, count } = await query;
 
     if (error) {
       console.error("Error fetching projects:", error);
     } else {
-      setProjects(data || []);
-      console.log;
+      const fetched = data || [];
+      setProjects((prev) => (append ? [...prev, ...fetched] : fetched));
+      setPage(pageNumber);
+      if (typeof count === "number") {
+        setHasMore(to + 1 < count);
+      } else {
+        setHasMore(fetched.length === PAGE_SIZE);
+      }
+
+      // Fetch rating meta for this batch
+      const ids = fetched.map((p: Project) => p.id);
+      if (ids.length > 0) {
+        const { data: ratingsData, error: ratingsError } = await supabase
+          .from("project_ratings")
+          .select("project_id,rating")
+          .in("project_id", ids);
+
+        if (!ratingsError && ratingsData) {
+          const nextMeta: Record<string, RatingMeta> = {};
+          for (const row of ratingsData as {
+            project_id: string;
+            rating: number;
+          }[]) {
+            const existing = nextMeta[row.project_id] || { average: 0, count: 0 };
+            const total = existing.average * existing.count + row.rating;
+            const count = existing.count + 1;
+            nextMeta[row.project_id] = {
+              average: total / count,
+              count,
+            };
+          }
+
+          setRatingsMeta((prev) =>
+            append ? { ...prev, ...nextMeta } : nextMeta
+          );
+        } else if (!append) {
+          setRatingsMeta({});
+        }
+      } else if (!append) {
+        setRatingsMeta({});
+      }
     }
-    setLoading(false);
-  };
 
-  const fetchRatings = async (projectId: string) => {
-    const { data, error } = await supabase
-      .from("project_ratings")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching ratings:", error);
+    if (pageNumber === 1) {
+      setLoading(false);
     } else {
-      setRatings(data || []);
+      setLoadingMore(false);
     }
   };
 
   const handleProjectSelect = (project: Project) => {
-    setSelectedProject(project);
-    fetchRatings(project.id);
+    router.push(routes.generalProjectDetails(project.id));
   };
 
-  const handleSubmitRating = async () => {
-    if (!selectedProject || !userName.trim() || newRating === 0) {
-      toast.error("Please fill in all fields and select a rating");
-      return;
+  const handleLoadMore = () => {
+    if (!hasMore || loadingMore) return;
+    fetchProjects(page + 1, { append: true });
+  };
+
+  const handleClearFilters = () => {
+    setFilterDraft(DEFAULT_FILTERS);
+    setFilters(DEFAULT_FILTERS);
+  };
+
+  const handleApplyFilters = () => {
+    setFilters(filterDraft);
+  };
+
+  const getStatusBadgeClasses = (status: string) => {
+    const normalized = status.toLowerCase();
+    if (normalized === "active") {
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
     }
-
-    setSubmitting(true);
-
-    const { error } = await supabase.from("project_ratings").insert(
-      {
-        project_id: selectedProject.id,
-        rating: newRating,
-        comment: newComment.trim(),
-        user_name: userName.trim(),
-        email: userEmail.trim(),
-      },
-      {
-        onConflict: "project_id,email", // Key: replace if this combo exists
-        ignoreDuplicates: false,
-      }
-    );
-
-    if (error) {
-      console.error("Error submitting rating:", error);
-      toast.error("Error submitting rating. Please try again.");
-    } else {
-      setNewRating(0);
-      setNewComment("");
-      setUserName("");
-      fetchRatings(selectedProject.id);
+    if (normalized === "pending") {
+      return "bg-amber-50 text-amber-700 border-amber-200";
     }
-
-    setSubmitting(false);
+    if (normalized === "completed") {
+      return "bg-slate-50 text-slate-700 border-slate-200";
+    }
+    if (normalized === "rejected") {
+      return "bg-red-50 text-red-700 border-red-200";
+    }
+    if (normalized === "cancelled") {
+      return "bg-gray-50 text-gray-700 border-gray-200";
+    }
+    return "bg-gray-50 text-gray-700 border-gray-200";
   };
 
-  const renderStars = (
-    rating: number,
-    interactive = false,
-    onStarClick?: (rating: number) => void
-  ) => {
-    return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`h-5 w-5 ${
-              star <= rating
-                ? "fill-yellow-400 text-yellow-400"
-                : "text-gray-300"
-            } ${interactive ? "cursor-pointer hover:text-yellow-400" : ""}`}
-            onClick={() => interactive && onStarClick?.(star)}
-          />
-        ))}
-      </div>
-    );
-  };
-
-  const getAverageRating = (ratings: Rating[]) => {
-    if (ratings.length === 0) return 0;
-    const sum = ratings.reduce((acc, rating) => acc + rating.rating, 0);
-    return Math.round((sum / ratings.length) * 10) / 10;
-  };
+  const displayedProjects = useMemo(() => {
+    if (filters.minRating <= 0) return projects;
+    return projects.filter((project) => {
+      const meta = ratingsMeta[project.id];
+      const avg = meta?.average ?? 0;
+      return avg >= filters.minRating;
+    });
+  }, [projects, ratingsMeta, filters.minRating]);
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <div>
+        <div className="mb-8 space-y-4">
+          <div className="space-y-2">
+            <div className="h-7 w-40 bg-gray-200 rounded-md animate-pulse" />
+            <div className="h-4 w-64 bg-gray-200 rounded-md animate-pulse" />
+          </div>
+
+          <div className="rounded-xl border bg-white/80 p-4 shadow-sm space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="flex-1">
+                <div className="h-10 w-full bg-gray-100 rounded-md animate-pulse" />
+              </div>
+              <div className="flex gap-2">
+                <div className="h-9 w-20 bg-gray-100 rounded-lg animate-pulse" />
+                <div className="h-9 w-20 bg-gray-100 rounded-lg animate-pulse" />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-9 w-full bg-gray-50 rounded-md border border-gray-100 animate-pulse"
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+            <Card key={i} className="h-full flex flex-col shadow-sm">
+              <CardHeader className="space-y-2 animate-pulse">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-4/5" />
+                    <div className="h-3 bg-gray-200 rounded w-2/5" />
+                  </div>
+                  <div className="h-5 w-16 bg-gray-200 rounded-full" />
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-3 animate-pulse flex-1 flex flex-col">
+                <div className="space-y-2 flex-1">
+                  <div className="h-3 bg-gray-200 rounded w-full" />
+                  <div className="h-3 bg-gray-200 rounded w-5/6" />
+                  <div className="h-3 bg-gray-200 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 rounded w-2/5" />
+                </div>
+                <div className="h-9 w-full bg-gray-200 rounded-md mt-2" />
               </CardContent>
             </Card>
           ))}
@@ -179,222 +309,245 @@ export default function PublicProjectView() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2"> Projects</h1>
-        <p className="text-muted-foreground">
-          Discover volunteer opportunities and share your experience with the
-          community.
-        </p>
+    <div>
+      <div className="mb-8 space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Projects</h1>
+          <p className="text-muted-foreground">
+            Discover verified opportunities, explore impact stories, and share
+            your experience with the community.
+          </p>
+        </div>
+
+        {/* Filters */}
+        <div className="rounded-xl border bg-white/80 p-4 shadow-sm space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="flex-1">
+              <Input
+                placeholder="Search by project title, organization, or skills"
+                value={filterDraft.query}
+                onChange={(e) =>
+                  setFilterDraft((prev) => ({ ...prev, query: e.target.value }))
+                }
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="px-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90 text-white shadow-sm"
+                onClick={handleApplyFilters}
+              >
+                Search
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-sm font-medium text-gray-700 border border-gray-300 hover:border-[#0ea5e9] hover:text-[#0ea5e9] rounded-lg px-4 py-2 transition-colors duration-200"
+                onClick={handleClearFilters}
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Input
+              placeholder="Organization"
+              value={filterDraft.organization}
+              onChange={(e) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  organization: e.target.value,
+                }))
+              }
+            />
+            <Input
+              placeholder="Location (city, country, or region)"
+              value={filterDraft.location}
+              onChange={(e) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  location: e.target.value,
+                }))
+              }
+            />
+            <Input
+              placeholder="Skill (e.g. design, data, policy)"
+              value={filterDraft.skill}
+              onChange={(e) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  skill: e.target.value,
+                }))
+              }
+            />
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={filterDraft.status}
+              onChange={(e) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  status: e.target.value as StatusFilter,
+                }))
+              }
+            >
+              <option value="all">All statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Active">Active</option>
+              <option value="Completed">Completed</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground whitespace-nowrap">
+                Start date
+              </span>
+              <input
+                type="date"
+                className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+                value={filterDraft.startDate ?? ""}
+                onChange={(e) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    startDate: e.target.value || undefined,
+                  }))
+                }
+              />
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground whitespace-nowrap">
+                End date
+              </span>
+              <input
+                type="date"
+                className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+                value={filterDraft.endDate ?? ""}
+                onChange={(e) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    endDate: e.target.value || undefined,
+                  }))
+                }
+              />
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground whitespace-nowrap">
+                Min. rating
+              </span>
+              <select
+                className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+                value={filterDraft.minRating}
+                onChange={(e) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    minRating: Number(e.target.value),
+                  }))
+                }
+              >
+                <option value={0}>Any</option>
+                <option value={4}>4.0+</option>
+                <option value={3}>3.0+</option>
+                <option value={2}>2.0+</option>
+              </select>
+            </div>
+            <div className="hidden lg:flex items-center justify-end text-xs text-muted-foreground">
+              {displayedProjects.length} project
+              {displayedProjects.length === 1 ? "" : "s"} found
+            </div>
+          </div>
+        </div>
       </div>
 
-      {!selectedProject ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <Card
-              key={project.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-            >
-              <CardHeader>
-                <CardTitle className="text-lg">{project.title}</CardTitle>
-                <CardDescription>{project.organization_name}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-                  {project.description}
-                </p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      {new Date(project.start_date).toLocaleDateString()} -{" "}
-                      {new Date(project.end_date).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>
-                      {project.volunteers_registered}/
-                      {project.volunteers_needed} volunteers
-                    </span>
-                  </div>
-                  <Badge variant="secondary">{project.category}</Badge>
-                </div>
-                <Button
-                  className="w-full mt-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
-                  onClick={() => handleProjectSelect(project)}
-                >
-                  View Details & Rate
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {displayedProjects.length === 0 ? (
+        <p className="text-muted-foreground">No projects found.</p>
       ) : (
-        <div className="max-w-4xl mx-auto">
-          <Button
-            variant="outline"
-            className="mb-6 bg-transparent"
-            onClick={() => setSelectedProject(null)}
-          >
-            ← Back to Projects
-          </Button>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 items-stretch">
+          {displayedProjects.map((project) => {
+            const ratingInfo = ratingsMeta[project.id];
+            const avgRating = ratingInfo?.average ?? 0;
+            const ratingLabel =
+              ratingInfo && ratingInfo.count > 0
+                ? `${avgRating.toFixed(1)} (${ratingInfo.count})`
+                : "Not rated yet";
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Project Details */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-2xl">
-                    {selectedProject.title}
-                  </CardTitle>
-                  <CardDescription className="text-lg">
-                    {selectedProject.organization_name}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p>{selectedProject.description}</p>
-                  <div className="grid gap-4 md:grid-cols-2">
+            return (
+              <Card
+                key={project.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow h-full flex flex-col"
+              >
+                <CardHeader className="space-y-1">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h4 className="font-semibold mb-2">Project Details</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>
-                            {new Date(
-                              selectedProject.start_date
-                            ).toLocaleDateString()}{" "}
-                            -{" "}
-                            {new Date(
-                              selectedProject.end_date
-                            ).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4" />
-                          <span>
-                            {selectedProject.volunteers_registered}/
-                            {selectedProject.volunteers_needed} volunteers
-                          </span>
-                        </div>
-                        <Badge variant="secondary">
-                          {selectedProject.category}
-                        </Badge>
-                      </div>
+                      <CardTitle className="text-lg line-clamp-2">
+                        {project.title}
+                      </CardTitle>
+                      <CardDescription className="line-clamp-1">
+                        {project.organization_name}
+                      </CardDescription>
                     </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Community Rating</h4>
-                      <div className="flex items-center gap-2">
-                        {renderStars(getAverageRating(ratings))}
-                        <span className="text-sm text-muted-foreground">
-                          ({getAverageRating(ratings)}/5 from {ratings.length}{" "}
-                          reviews)
-                        </span>
-                      </div>
-                    </div>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs font-medium capitalize ${getStatusBadgeClasses(
+                        project.status
+                      )}`}
+                    >
+                      {project.status}
+                    </Badge>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Comments Section */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageCircle className="h-5 w-5" />
-                    Community Reviews ({ratings.length})
-                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {ratings.map((rating) => (
-                      <div
-                        key={rating.id}
-                        className="border-b pb-4 last:border-b-0"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">
-                              {rating.user_name}
-                            </span>
-                            {renderStars(rating.rating)}
-                          </div>
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(rating.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        {rating.comment && (
-                          <p className="text-sm">{rating.comment}</p>
-                        )}
-                      </div>
-                    ))}
-                    {ratings.length === 0 && (
-                      <p className="text-muted-foreground text-center py-4">
-                        No reviews yet. Be the first to share your experience!
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Rating Form */}
-            <div>
-              <Card className="sticky top-6">
-                <CardHeader>
-                  <CardTitle>Share Your Experience</CardTitle>
-                  <CardDescription>
-                    Rate this project and leave a comment for the community.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="user-name">Your Name</Label>
-                    <Input
-                      id="user-name"
-                      placeholder="Enter your name"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="user-email">Your Email</Label>
-                    <Input
-                      id="user-email"
-                      placeholder="Enter your email"
-                      value={userEmail}
-                      onChange={(e) => setUserEmail(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Rating</Label>
-                    <div className="mt-2">
-                      {renderStars(newRating, true, setNewRating)}
+                <CardContent className="flex flex-col h-full">
+                  <div className="space-y-2 text-sm flex-1">
+                    <p className="text-sm text-muted-foreground line-clamp-3">
+                      {project.description}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                      <span>{ratingLabel}</span>
                     </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="comment">Comment (Optional)</Label>
-                    <Textarea
-                      id="comment"
-                      placeholder="Share your thoughts about this project..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      rows={4}
-                    />
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        {new Date(project.start_date).toLocaleDateString()} -{" "}
+                        {new Date(project.end_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span>
+                        {project.volunteers_registered}/
+                        {project.volunteers_needed} volunteers
+                      </span>
+                    </div>
+                    <Badge variant="secondary">{project.category}</Badge>
                   </div>
                   <Button
-                    className="w-full bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
-                    onClick={handleSubmitRating}
-                    disabled={submitting}
+                    className="w-full mt-4 bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0EA5E9]/90 hover:to-[#0284C7]/90"
+                    onClick={() => handleProjectSelect(project)}
                   >
-                    {submitting ? "Submitting..." : "Submit Review"}
+                    View Details & Rate
                   </Button>
                 </CardContent>
               </Card>
-            </div>
-          </div>
+            );
+          })}
+        </div>
+      )}
+
+      {hasMore && (
+        <div className="flex justify-center mt-8">
+          <Button
+            variant="outline"
+            className="text-sm font-medium text-gray-700 border border-gray-300 hover:border-[#0ea5e9] hover:text-[#0ea5e9] rounded-lg px-4 py-2 transition-colors duration-200"
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? "Loading more..." : "Load more projects"}
+          </Button>
         </div>
       )}
     </div>
   );
 }
+

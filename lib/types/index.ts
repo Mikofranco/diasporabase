@@ -31,6 +31,8 @@ export interface Deliverable {
   createdAt?: string;
   due_date?: string;
   milestone_id?: string;
+  /** User id (volunteer) assigned to this deliverable. Nullable. */
+  assigned_to?: string | null;
 }
 
 export interface Milestone {
@@ -100,6 +102,15 @@ export interface Profile {
   volunteer_countries?: string[] | undefined | null;
   volunteer_states?: string[] | undefined | null;
   volunteer_lgas?: string[] | undefined | null;
+  contact_person_first_name?: string | null;
+  contact_person_last_name?: string | null;
+  contact_person_email?: string | null;
+  contact_person_phone?: string | null;
+  organization_name?: string | null;
+  organization_type?: string | null;
+  profile_picture?: string | null;
+  cac_number?: string | null;
+  documents?: string[] | [];
 }
 
 export interface ProjectLeaveReason {
@@ -147,7 +158,8 @@ export interface Project {
   start_date?:string;
   organization_id?: string;
   organization_name?: string;
-  project_manager_id?: string;
+  project_manager_id?: string | null;
+  project_manager_2_id?: string | null;
   volunteers_needed?: number;
   volunteers_registered?: number;
   lga?: string | null;
@@ -155,6 +167,7 @@ export interface Project {
   state?: string | null;
   end_date?: string;
   closing_remarks?:string;
+  documents?: { title: string; url: string }[] | [];
 }
 
 export interface SkillSet {
@@ -202,6 +215,7 @@ export interface Volunteer {
   email: string;
   skills: string[];
   availability?: string;
+  experience?: string | null;
   residence_country?: string;
   residence_state?: string;
   volunteer_countries?: string[];
@@ -213,4 +227,29 @@ export interface Volunteer {
   joined_at: string;
   avatar_url?: string;
   profile?: Profile;
+  /** When true, hide name/email/photo in contexts that respect anonymity (e.g. find volunteers, public). */
+  anonymous?: boolean;
+}
+
+export interface AgencyProfile {
+  id: string;
+  organization_name: string | null;
+  contact_person_email: string | null;
+  contact_person_phone: string | null;
+  website: string | null;
+  focus_areas: string[] | null;
+  address: string | null;
+  organization_type: string | null;
+  description: string | null;
+  environment_cities: string[] | null;
+  environment_states: string[] | null;
+  profile_picture: string | null;
+  is_active: boolean;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  cac_number: string | null;
+  documents: string[] | [];
+  contact_person_first_name: string | null;
+contact_person_last_name: string | null;
 }
