@@ -381,6 +381,7 @@ export default function ViewProjectDetails() {
           <MilestonesSection
             projectId={project.id}
             canEdit={isUserProjectManager}
+            isUserInProject={isUserInProject}
             canAddMilestone={isUserProjectManager && ["pending", "approved", "active"].includes((project?.status ?? "").toLowerCase())}
             volunteers={volunteers}
             milestonesPageHref={routes.volunteerProjectMilestones(project.id)}

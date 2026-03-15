@@ -50,6 +50,7 @@ interface MilestonesPageContentProps {
   isAgency: boolean;
   /** When true (volunteer is PM for this project), allow create/edit milestones and create/edit/assign deliverables. */
   isProjectManager?: boolean;
+  isisUserInProject?: boolean;
 }
 
 export function MilestonesPageContent({
@@ -61,6 +62,7 @@ export function MilestonesPageContent({
   currentUserId,
   backHref,
   isAgency,
+  isisUserInProject,
   isProjectManager = false,
 }: MilestonesPageContentProps) {
   const searchParams = useSearchParams();
@@ -344,7 +346,7 @@ export function MilestonesPageContent({
                             </Button>
                           </>
                         )}
-                        {(canAddMilestone || role === "volunteer") && (
+                        {(canAddMilestone || isisUserInProject || isProjectManager) && (
                           <Button
                             size="sm"
                             variant="outline"

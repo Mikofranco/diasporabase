@@ -853,3 +853,19 @@ export const checkAgencyRequestsToVolunteer = async (
 
   return { hasPendingRequest: !!data, error: null };
 }
+
+ export const checkIfUserIsInProject = async (userId: string, projectId: string) => {
+    const { data, error } = await supabase
+      .from("project_volunteers")
+      .select("*")
+      .eq("project_id", projectId)
+      .eq("volunteer_id", userId)
+      .single();
+
+    if (error) {
+      console.error("Error checking if user is in project:", error);
+      return false;
+    }
+
+    return !!data;
+  }
