@@ -210,6 +210,7 @@ export function ClosingRemarksModal({
                 Mark as Completed
               </Button>
             </DialogFooter>
+            
           </>
         ) : (
           // Success view
