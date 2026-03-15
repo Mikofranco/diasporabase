@@ -33,6 +33,7 @@ interface Project {
   volunteers_registered: number;
   status: string;
   category: string;
+  completed_project_link: string | null; 
 }
 
 interface Rating {
@@ -273,6 +274,21 @@ export default function PublicProjectDetailsPage() {
                             reviews)
                           </span>
                         </div>
+                      </div>
+
+                      <div>
+                        {project.completed_project_link && (
+                          <>
+                            <a
+                              href={project.completed_project_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-diaspora-darkBlue hover:underline"
+                            >
+                              View Project Outcome
+                            </a>
+                          </>
+                        )}
                       </div>
                     </div>
                   </CardContent>

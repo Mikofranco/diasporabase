@@ -253,3 +253,8 @@ export interface AgencyProfile {
   contact_person_first_name: string | null;
 contact_person_last_name: string | null;
 }
+
+export interface ProjectLink {
+  description: string;
+  link: string;
+}
