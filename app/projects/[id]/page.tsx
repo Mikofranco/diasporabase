@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Star, MessageCircle, Users, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 import { toast } from "sonner";
 import { routes } from "@/lib/routes";
 import { getStatusBadgeClasses } from "@/lib/utils";
@@ -231,21 +232,25 @@ export default function PublicProjectDetailsPage() {
               {/* Project Details */}
               <div className="lg:col-span-2">
                 <Card>
-                  <CardHeader >
-                    <CardTitle className="text-2xl flex items-center gap-4 justify-between">
-                      {project.title}
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <CardTitle className="text-2xl">
+                          {project.title}
+                        </CardTitle>
+                        <CardDescription className="text-lg">
+                          {project.organization_name}
+                        </CardDescription>
+                      </div>
                       <Badge
                         variant="outline"
-                        className={`text-xs font-medium capitalize ${getStatusBadgeClasses(
-                          project.status,
-                        )}`}
+                        className={`text-xs font-medium capitalize ${getProjectStatusStyle(
+                          project.status
+                        ).className}`}
                       >
-                        {project.status}
+                        {getProjectStatusStyle(project.status).label}
                       </Badge>
-                    </CardTitle>
-                    <CardDescription className="text-lg">
-                      {project.organization_name}
-                    </CardDescription>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <p>{project.description}</p>
@@ -283,21 +288,6 @@ export default function PublicProjectDetailsPage() {
                           </span>
                         </div>
                       </div>
-
-                      <div>
-                        {project.completed_project_link && (
-                          <>
-                            <a
-                              href={project.completed_project_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-diaspora-darkBlue hover:underline"
-                            >
-                              View Project Outcome
-                            </a>
-                          </>
-                        )}
-                      </div>
                     </div>
 
                     {project.closing_remarks && (
@@ -308,6 +298,43 @@ export default function PublicProjectDetailsPage() {
                     )}
                   </CardContent>
                 </Card>
+
+                {(project.closing_remarks || project.completed_project_link) && (
+                  <Card className="mt-6">
+                    <CardHeader className="space-y-1">
+                      <CardTitle className="text-base">
+                        Project Outcome
+                      </CardTitle>
+                      <CardDescription>
+                        Closing remarks and any published outcome link.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {project.closing_remarks && (
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">Closing Remarks</p>
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {project.closing_remarks}
+                          </p>
+                        </div>
+                      )}
+
+                      {project.completed_project_link && (
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">Outcome Link</p>
+                          <a
+                            href={project.completed_project_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-diaspora-darkBlue hover:underline break-all"
+                          >
+                            View Project Outcome
+                          </a>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Comments Section */}
                 <Card className="mt-6">

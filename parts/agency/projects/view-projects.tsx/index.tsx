@@ -119,6 +119,7 @@ interface Project {
   cancelled_at?: string | null;
   project_links?: ProjectLink[] | [];
   completed_project_link?: string | null;
+  closing_remarks?: string | null;
 }
 
 interface RejectionReasonRow {
@@ -258,7 +259,7 @@ const ProjectDetails: React.FC = () => {
         const { data: projectData, error: projErr } = await supabase
           .from("projects")
           .select(
-            "id, title, description, organization_id, organization_name, location, country, state, lga, start_date, end_date, volunteers_needed, volunteers_registered, status, category, created_at, required_skills, project_manager_id, project_manager_2_id, documents, cancelled_reason, cancelled_at, project_links, completed_project_link",
+            "id, title, description, organization_id, organization_name, location, country, state, lga, start_date, end_date, volunteers_needed, volunteers_registered, status, category, created_at, required_skills, project_manager_id, project_manager_2_id, documents, cancelled_reason, cancelled_at, project_links, completed_project_link, closing_remarks",
           )
           .eq("id", projectId)
           .eq("organization_id", userId)
@@ -964,6 +965,8 @@ const ProjectDetails: React.FC = () => {
        <ProjectLinksManager
         projectId={project.id}
         initialLinks={project.project_links || []}
+        canAdd={project.status !== "completed"}
+        canEditAll={true}
         onLinksUpdated={(newLinks) => {
           setProjectLinks(newLinks);
           // Optional: show toast "Links saved!"
@@ -1035,6 +1038,49 @@ const ProjectDetails: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        {project.status === "completed" &&
+          (project.closing_remarks || project.completed_project_link) && (
+            <Card className="border-diaspora-blue-100 bg-blue-50/60">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-diaspora-blue">
+                  Project Outcome
+                </CardTitle>
+                <CardDescription>
+                  Final closing remarks and any published outcome link for this
+                  project.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {project.closing_remarks && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Closing Remarks
+                    </p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {project.closing_remarks}
+                    </p>
+                  </div>
+                )}
+
+                {project.completed_project_link && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Outcome Link
+                    </p>
+                    <a
+                      href={project.completed_project_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-diaspora-darkBlue hover:underline break-all"
+                    >
+                      View Project Outcome
+                    </a>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
         {/* Milestone Modal */}
         <Dialog

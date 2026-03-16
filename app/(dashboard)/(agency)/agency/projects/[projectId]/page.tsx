@@ -1,12 +1,12 @@
-import ProjectDetails from '@/parts/agency/projects/view-projects.tsx'
-import React from 'react'
+import React from "react";
+import ProjectDetails from "@/parts/agency/projects/view-projects.tsx/index";
 
 const AgencyViewProjectPage = () => {
   return (
     <div>
-        <ProjectDetails/>
+      <ProjectDetails />
     </div>
-  )
-}
+  );
+};
 
 export default AgencyViewProjectPage

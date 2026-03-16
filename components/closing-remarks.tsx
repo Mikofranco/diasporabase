@@ -165,7 +165,7 @@ export function ClosingRemarksModal({
 
               <div className="space-y-2">
                 <label htmlFor="remarks" className="text-sm font-medium">
-                  Project Link <span className="text-red-500">*</span>
+                  Completed Project Link <span className="text-red-500">*</span>
                 </label>
                 <Input
                   id="remarks"
