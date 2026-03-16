@@ -44,7 +44,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, Trash2, Edit, FileText, ImageIcon, ExternalLink } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Trash2,
+  Edit,
+  FileText,
+  ImageIcon,
+  ExternalLink,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -56,7 +65,7 @@ import { useSkillLabels } from "@/hooks/useSkillLabels";
 import { MilestonesSection } from "./milestone-section";
 import { AssignedVolunteersTable } from "./assigned-volunteer";
 import { ClosingRemarksModal } from "@/components/closing-remarks";
-import { ProjectStatus } from "@/lib/types";
+import { ProjectLink, ProjectStatus } from "@/lib/types";
 import { routes } from "@/lib/routes";
 import { getProjectManagerRequestsForProject } from "@/services/projects";
 import { getProjectStatusStyle } from "../filters";
@@ -71,6 +80,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
 import CreateProjectForm from "@/parts/agency/create-project";
+import ProjectLinksManager from "./projectLinks";
 
 const supabase = createClient();
 
@@ -107,6 +117,9 @@ interface Project {
   documents?: Array<{ title: string; url: string }>;
   cancelled_reason?: string | null;
   cancelled_at?: string | null;
+  project_links?: ProjectLink[] | [];
+  completed_project_link?: string | null;
+  closing_remarks?: string | null;
 }
 
 interface RejectionReasonRow {
@@ -162,10 +175,15 @@ const ProjectDetails: React.FC = () => {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [assignedVolunteers, setAssignedVolunteers] = useState<Volunteer[]>([]);
-  const [rejectionReasons, setRejectionReasons] = useState<RejectionReasonRow[]>([]);
-  const [pendingPmVolunteerIds, setPendingPmVolunteerIds] = useState<string[]>([]);
+  const [rejectionReasons, setRejectionReasons] = useState<
+    RejectionReasonRow[]
+  >([]);
+  const [pendingPmVolunteerIds, setPendingPmVolunteerIds] = useState<string[]>(
+    [],
+  );
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [projectLinks, setProjectLinks] = useState<ProjectLink[]>(project?.project_links || []);
 
   // Modal States
   const [editProject, setEditProject] = useState<Project | null>(null);
@@ -211,8 +229,24 @@ const ProjectDetails: React.FC = () => {
     ? params.projectId[0]
     : params.projectId;
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const onProjectManagerAssigned = useCallback(() => setRefreshTrigger((t) => t + 1), []);
+  const onProjectManagerAssigned = useCallback(
+    () => setRefreshTrigger((t) => t + 1),
+    [],
+  );
 
+  const handleLinksChange = async (updated: ProjectLink[]) => {
+  // Here you would call Supabase update
+  const { error } = await supabase
+    .from('projects')
+    .update({ project_links: updated })
+    .eq('id', projectId);
+
+  if (!error) {
+    setProjectLinks(updated);
+  } else {
+    console.error('Failed to save links:', error);
+  }
+};
   useEffect(() => {
     if (!projectId) return;
 
@@ -225,7 +259,7 @@ const ProjectDetails: React.FC = () => {
         const { data: projectData, error: projErr } = await supabase
           .from("projects")
           .select(
-            "id, title, description, organization_id, organization_name, location, country, state, lga, start_date, end_date, volunteers_needed, volunteers_registered, status, category, created_at, required_skills, project_manager_id, project_manager_2_id, documents, cancelled_reason, cancelled_at"
+            "id, title, description, organization_id, organization_name, location, country, state, lga, start_date, end_date, volunteers_needed, volunteers_registered, status, category, created_at, required_skills, project_manager_id, project_manager_2_id, documents, cancelled_reason, cancelled_at, project_links, completed_project_link, closing_remarks",
           )
           .eq("id", projectId)
           .eq("organization_id", userId)
@@ -288,14 +322,18 @@ const ProjectDetails: React.FC = () => {
             volunteer_states: v.profiles.volunteer_states || [],
             volunteer_countries: v.profiles.volunteer_countries || [],
             volunteer_lgas: v.profiles.volunteer_lgas || [],
-            average_rating: typeof v.profiles.average_rating === "number" ? v.profiles.average_rating : 0,
+            average_rating:
+              typeof v.profiles.average_rating === "number"
+                ? v.profiles.average_rating
+                : 0,
             anonymous: !!v.profiles.anonymous,
             joined_at: v.joined_at ?? "",
           })),
         );
 
         try {
-          const { data: pmRequests } = await getProjectManagerRequestsForProject(projectId);
+          const { data: pmRequests } =
+            await getProjectManagerRequestsForProject(projectId);
           setPendingPmVolunteerIds(pmRequests?.pendingVolunteerIds ?? []);
         } catch {
           setPendingPmVolunteerIds([]);
@@ -585,7 +623,11 @@ const ProjectDetails: React.FC = () => {
     project.location && typeof project.location === "object"
       ? project.location
       : project.country
-        ? { country: project.country, state: project.state ?? undefined, lga: project.lga ?? undefined }
+        ? {
+            country: project.country,
+            state: project.state ?? undefined,
+            lga: project.lga ?? undefined,
+          }
         : null;
 
   return (
@@ -624,7 +666,7 @@ const ProjectDetails: React.FC = () => {
               size="sm"
               onClick={() => setEditProject(project)}
               disabled={["pending", "cancelled", "completed"].includes(
-                (project.status || "").toLowerCase()
+                (project.status || "").toLowerCase(),
               )}
             >
               <Edit className="h-4 w-4 sm:mr-1.5" />
@@ -641,10 +683,7 @@ const ProjectDetails: React.FC = () => {
               {(() => {
                 const statusStyle = getProjectStatusStyle(project.status);
                 return (
-                  <Badge
-                    variant="outline"
-                    className={statusStyle.className}
-                  >
+                  <Badge variant="outline" className={statusStyle.className}>
                     {statusStyle.label}
                   </Badge>
                 );
@@ -746,7 +785,9 @@ const ProjectDetails: React.FC = () => {
                     <button
                       key={i}
                       type="button"
-                      onClick={() => setPreviewDocument({ title: label, url: doc.url })}
+                      onClick={() =>
+                        setPreviewDocument({ title: label, url: doc.url })
+                      }
                       className="flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-gray-50/80 p-4 text-center transition hover:border-diaspora-blue/50 hover:bg-diaspora-blue/5 focus:outline-none focus:ring-2 focus:ring-diaspora-blue/30"
                     >
                       {docType === "image" ? (
@@ -838,7 +879,9 @@ const ProjectDetails: React.FC = () => {
               projectId={project.id}
               canEdit={true}
               volunteers={assignedVolunteers}
-              canAddMilestone={["pending", "approved", "active"].includes(project.status)}
+              canAddMilestone={["pending", "approved", "active"].includes(
+                project.status,
+              )}
               milestonesPageHref={routes.agencyProjectMilestones(project.id)}
             />
           </CardContent>
@@ -853,7 +896,8 @@ const ProjectDetails: React.FC = () => {
               </CardTitle>
               {(() => {
                 const findVolunteersEnabled =
-                  (project.status === "approved" || project.status === "active") &&
+                  (project.status === "approved" ||
+                    project.status === "active") &&
                   assignedVolunteers.length < 10;
                 return (
                   <Tooltip>
@@ -867,7 +911,11 @@ const ProjectDetails: React.FC = () => {
                           disabled={!findVolunteersEnabled}
                         >
                           {findVolunteersEnabled ? (
-                            <Link href={routes.agencyProjectRecommendations(project.id)}>
+                            <Link
+                              href={routes.agencyProjectRecommendations(
+                                project.id,
+                              )}
+                            >
                               Find volunteers
                             </Link>
                           ) : (
@@ -878,7 +926,8 @@ const ProjectDetails: React.FC = () => {
                     </TooltipTrigger>
                     <TooltipContent>
                       {!findVolunteersEnabled
-                        ? project.status !== "approved" && project.status !== "active"
+                        ? project.status !== "approved" &&
+                          project.status !== "active"
                           ? "Only available when project is Approved or Active."
                           : "Only available when fewer than 10 volunteers are assigned."
                         : "Search and invite volunteers for this project."}
@@ -893,18 +942,36 @@ const ProjectDetails: React.FC = () => {
               projectId={projectId ?? ""}
               volunteers={assignedVolunteers}
               organizationId={project.organization_id}
-              projectManagerIds={[project.project_manager_id, project.project_manager_2_id].filter(Boolean) as string[]}
+              projectManagerIds={
+                [
+                  project.project_manager_id,
+                  project.project_manager_2_id,
+                ].filter(Boolean) as string[]
+              }
               pendingPmVolunteerIds={pendingPmVolunteerIds}
-              canAssignManager={project.status === "approved" || project.status === "active"}
+              canAssignManager={
+                project.status === "approved" || project.status === "active"
+              }
               onManagerAssigned={onProjectManagerAssigned}
               onPmRequestSent={(volunteerId) =>
                 setPendingPmVolunteerIds((prev) =>
-                  prev.includes(volunteerId) ? prev : [...prev, volunteerId]
+                  prev.includes(volunteerId) ? prev : [...prev, volunteerId],
                 )
               }
             />
           </CardContent>
         </Card>
+
+       <ProjectLinksManager
+        projectId={project.id}
+        initialLinks={project.project_links || []}
+        canAdd={project.status !== "completed"}
+        canEditAll={true}
+        onLinksUpdated={(newLinks) => {
+          setProjectLinks(newLinks);
+          // Optional: show toast "Links saved!"
+        }}
+      />
 
         {/* Rejection reasons – own block when status is rejected */}
         {project.status === "rejected" && rejectionReasons.length > 0 && (
@@ -920,7 +987,9 @@ const ProjectDetails: React.FC = () => {
                   <li key={r.id} className="text-sm text-red-900">
                     <span className="font-medium">{r.reason_text}</span>
                     {r.internal_note && (
-                      <p className="mt-1 text-red-700/90 italic">{r.internal_note}</p>
+                      <p className="mt-1 text-red-700/90 italic">
+                        {r.internal_note}
+                      </p>
                     )}
                   </li>
                 ))}
@@ -962,13 +1031,56 @@ const ProjectDetails: React.FC = () => {
                 isAuthorized={true}
                 onProjectClosed={() =>
                   setProject((prev) =>
-                    prev ? { ...prev, status: "completed" } : prev
+                    prev ? { ...prev, status: "completed" } : prev,
                   )
                 }
               />
             </CardContent>
           </Card>
         )}
+
+        {project.status === "completed" &&
+          (project.closing_remarks || project.completed_project_link) && (
+            <Card className="border-diaspora-blue-100 bg-blue-50/60">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-diaspora-blue">
+                  Project Outcome
+                </CardTitle>
+                <CardDescription>
+                  Final closing remarks and any published outcome link for this
+                  project.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {project.closing_remarks && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Closing Remarks
+                    </p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {project.closing_remarks}
+                    </p>
+                  </div>
+                )}
+
+                {project.completed_project_link && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Outcome Link
+                    </p>
+                    <a
+                      href={project.completed_project_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-diaspora-darkBlue hover:underline break-all"
+                    >
+                      View Project Outcome
+                    </a>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
         {/* Milestone Modal */}
         <Dialog

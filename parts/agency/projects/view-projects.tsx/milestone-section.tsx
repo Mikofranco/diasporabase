@@ -27,6 +27,7 @@ interface MilestonesSectionProps {
   canAddMilestone?: boolean;
   /** Full URL to the dedicated milestones page (e.g. agency or volunteer route). */
   milestonesPageHref: string;
+  isUserInProject?: boolean;
 }
 
 export function MilestonesSection({
@@ -34,6 +35,7 @@ export function MilestonesSection({
   canEdit = true,
   canAddMilestone = true,
   milestonesPageHref,
+  isUserInProject,
 }: MilestonesSectionProps) {
   const [milestones, setMilestones] = useState<MilestoneSectionMilestone[]>([]);
   const [loading, setLoading] = useState(true);
