@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Star, MessageCircle, Users, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 import { toast } from "sonner";
 import { routes } from "@/lib/routes";
 
@@ -33,7 +34,8 @@ interface Project {
   volunteers_registered: number;
   status: string;
   category: string;
-  completed_project_link: string | null; 
+  completed_project_link: string | null;
+  closing_remarks?: string | null;
 }
 
 interface Rating {
@@ -228,12 +230,24 @@ export default function PublicProjectDetailsPage() {
               <div className="lg:col-span-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-2xl">
-                      {project.title}
-                    </CardTitle>
-                    <CardDescription className="text-lg">
-                      {project.organization_name}
-                    </CardDescription>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <CardTitle className="text-2xl">
+                          {project.title}
+                        </CardTitle>
+                        <CardDescription className="text-lg">
+                          {project.organization_name}
+                        </CardDescription>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs font-medium capitalize ${getProjectStatusStyle(
+                          project.status
+                        ).className}`}
+                      >
+                        {getProjectStatusStyle(project.status).label}
+                      </Badge>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <p>{project.description}</p>
@@ -275,24 +289,46 @@ export default function PublicProjectDetailsPage() {
                           </span>
                         </div>
                       </div>
-
-                      <div>
-                        {project.completed_project_link && (
-                          <>
-                            <a
-                              href={project.completed_project_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-diaspora-darkBlue hover:underline"
-                            >
-                              View Project Outcome
-                            </a>
-                          </>
-                        )}
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
+
+                {(project.closing_remarks || project.completed_project_link) && (
+                  <Card className="mt-6">
+                    <CardHeader className="space-y-1">
+                      <CardTitle className="text-base">
+                        Project Outcome
+                      </CardTitle>
+                      <CardDescription>
+                        Closing remarks and any published outcome link.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {project.closing_remarks && (
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">Closing Remarks</p>
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {project.closing_remarks}
+                          </p>
+                        </div>
+                      )}
+
+                      {project.completed_project_link && (
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">Outcome Link</p>
+                          <a
+                            href={project.completed_project_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-diaspora-darkBlue hover:underline break-all"
+                          >
+                            View Project Outcome
+                          </a>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Comments Section */}
                 <Card className="mt-6">

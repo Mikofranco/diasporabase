@@ -1,26 +1,34 @@
 // components/ProjectLinksManager.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from "react";
 import { Trash2, Edit2, Plus, Save, X } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-
-interface ProjectLink {
-  description: string;
-  link: string;
-}
+import { ProjectLink } from "@/lib/types";
 
 interface ProjectLinksManagerProps {
   projectId: string;                     // UUID or string – must match your projects.id column type
   initialLinks: ProjectLink[];
   onLinksUpdated?: (newLinks: ProjectLink[]) => void; // optional callback after successful save
+  /** Legacy: when provided, controls add/edit/delete as a single switch */
+  canEdit?: boolean;
+  /** Auth context (for ownership checks) */
+  currentUserId?: string | null;
+  /** Fine-grained permissions */
+  canAdd?: boolean;
+  canEditAll?: boolean;
+  canEditOwn?: boolean;
 }
 
 const ProjectLinksManager: React.FC<ProjectLinksManagerProps> = ({
   projectId,
   initialLinks = [],
   onLinksUpdated,
+  canEdit,
+  currentUserId = null,
+  canAdd,
+  canEditAll,
+  canEditOwn,
 }) => {
   const [links, setLinks] = useState<ProjectLink[]>(initialLinks);
   const [newDescription, setNewDescription] = useState('');
@@ -31,21 +39,41 @@ const ProjectLinksManager: React.FC<ProjectLinksManagerProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const permissions = useMemo(() => {
+    // Back-compat: `canEdit` means "user can add/edit/delete anything"
+    const legacy = typeof canEdit === "boolean" ? canEdit : undefined;
+    return {
+      canAdd: legacy ?? canAdd ?? true,
+      canEditAll: legacy ?? canEditAll ?? true,
+      canEditOwn: legacy ?? canEditOwn ?? true,
+    };
+  }, [canAdd, canEdit, canEditAll, canEditOwn]);
+
+  const canMutateLinkAtIndex = (index: number) => {
+    if (permissions.canEditAll) return true;
+    if (!permissions.canEditOwn) return false;
+    const owner = links[index]?.created_by ?? null;
+    if (!owner || !currentUserId) return false;
+    return owner === currentUserId;
+  };
+
   const saveToSupabase = async (updatedLinks: ProjectLink[]) => {
     setIsSaving(true);
     setError(null);
 
     try {
-      const { error: updateError } = await supabase
-        .from('projects')
-        .update({ project_links: updatedLinks })
-        .eq('id', projectId)
-        .select();
-
-      if (updateError) throw updateError;
+      const res = await fetch(`/api/projects/${projectId}/links`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ links: updatedLinks }),
+      });
+      const json = (await res.json()) as { error?: string; project_links?: ProjectLink[] };
+      if (!res.ok) {
+        throw new Error(json?.error || "Failed to save links");
+      }
 
       // Success
-      if (onLinksUpdated) onLinksUpdated(updatedLinks);
+      if (onLinksUpdated) onLinksUpdated(json.project_links ?? updatedLinks);
     } catch (err: any) {
       setError(err.message || 'Failed to save links');
       console.error('Supabase save error:', err);
@@ -57,9 +85,14 @@ const ProjectLinksManager: React.FC<ProjectLinksManagerProps> = ({
 
   // Add new link
   const handleAddLink = () => {
-    if (!newDescription.trim() || !newLink.trim()) return;
+    if (!permissions.canAdd || !newDescription.trim() || !newLink.trim()) return;
 
-    const newItem = { description: newDescription.trim(), link: newLink.trim() };
+    const newItem: ProjectLink = {
+      description: newDescription.trim(),
+      link: newLink.trim(),
+      created_by: currentUserId || null,
+      created_at: new Date().toISOString(),
+    };
     const updated = [...links, newItem];
 
     setLinks(updated);
@@ -71,6 +104,7 @@ const ProjectLinksManager: React.FC<ProjectLinksManagerProps> = ({
 
   // Start editing
   const handleEditStart = (index: number) => {
+    if (!canMutateLinkAtIndex(index)) return;
     setEditingIndex(index);
     setEditDescription(links[index].description);
     setEditLink(links[index].link);
@@ -79,9 +113,10 @@ const ProjectLinksManager: React.FC<ProjectLinksManagerProps> = ({
   // Save edited link
   const handleEditSave = (index: number) => {
     if (!editDescription.trim() || !editLink.trim()) return;
-
+    if (!canMutateLinkAtIndex(index)) return;
     const updated = [...links];
     updated[index] = {
+      ...updated[index],
       description: editDescription.trim(),
       link: editLink.trim(),
     };
@@ -98,6 +133,7 @@ const ProjectLinksManager: React.FC<ProjectLinksManagerProps> = ({
 
   // Delete link
   const handleDelete = (index: number) => {
+    if (!canMutateLinkAtIndex(index)) return;
     const updated = links.filter((_, i) => i !== index);
     setLinks(updated);
     saveToSupabase(updated);
@@ -123,7 +159,7 @@ const ProjectLinksManager: React.FC<ProjectLinksManagerProps> = ({
               key={index}
               className="flex items-center justify-between p-3 bg-white border rounded-md shadow-sm"
             >
-              {editingIndex === index ? (
+              {editingIndex === index && canMutateLinkAtIndex(index) ? (
                 <div className="flex-1 flex gap-3">
                   <input
                     type="text"
@@ -171,6 +207,7 @@ const ProjectLinksManager: React.FC<ProjectLinksManagerProps> = ({
                       {item.link}
                     </a>
                   </div>
+                  {canMutateLinkAtIndex(index) && (
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditStart(index)}
@@ -189,6 +226,7 @@ const ProjectLinksManager: React.FC<ProjectLinksManagerProps> = ({
                       <Trash2 size={18} />
                     </button>
                   </div>
+                  )}
                 </>
               )}
             </div>
@@ -197,35 +235,37 @@ const ProjectLinksManager: React.FC<ProjectLinksManagerProps> = ({
       </div>
 
       {/* Add new */}
-      <div className="border-t pt-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            placeholder="Description (e.g. GitHub Repo)"
-            className="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-diaspora-darkBlue"
-            disabled={isSaving}
-          />
-          <input
-            type="url"
-            value={newLink}
-            onChange={(e) => setNewLink(e.target.value)}
-            placeholder="https://example.com/..."
-            className="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-diaspora-darkBlue"
-            disabled={isSaving}
-          />
-          <Button
-            onClick={handleAddLink}
-            disabled={!newDescription.trim() || !newLink.trim() || isSaving}
-            size={"sm"}
-            className="px-4 py-2 bg-diaspora-darkBlue text-white rounded hover:bg-diaspora-darkBlueHover disabled:cursor-not-allowed flex items-center gap-2 min-w-[120px]"
-          >
-            <Plus size={18} />
-            {isSaving ? 'Saving...' : 'Add Link'}
-          </Button>
+      {permissions.canAdd && (
+        <div className="border-t pt-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="Description (e.g. GitHub Repo)"
+              className="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-diaspora-darkBlue"
+              disabled={isSaving}
+            />
+            <input
+              type="url"
+              value={newLink}
+              onChange={(e) => setNewLink(e.target.value)}
+              placeholder="https://example.com/..."
+              className="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-diaspora-darkBlue"
+              disabled={isSaving}
+            />
+            <Button
+              onClick={handleAddLink}
+              disabled={!newDescription.trim() || !newLink.trim() || isSaving}
+              size={"sm"}
+              className="px-4 py-2 bg-diaspora-darkBlue text-white rounded hover:bg-diaspora-darkBlueHover disabled:cursor-not-allowed flex items-center gap-2 min-w-[120px]"
+            >
+              <Plus size={18} />
+              {isSaving ? 'Saving...' : 'Add Link'}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {isSaving && !error && (
         <p className="text-sm text-diaspora-darkBlue mt-2">Saving to database...</p>

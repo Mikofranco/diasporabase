@@ -362,6 +362,7 @@ export default function ViewProjectDetails() {
           <ProjectView
             project={project}
             isUserInProject={isUserInProject}
+            isUserProjectManager={isUserProjectManager}
             hasRequested={hasRequested}
             setHasRequested={setHasRequested}
             userID={currentUserId} //@ts-ignore
