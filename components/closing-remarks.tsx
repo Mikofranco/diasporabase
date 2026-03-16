@@ -97,7 +97,7 @@ export function ClosingRemarksModal({
         .update({
           status: "completed",
           closing_remarks: trimmedRemarks,
-          project_link: projectLink.trim() || null,
+          completed_project_link: projectLink.trim() || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", projectId)
