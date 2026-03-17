@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Users, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 import { routes } from "@/lib/routes";
 
 interface Project {
@@ -220,25 +221,8 @@ export default function PublicProjectView() {
     setFilters(filterDraft);
   };
 
-  const getStatusBadgeClasses = (status: string) => {
-    const normalized = status.toLowerCase();
-    if (normalized === "active") {
-      return "bg-diaspora-blue/10 text-diaspora-darkBlue border-diaspora-blue/30 border";
-    }
-    if (normalized === "pending") {
-      return "bg-amber-100 text-amber-800 border-amber-200 border";
-    }
-    if (normalized === "completed") {
-      return "bg-slate-50 text-slate-700 border-slate-200";
-    }
-    if (normalized === "rejected") {
-      return "bg-red-50 text-red-700 border-red-200";
-    }
-    if (normalized === "cancelled") {
-      return "bg-orange-100 text-orange-800 border-orange-200 border";
-    }
-    return "bg-gray-50 text-gray-700 border-gray-200";
-  };
+  const getStatusBadgeClasses = (status: string) =>
+    getProjectStatusStyle(status).className;
 
   const displayedProjects = useMemo(() => {
     if (filters.minRating <= 0) return projects;

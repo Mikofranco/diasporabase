@@ -39,10 +39,12 @@ import { formatLocation } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 import { useSkillLabels } from "@/hooks/useSkillLabels";
+import ProjectLinksManager from "@/parts/agency/projects/view-projects.tsx/projectLinks";
 
 interface ProjectViewProps {
   project: Project;
   isUserInProject?: boolean;
+  isUserProjectManager?: boolean;
   hasRequested: boolean;
   setHasRequested: (requested: boolean) => void;
   userID: string | null;
@@ -58,6 +60,7 @@ interface ProjectViewProps {
 const ProjectView: React.FC<ProjectViewProps> = ({
   project,
   isUserInProject,
+  isUserProjectManager,
   hasRequested,
   setHasRequested,
   userID,
@@ -316,6 +319,66 @@ const ProjectView: React.FC<ProjectViewProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {project.status === "completed" &&
+                  (project.closing_remarks || project.completed_project_link) && (
+                    <div className="mt-4 rounded-lg border border-diaspora-blue/25 bg-blue-50/70 p-4 space-y-3">
+                      <h3 className="text-sm font-semibold text-diaspora-blue">
+                        Project Outcome
+                      </h3>
+
+                      {project.closing_remarks && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-gray-700">
+                            Closing Remarks
+                          </p>
+                          <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                            {project.closing_remarks}
+                          </p>
+                        </div>
+                      )}
+
+                      {project.completed_project_link && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-gray-700">
+                            Outcome Link
+                          </p>
+                          <a
+                            href={project.completed_project_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-diaspora-darkBlue hover:underline break-all"
+                          >
+                            View Project Outcome
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Project links (only visible to volunteers in the project) */}
+          {isUserInProject && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-2xl text-diaspora-darkBlue">
+                  Project Links
+                </CardTitle>
+                <CardDescription>
+                  Useful links shared by participants and organizers.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProjectLinksManager
+                  projectId={project.id}
+                  initialLinks={project.project_links || []}
+                  currentUserId={userID}
+                  canAdd={(project.status ?? "").toLowerCase() !== "completed"}
+                  canEditAll={!!isUserProjectManager}
+                  canEditOwn={true}
+                />
               </CardContent>
             </Card>
           )}

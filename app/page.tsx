@@ -134,17 +134,30 @@ export default function LandingPage() {
             </div>
           </motion.div>
 
-          {/* Soft wave transition into Stats section – subtle drift animation */}
+          {/* Soft wave transition into Stats section */}
           <div className="absolute bottom-0 left-0 right-0 w-full pointer-events-none">
+            {/* Subtle, flatter wave for small / medium screens */}
             <svg
               viewBox="0 0 1440 80"
               preserveAspectRatio="none"
-              className="w-full h-20 sm:h-24 fill-gray-100 dark:fill-gray-700 hero-wave-drift"
+              className="block lg:hidden w-full h-16 sm:h-20"
+              aria-hidden
+            >
+              <path
+                d="M0,80 L0,48 Q360,24 720,36 T1440,44 L1440,80 Z"
+                className="fill-gray-100 dark:fill-gray-800"
+              />
+            </svg>
+
+            {/* Original hero wave for large screens */}
+            <svg
+              viewBox="0 0 1440 80"
+              preserveAspectRatio="none"
+              className="hidden lg:block w-full h-24 fill-gray-100 dark:fill-gray-700 hero-wave-drift"
               aria-hidden
             >
               <path d="M0,80 V48 Q360,0 720,48 T1440,48 V80 Z" />
             </svg>
-            <div className="h-6 -mt-px bg-gray-100 dark:bg-gray-700" />
           </div>
         </section>
 
