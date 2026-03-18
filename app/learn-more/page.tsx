@@ -83,7 +83,7 @@ export default function LearnMore() {
       <NavBar />
 
       <section
-        className="relative min-h-[50vh] flex items-center justify-center overflow-hidden"
+        className="relative min-h-[50vh] flex items-center justify-center overflow-hidden mt-16"
         style={{
           backgroundImage: `linear-gradient(to bottom, rgba(14, 165, 233, 0.4), rgba(15, 23, 42, 0.85)), url('https://jbgnohxjwrvepqnlpccy.supabase.co/storage/v1/object/public/app_images/business-people-collaborating-office-working-project-together_709984-8661.jpg')`,
           backgroundSize: "cover",

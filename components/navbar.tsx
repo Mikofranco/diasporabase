@@ -125,7 +125,7 @@ const NavBar = () => {
               onClick={closeMenu}
               aria-label="Login"
             >
-              Login
+              Sign in
             </Link>
             <button
               type="button"
@@ -134,7 +134,7 @@ const NavBar = () => {
               onClick={closeMenu}
               aria-label="Register"
             >
-              Register
+              Sign up
             </button>
           </li>
         </ul>
