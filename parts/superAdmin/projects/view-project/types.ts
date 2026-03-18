@@ -25,6 +25,8 @@ export interface Project {
   approved_by?: string | null;
   documents?: Array<{ title: string; url: string }>;
   organization?: Profile | null;
+  closing_remarks?: string | null;
+  completed_project_link?: string | null;
 }
 
 export interface RejectionReasonRow {

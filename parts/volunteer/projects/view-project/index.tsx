@@ -362,6 +362,7 @@ export default function ViewProjectDetails() {
           <ProjectView
             project={project}
             isUserInProject={isUserInProject}
+            isUserProjectManager={isUserProjectManager}
             hasRequested={hasRequested}
             setHasRequested={setHasRequested}
             userID={currentUserId} //@ts-ignore
@@ -381,6 +382,7 @@ export default function ViewProjectDetails() {
           <MilestonesSection
             projectId={project.id}
             canEdit={isUserProjectManager}
+            isUserInProject={isUserInProject}
             canAddMilestone={isUserProjectManager && ["pending", "approved", "active"].includes((project?.status ?? "").toLowerCase())}
             volunteers={volunteers}
             milestonesPageHref={routes.volunteerProjectMilestones(project.id)}

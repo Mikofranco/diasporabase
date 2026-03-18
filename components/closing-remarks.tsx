@@ -15,6 +15,7 @@ import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase/client";
 import { ProjectStatus } from "@/lib/types";
+import { Input } from "./ui/input";
 
 type ClosingRemarksModalProps = {
   projectId: string;
@@ -35,7 +36,7 @@ export function ClosingRemarksModal({
   const [success, setSuccess] = useState(false);
   const [unratedCount, setUnratedCount] = useState<number | null>(null);
   const { toast } = useToast();
-
+  const [projectLink, setProjectLink] = useState("");
   useEffect(() => {
     if (!open || !projectId || currentStatus !== "active") return;
     const checkRatings = async () => {
@@ -79,6 +80,15 @@ export function ClosingRemarksModal({
       return;
     }
 
+    if(projectLink.trim() === "") {
+      toast({
+        title: "Project link is required",
+        description: "Please provide a link to the project outcome or deliverable.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -87,6 +97,7 @@ export function ClosingRemarksModal({
         .update({
           status: "completed",
           closing_remarks: trimmedRemarks,
+          completed_project_link: projectLink.trim() || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", projectId)
@@ -145,12 +156,26 @@ export function ClosingRemarksModal({
                     </p>
                   </div>
                 </div>
-              )}
+              )}  
 
               <p className="text-sm text-muted-foreground">
                 Please share final thoughts, achievements, or thanks to the team. 
                 This will be visible to all participants.
               </p>
+
+              <div className="space-y-2">
+                <label htmlFor="remarks" className="text-sm font-medium">
+                  Completed Project Link <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  id="remarks"
+                  placeholder="https://example.com/project-outcome"
+                  value={projectLink}
+                  onChange={(e) => setProjectLink(e.target.value)}
+                  disabled={loading}
+                  className="resize-none"
+                />
+              </div>
 
               <div className="space-y-2">
                 <label htmlFor="remarks" className="text-sm font-medium">
@@ -185,6 +210,7 @@ export function ClosingRemarksModal({
                 Mark as Completed
               </Button>
             </DialogFooter>
+            
           </>
         ) : (
           // Success view

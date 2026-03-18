@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { MilestonesPageContent } from "@/parts/agency/projects/view-projects.tsx/MilestonesPageContent";
-import { checkIfUserIsProjectManager } from "@/services/projects";
+import { checkIfUserIsInProject, checkIfUserIsProjectManager } from "@/services/projects";
 import type { Volunteer } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -23,6 +23,9 @@ export default function VolunteerProjectMilestonesPage() {
   const [isProjectManager, setIsProjectManager] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUserInProject, setIsUserInProject] = useState(false);
+  
+
 
   useEffect(() => {
     let cancelled = false;
@@ -30,6 +33,10 @@ export default function VolunteerProjectMilestonesPage() {
     async function load() {
       const { data: userId } = await getUserId();
       setCurrentUserId(userId ?? null);
+
+      await checkIfUserIsProjectManager(userId, projectId);
+      const isUserInProject = await checkIfUserIsInProject(userId, projectId);
+      setIsUserInProject(isUserInProject);
 
       const { data: project, error: projErr } = await supabase
         .from("projects")
@@ -104,6 +111,7 @@ export default function VolunteerProjectMilestonesPage() {
       projectId={projectId}
       projectTitle={projectTitle}
       role="volunteer"
+      isUserInProject={isUserInProject}
       projectStatus={projectStatus}
       volunteers={volunteers}
       currentUserId={currentUserId}

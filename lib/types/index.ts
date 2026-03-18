@@ -167,6 +167,8 @@ export interface Project {
   state?: string | null;
   end_date?: string;
   closing_remarks?:string;
+  completed_project_link?: string | null;
+  project_links?: ProjectLink[] | [];
   documents?: { title: string; url: string }[] | [];
 }
 
@@ -252,4 +254,11 @@ export interface AgencyProfile {
   documents: string[] | [];
   contact_person_first_name: string | null;
 contact_person_last_name: string | null;
+}
+
+export interface ProjectLink {
+  description: string;
+  link: string;
+  created_by?: string | null;
+  created_at?: string | null;
 }
