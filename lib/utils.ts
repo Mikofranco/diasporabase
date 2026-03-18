@@ -699,3 +699,9 @@ export const getStatusBadgeClasses = (status: string) => {
     }
     return "bg-gray-50 text-gray-700 border-gray-200";
   };
+
+ export const truncate = (str: string, max: number) => {
+  return str.length > max ? str.substring(0, max) + "..." : str;
+};
+
+

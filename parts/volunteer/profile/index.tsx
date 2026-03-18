@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { cn, getSkillsets, getUserLocation } from "@/lib/utils";
+import { cn, getSkillsets, getUserLocation, truncate } from "@/lib/utils";
 import { toast } from "sonner";
 import LocationSelector from "@/components/location-selector";
 import { useSkillLabels } from "@/hooks/useSkillLabels";
@@ -715,24 +715,7 @@ export default function VolunteerProfile() {
                         {profile.date_of_birth ? format(new Date(profile.date_of_birth), "PPP") : "—"}
                       </p>
                     </div>
-                    {profile.x_link && (
-                      <div className="grid gap-1">
-                      <span className="text-sm text-gray-500 flex items-center gap-2"><XLogo className="h-4 w-4"/> Profile</span>
-                      <a href={profile.x_link} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">{profile.x_link}</a>
-                    </div>
-                    )}
-                    {profile.linkedin_link && (
-                      <div className="grid gap-1">
-                      <span className="text-sm text-gray-500 flex items-center gap-2"><Linkedin className="w-4 h-4"/> Profile</span>
-                      <a href={profile.linkedin_link} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">{profile.linkedin_link}</a>
-                    </div>
-                    )}
-                    {profile.website && (
-                      <div className="grid gap-1">
-                      <span className="text-sm text-gray-500 flex items-center gap-2"><Globe className="w-4 h-4"/> Website</span>
-                      <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">{profile.website}</a>
-                    </div>
-                    )}
+                    
                     <div className="grid gap-1 md:col-span-2">
                       <span className="text-sm text-gray-500">Address</span>
                       <p className="font-medium text-gray-900">{profile.address || "—"}</p>
@@ -741,6 +724,24 @@ export default function VolunteerProfile() {
                       <span className="text-sm text-gray-500">Current location</span>
                       <p className="font-medium text-gray-900">{locationDisplay}</p>
                     </div>
+                    {profile.x_link && (
+                      <div className="grid gap-1">
+                      <span className="text-sm text-gray-500 flex items-center gap-2"><XLogo className="h-4 w-4"/> Profile</span>
+                      <a href={profile.x_link} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">{truncate(profile.x_link, 30)}</a>
+                    </div>
+                    )}
+                    {profile.linkedin_link && (
+                      <div className="grid gap-1">
+                      <span className="text-sm text-gray-500 flex items-center gap-2"><Linkedin className="w-4 h-4"/> Profile</span>
+                      <a href={profile.linkedin_link} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">{truncate(profile.linkedin_link, 30)}</a>
+                    </div>
+                    )}
+                    {profile.website && (
+                      <div className="grid gap-1">
+                      <span className="text-sm text-gray-500 flex items-center gap-2"><Globe className="w-4 h-4"/> Website</span>
+                      <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">{truncate(profile.website, 30)}</a>
+                    </div>
+                    )}
                   </>
                 )}
               </div>
