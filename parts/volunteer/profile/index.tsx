@@ -37,7 +37,7 @@ import { cn, getSkillsets, getUserLocation, truncate } from "@/lib/utils";
 import { toast } from "sonner";
 import LocationSelector from "@/components/location-selector";
 import { useSkillLabels } from "@/hooks/useSkillLabels";
-import XLogo from "@/components/X_logo";
+import XLogo from "@/components/x_logo";
 
 
 function getInitials(name: string | null): string {
@@ -920,7 +920,7 @@ export default function VolunteerProfile() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label className="text-sm font-medium text-gray-800">Place of Origin</Label>
+                  <Label className="text-sm font-medium text-gray-800">Nationality</Label>
                   <LocationSelects
                     label=""
                     country={profile.origin_country || ""}
