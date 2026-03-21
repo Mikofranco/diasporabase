@@ -44,8 +44,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Image from "next/image";
-import XLogo from "@/components/X_logo";
-
+import XLogo from "@/components/x_logo";
 
 const supabase = createClient();
 

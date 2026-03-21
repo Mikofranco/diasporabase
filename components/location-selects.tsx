@@ -61,7 +61,7 @@ export function LocationSelects({
       </div>
 
       {/* STATE / PROVINCE */}
-      {country && (
+      {/* {country && (
         <div className="grid gap-2">
           <Label htmlFor={`${label}-state`}>
             {label} State / Province {required && !stateOptional && "*"}
@@ -82,10 +82,10 @@ export function LocationSelects({
             </SelectContent>
           </Select>
         </div>
-      )}
+      )} */}
 
       {/* CITY */}
-      {state && (
+      {/* {state && (
         <div className="grid gap-2">
           <Label htmlFor={`${label}-lga`}>
             {label} City {required && !lgaOptional && "*"}
@@ -106,7 +106,7 @@ export function LocationSelects({
             </SelectContent>
           </Select>
         </div>
-      )}
+      )} */}
     </div>
   )
 }

@@ -233,6 +233,7 @@ export default function PublicProjectView() {
     });
   }, [projects, ratingsMeta, filters.minRating]);
 
+
   if (loading) {
     return (
       <div>
