@@ -2,7 +2,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { getUserId } from "@/lib/utils";
+import { getUserId, truncate } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -31,7 +31,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { Edit2, MapPin, User, Globe, Phone, Mail, Building, Loader2 } from "lucide-react";
+import { Edit2, MapPin, User, Globe, Phone, Mail, Building, Loader2, Linkedin } from "lucide-react";
 import {
   Form,
   FormField,
@@ -44,6 +44,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Image from "next/image";
+import XLogo from "@/components/x_logo";
 
 const supabase = createClient();
 
@@ -58,6 +59,8 @@ const formSchema = z.object({
   contact_person_email: z.string().email("Invalid email address.").min(1, "Email is required."),
   contact_person_phone: z.string().min(1, "Phone number is required.").trim(),
   website: z.string().nullable(),
+  x_link: z.string().nullable(),
+  linkedin_link: z.string().nullable(),
   organization_type: z.string().min(1, "Organization type is required.").trim(),
   tax_id: z.string().min(1, "Tax ID is required.").trim(),
   focus_areas: z.array(z.string()).min(1, "At least one focus area is required."),
@@ -87,6 +90,8 @@ interface Profile {
   environment_cities: string[] | null;
   environment_states: string[] | null;
   profile_picture: string | null;
+  x_link: string | null;
+  linkedin_link: string | null;
 }
 
 const CONTENT_WIDTH = "max-w-6xl";
@@ -245,7 +250,9 @@ const Profile: React.FC = () => {
             focus_areas,
             environment_cities,
             environment_states,
-            profile_picture
+            profile_picture,
+            x_link,
+            linkedin_link
           `)
           .eq("id", userId)
           .eq("role", "agency")
@@ -272,6 +279,8 @@ const Profile: React.FC = () => {
           environment_states: profileData.environment_states || [],
           profile_picture: profileData.profile_picture || null,
           organization_phone: profileData.phone ?? "",
+          x_link: profileData.x_link || null,
+          linkedin_link: profileData.linkedin_link || null,
         });
       } catch (err: any) {
         setError(err.message);
@@ -332,6 +341,8 @@ const Profile: React.FC = () => {
           environment_states: data.environment_states,
           profile_picture: profilePictureUrl,
           phone: data.organization_phone || null,
+          x_link: data.x_link,
+          linkedin_link: data.linkedin_link,
         })
         .eq("id", userId)
         .eq("role", "agency");
@@ -361,6 +372,8 @@ const Profile: React.FC = () => {
               environment_cities: data.environment_cities,
               environment_states: data.environment_states,
               profile_picture: profilePictureUrl,
+              x_link: data.x_link,
+              linkedin_link: data.linkedin_link,
             }
           : null
       );
@@ -487,6 +500,9 @@ const Profile: React.FC = () => {
                     <Label className="text-gray-700 font-medium">Tax ID</Label>
                     <p className="text-gray-600">{profile.tax_id || "N/A"}</p>
                   </div>
+
+                  {(profile.x_link || profile.linkedin_link || profile.website) && (
+                     <div className="md:col-span-2 flex flex-wrap gap-x-8 gap-y-3 mt-3">
                   <div>
                     <Label className="text-gray-700 font-medium flex items-center gap-1">
                       <Globe className="h-4 w-4 text-gray-500" />
@@ -500,13 +516,48 @@ const Profile: React.FC = () => {
                           rel="noopener noreferrer"
                           className="text-diaspora-darkBlue hover:underline"
                         >
-                          {profile.website}
+                          {truncate(profile.website, 30)}
                         </a>
                       ) : (
                         "N/A"
                       )}
                     </p>
                   </div>
+                  {profile.x_link && (
+                    <div className="sm:col-span-2">
+                      <Label className="text-gray-700 font-medium flex items-center gap-1">
+                        <XLogo className="h-4 w-4 text-gray-500" />
+                        Link
+                      </Label>
+                      <a
+                        href={profile.x_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-diaspora-darkBlue hover:underline"
+                      >
+                        {truncate(profile.x_link, 30)}
+                      </a>
+                    </div>
+                  )}
+                  {profile.linkedin_link && (
+                    <div className="sm:col-span-2">
+                      <Label className="text-gray-700 font-medium flex items-center gap-1">
+                        <Linkedin className="h-4 w-4 text-gray-500" />
+                        LinkedIn Profile
+                      </Label>
+                      <a
+                        href={profile.linkedin_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-diaspora-darkBlue hover:underline"
+                      >
+                        {truncate(profile.linkedin_link, 30)}
+                      </a>
+                    </div>
+                  )}
+
+                     </div>
+                  )}
                   <div className="sm:col-span-2">
                     <Label className="text-gray-700 font-medium">Description</Label>
                     <p className="text-gray-600">{profile.description || "No description provided."}</p>
@@ -768,6 +819,50 @@ const Profile: React.FC = () => {
                                 value={field.value ?? ""}
                                 onChange={(e) => field.onChange(e.target.value || null)}
                                 placeholder="Enter website URL"
+                                className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-sm" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="linkedin_link"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 font-medium flex items-center gap-1">
+                              <Linkedin className="h-4 w-4 text-gray-500" />
+                              LinkedIn Profile
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value || null)}
+                                placeholder="Enter LinkedIn profile URL"
+                                className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-sm" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="x_link"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 font-medium flex items-center gap-1">
+                              <XLogo className="h-4 w-4 text-gray-500" />
+                              X Profile
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value || null)}
+                                placeholder="Enter X profile URL"
                                 className="border-gray-300 focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                               />
                             </FormControl>
