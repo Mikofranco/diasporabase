@@ -29,7 +29,7 @@ export const PROJECT_STATUS_STYLES: Record<
   },
   completed: {
     label: "Completed",
-    className: "bg-green-100 text-green-800 border-green-200 border",
+    className: "bg-slate-50 text-slate-700 border-slate-200",
   },
   rejected: {
     label: "Rejected",
