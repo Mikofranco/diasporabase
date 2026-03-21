@@ -33,7 +33,7 @@ export default function BackButton({
       variant={variant}
       size={size}
       onClick={handleClick}
-      className={`flex items-center gap-2 ${className}`}
+      className={`hidden sm:flex items-center gap-2 ${className}`}
     >
       <ArrowLeft className="h-4 w-4" />
       {label}

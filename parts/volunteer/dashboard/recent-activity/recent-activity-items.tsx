@@ -17,25 +17,16 @@ const RecentActivityItems: React.FC<RecentActivityItemsProps> = ({
 }) => {
   return (
     <div
-      className={className}
+      className={`flex gap-6 rounded-md p-2 ${className}`}
       role="listitem"
       aria-label={ariaLabel}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        padding: "12px",
-        borderRadius: "8px",
-        backgroundColor: "#f9fafb",
-        transition: "background-color 0.2s ease",
-      }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "40px", height: "40px" }}>
+      <div className="w-4 h-4 ">
         {icon}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-        <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 500, color: "#1f2937" }}>{title}</h4>
-        <p style={{ margin: 0, fontSize: "14px", color: "#6b7280" }}>{period}</p>
+      <div className="flex flex-col gap-1 ml-2">
+        <h4 className="text-sm font-medium text-gray-900">{title}</h4>
+        <p className="text-xs text-gray-500">{period}</p>
       </div>
     </div>
   );

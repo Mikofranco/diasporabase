@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { getProjectStatusStyle } from "@/parts/agency/projects/filters";
 import { toast } from "sonner";
 import { routes } from "@/lib/routes";
+import { getStatusBadgeClasses } from "@/lib/utils";
 
 interface Project {
   id: string;
@@ -70,15 +71,17 @@ export default function PublicProjectDetailsPage() {
   const fetchProjectAndRatings = async (id: string) => {
     setLoading(true);
 
-    const [{ data: projectData, error: projectError }, { data: ratingsData, error: ratingsError }] =
-      await Promise.all([
-        supabase.from("projects").select("*").eq("id", id).single(),
-        supabase
-          .from("project_ratings")
-          .select("*")
-          .eq("project_id", id)
-          .order("created_at", { ascending: false }),
-      ]);
+    const [
+      { data: projectData, error: projectError },
+      { data: ratingsData, error: ratingsError },
+    ] = await Promise.all([
+      supabase.from("projects").select("*").eq("id", id).single(),
+      supabase
+        .from("project_ratings")
+        .select("*")
+        .eq("project_id", id)
+        .order("created_at", { ascending: false }),
+    ]);
 
     if (projectError) {
       console.error("Error fetching project:", projectError);
@@ -115,7 +118,7 @@ export default function PublicProjectDetailsPage() {
       {
         onConflict: "project_id,email",
         ignoreDuplicates: false,
-      }
+      },
     );
 
     if (error) {
@@ -134,7 +137,7 @@ export default function PublicProjectDetailsPage() {
   const renderStars = (
     rating: number,
     interactive = false,
-    onStarClick?: (rating: number) => void
+    onStarClick?: (rating: number) => void,
   ) => {
     return (
       <div className="flex gap-1">
@@ -259,12 +262,10 @@ export default function PublicProjectDetailsPage() {
                             <Calendar className="h-4 w-4" />
                             <span>
                               {new Date(
-                                project.start_date
+                                project.start_date,
                               ).toLocaleDateString()}{" "}
                               -{" "}
-                              {new Date(
-                                project.end_date
-                              ).toLocaleDateString()}
+                              {new Date(project.end_date).toLocaleDateString()}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -274,9 +275,7 @@ export default function PublicProjectDetailsPage() {
                               {project.volunteers_needed} volunteers
                             </span>
                           </div>
-                          <Badge variant="secondary">
-                            {project.category}
-                          </Badge>
+                          <Badge variant="secondary">{project.category}</Badge>
                         </div>
                       </div>
                       <div>
@@ -353,9 +352,7 @@ export default function PublicProjectDetailsPage() {
                               {renderStars(rating.rating)}
                             </div>
                             <span className="text-sm text-muted-foreground">
-                              {new Date(
-                                rating.created_at
-                              ).toLocaleDateString()}
+                              {new Date(rating.created_at).toLocaleDateString()}
                             </span>
                           </div>
                           {rating.comment && (
@@ -435,4 +432,3 @@ export default function PublicProjectDetailsPage() {
     </div>
   );
 }
-
