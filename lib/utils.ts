@@ -679,3 +679,6 @@ export const getFirstTwoWordsShort = (text?: string | null) =>
 export const getFirstWordShort = (text?: string | null) =>
   text?.trim().split(/\s+/, 1)[0] ?? "";
 
+export const truncate = (str: string, max: number) => {
+  return str.length > max ? str.substring(0, max) + "..." : str;
+};
