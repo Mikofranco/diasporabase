@@ -2,7 +2,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { getUserId } from "@/lib/utils";
+import { getUserId, truncate } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -500,6 +500,9 @@ const Profile: React.FC = () => {
                     <Label className="text-gray-700 font-medium">Tax ID</Label>
                     <p className="text-gray-600">{profile.tax_id || "N/A"}</p>
                   </div>
+
+                  {(profile.x_link || profile.linkedin_link || profile.website) && (
+                     <div className="md:col-span-2 flex flex-wrap gap-x-8 gap-y-3 mt-3">
                   <div>
                     <Label className="text-gray-700 font-medium flex items-center gap-1">
                       <Globe className="h-4 w-4 text-gray-500" />
@@ -513,7 +516,7 @@ const Profile: React.FC = () => {
                           rel="noopener noreferrer"
                           className="text-diaspora-darkBlue hover:underline"
                         >
-                          {profile.website}
+                          {truncate(profile.website, 30)}
                         </a>
                       ) : (
                         "N/A"
@@ -532,7 +535,7 @@ const Profile: React.FC = () => {
                         rel="noopener noreferrer"
                         className="text-diaspora-darkBlue hover:underline"
                       >
-                        {profile.x_link}
+                        {truncate(profile.x_link, 30)}
                       </a>
                     </div>
                   )}
@@ -548,9 +551,12 @@ const Profile: React.FC = () => {
                         rel="noopener noreferrer"
                         className="text-diaspora-darkBlue hover:underline"
                       >
-                        {profile.linkedin_link}
+                        {truncate(profile.linkedin_link, 30)}
                       </a>
                     </div>
+                  )}
+
+                     </div>
                   )}
                   <div className="sm:col-span-2">
                     <Label className="text-gray-700 font-medium">Description</Label>

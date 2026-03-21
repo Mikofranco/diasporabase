@@ -33,11 +33,12 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { cn, getSkillsets, getUserLocation } from "@/lib/utils";
+import { cn, getSkillsets, getUserLocation, truncate } from "@/lib/utils";
 import { toast } from "sonner";
 import LocationSelector from "@/components/location-selector";
 import { useSkillLabels } from "@/hooks/useSkillLabels";
 import XLogo from "@/components/x_logo";
+
 
 function getInitials(name: string | null): string {
   if (!name?.trim()) return "?";
@@ -384,10 +385,10 @@ export default function VolunteerProfile() {
     const locationsToSave = selectedLocations.selectedCountries.length > 0
       ? selectedLocations
       : {
-          selectedCountries: profile.volunteer_countries || [],
-          selectedStates: profile.volunteer_states || [],
-          selectedLgas: profile.volunteer_lgas || [],
-        };
+        selectedCountries: profile.volunteer_countries || [],
+        selectedStates: profile.volunteer_states || [],
+        selectedLgas: profile.volunteer_lgas || [],
+      };
     if (locationsToSave.selectedCountries.length === 0) {
       toast.error("Please select at least one volunteer location.");
       setSubmitting(false);
@@ -423,13 +424,13 @@ export default function VolunteerProfile() {
       availabilityType === "full-time"
         ? "full-time"
         : JSON.stringify({
-            startDate: availabilityStartDate
-              ? format(availabilityStartDate, "yyyy-MM-dd")
-              : null,
-            endDate: availabilityEndDate
-              ? format(availabilityEndDate, "yyyy-MM-dd")
-              : null,
-          });
+          startDate: availabilityStartDate
+            ? format(availabilityStartDate, "yyyy-MM-dd")
+            : null,
+          endDate: availabilityEndDate
+            ? format(availabilityEndDate, "yyyy-MM-dd")
+            : null,
+        });
 
     const { error } = await supabase
       .from("profiles")
@@ -446,8 +447,8 @@ export default function VolunteerProfile() {
         origin_country: profile.origin_country,
         origin_state: profile.origin_state,
         origin_lga: profile.origin_lga,
-        website: profile.website ,
-        x_link: profile.x_link ,
+        website: profile.website,
+        x_link: profile.x_link,
         linkedin_link: profile.linkedin_link,
         volunteer_countries:
           locationsToSave.selectedCountries.length > 0
@@ -682,18 +683,18 @@ export default function VolunteerProfile() {
                       <Input type="text" value={locationDisplay} disabled className="bg-gray-100" />
                     </div>
                     <div className="grid gap-2 md:col-span-2">
-                      <Label className="text-sm font-medium text-gray-800 flex items-center gap-2"><XLogo className="h-4 w-4"/> Profile</Label>
-                      <Input type="text" value={profile.x_link || ""} className="border-gray-300 focus:ring-blue-500" placeholder="Enter X Profile Url" onChange={(e) => handleInputChange("x_link", e.target.value)}/>
+                      <Label className="text-sm font-medium text-gray-800 flex items-center gap-2"><XLogo className="h-4 w-4" /> Profile</Label>
+                      <Input type="text" value={profile.x_link || ""} className="border-gray-300 focus:ring-blue-500" placeholder="Enter X Profile Url" onChange={(e) => handleInputChange("x_link", e.target.value)} />
                     </div>
                     <div className="grid gap-2 md:col-span-2">
-                      <Label className="text-sm font-medium text-gray-800 flex items-center gap-2"><Globe className="w-4 h-4"/> Website</Label>
-                      <Input type="text" value={profile.website || ""} className="border-gray-300 focus:ring-blue-500" placeholder="Enter website URL" onChange={(e) => handleInputChange("website", e.target.value)}/>
+                      <Label className="text-sm font-medium text-gray-800 flex items-center gap-2"><Globe className="w-4 h-4" /> Website</Label>
+                      <Input type="text" value={profile.website || ""} className="border-gray-300 focus:ring-blue-500" placeholder="Enter website URL" onChange={(e) => handleInputChange("website", e.target.value)} />
                     </div>
                     <div className="grid gap-2 md:col-span-2">
-                      <Label className="text-sm font-medium text-gray-800 flex items-center gap-2"><Linkedin className="w-4 h-4"/> Profile</Label>
-                      <Input type="text" value={profile.linkedin_link || ""} className="border-gray-300 focus:ring-blue-500" placeholder="Enter Linkedin Profile Url" onChange={(e) => handleInputChange("linkedin_link", e.target.value)}/>
+                      <Label className="text-sm font-medium text-gray-800 flex items-center gap-2"><Linkedin className="w-4 h-4" /> Profile</Label>
+                      <Input type="text" value={profile.linkedin_link || ""} className="border-gray-300 focus:ring-blue-500" placeholder="Enter Linkedin Profile Url" onChange={(e) => handleInputChange("linkedin_link", e.target.value)} />
                     </div>
-                    
+
                   </>
                 ) : (
                   <>
@@ -715,24 +716,7 @@ export default function VolunteerProfile() {
                         {profile.date_of_birth ? format(new Date(profile.date_of_birth), "PPP") : "—"}
                       </p>
                     </div>
-                    {profile.x_link && (
-                      <div className="grid gap-1">
-                      <span className="text-sm text-gray-500 flex items-center gap-2"><XLogo className="h-4 w-4"/> Profile</span>
-                      <a href={profile.x_link} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">{profile.x_link}</a>
-                    </div>
-                    )}
-                    {profile.linkedin_link && (
-                      <div className="grid gap-1">
-                      <span className="text-sm text-gray-500 flex items-center gap-2"><Linkedin className="w-4 h-4"/> Profile</span>
-                      <a href={profile.linkedin_link} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">{profile.linkedin_link}</a>
-                    </div>
-                    )}
-                    {profile.website && (
-                      <div className="grid gap-1">
-                      <span className="text-sm text-gray-500 flex items-center gap-2"><Globe className="w-4 h-4"/> Website</span>
-                      <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">{profile.website}</a>
-                    </div>
-                    )}
+
                     <div className="grid gap-1 md:col-span-2">
                       <span className="text-sm text-gray-500">Address</span>
                       <p className="font-medium text-gray-900">{profile.address || "—"}</p>
@@ -741,6 +725,41 @@ export default function VolunteerProfile() {
                       <span className="text-sm text-gray-500">Current location</span>
                       <p className="font-medium text-gray-900">{locationDisplay}</p>
                     </div>
+
+                    {(profile.x_link || profile.linkedin_link || profile.website) && (
+                      <div className="md:col-span-2 flex flex-wrap gap-x-8 gap-y-3 mt-3">
+                        {profile.x_link && (
+                          <div className="grid gap-1">
+                            <span className="text-sm text-gray-500 flex items-center gap-2">
+                              <XLogo className="h-4 w-4" /> Profile
+                            </span>
+                            <a href={profile.x_link} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">
+                              {truncate(profile.x_link, 30)}
+                            </a>
+                          </div>
+                        )}
+                        {profile.linkedin_link && (
+                          <div className="grid gap-1">
+                            <span className="text-sm text-gray-500 flex items-center gap-2">
+                              <Linkedin className="w-4 h-4" /> Profile
+                            </span>
+                            <a href={profile.linkedin_link} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">
+                              {truncate(profile.linkedin_link, 30)}
+                            </a>
+                          </div>
+                        )}
+                        {profile.website && (
+                          <div className="grid gap-1">
+                            <span className="text-sm text-gray-500 flex items-center gap-2">
+                              <Globe className="w-4 h-4" /> Website
+                            </span>
+                            <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-xs text-diaspora-darkBlue">
+                              {truncate(profile.website, 30)}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -901,7 +920,7 @@ export default function VolunteerProfile() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label className="text-sm font-medium text-gray-800">Place of Origin</Label>
+                  <Label className="text-sm font-medium text-gray-800">Nationality</Label>
                   <LocationSelects
                     label=""
                     country={profile.origin_country || ""}

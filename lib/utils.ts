@@ -679,23 +679,6 @@ export const getFirstTwoWordsShort = (text?: string | null) =>
 export const getFirstWordShort = (text?: string | null) =>
   text?.trim().split(/\s+/, 1)[0] ?? "";
 
-
-export const getStatusBadgeClasses = (status: string) => {
-    const normalized = status.toLowerCase();
-    if (normalized === "active") {
-      return "bg-diaspora-blue/10 text-diaspora-darkBlue border-diaspora-blue/30 border";
-    }
-    if (normalized === "pending") {
-      return "bg-amber-100 text-amber-800 border-amber-200 border";
-    }
-    if (normalized === "completed") {
-      return "bg-slate-50 text-slate-700 border-slate-200";
-    }
-    if (normalized === "rejected") {
-      return "bg-red-50 text-red-700 border-red-200";
-    }
-    if (normalized === "cancelled") {
-      return "bg-orange-100 text-orange-800 border-orange-200 border";
-    }
-    return "bg-gray-50 text-gray-700 border-gray-200";
-  };
+export const truncate = (str: string, max: number) => {
+  return str.length > max ? str.substring(0, max) + "..." : str;
+};
