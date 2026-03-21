@@ -958,6 +958,8 @@ const ProjectDetails: React.FC = () => {
                   prev.includes(volunteerId) ? prev : [...prev, volunteerId],
                 )
               }
+              projectTitle={project.title}
+              organizationName={project.organization_name}
             />
           </CardContent>
         </Card>

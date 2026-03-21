@@ -9,6 +9,7 @@ type NotificationType =
   | "volunteer_request_send"
   | "volunteer_request_to_join_project"
   | "agency_account_created"
+  | "project_manager_request"
   | "tagged_in_comment";
 
 interface CreateNotificationParams {
@@ -35,6 +36,7 @@ export async function createNotification(
     "volunteer_request_to_join_project",
     "agency_account_created",
     "tagged_in_comment",
+    "project_manager_request",
   ];
 
   if (!validTypes.includes(type)) {
